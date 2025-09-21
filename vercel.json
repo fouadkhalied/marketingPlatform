@@ -5,7 +5,7 @@
     "devCommand": "npm run dev",
     "functions": {
     "api/index.js": {
-      "runtime": "@vercel/node@3.0.7"
+      "runtime": "@vercel/node@4.0.0"
     }
   },
     "routes": [

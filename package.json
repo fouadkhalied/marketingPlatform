@@ -14,7 +14,10 @@
 		  "db:push": "drizzle-kit push --config=src/infrastructure/config/drizzle.config.ts",
 		  "db:generate": "drizzle-kit generate --config=src/infrastructure/config/drizzle.config.ts",
 		  "db:migrate": "drizzle-kit migrate --config=src/infrastructure/config/drizzle.config.ts"
-		}
+		},
+    "engines": {
+    "node": "22.x"
+  }
 	  ,
 	"dependencies": {
 		"@neondatabase/serverless": "^0.10.4",
