@@ -3,6 +3,8 @@ import express from 'express';
 
 import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
 import { createPaymentController } from "../src/modules/payment/interfaces/factories/payment.factory";
+import { AuthenticatedRequest } from "../src/modules/payment/interfaces/controllers/payment.controller";
+import { authenticateToken } from "../src/modules/user/application/services/auth-app.service";
 
 const app = express();
 
@@ -30,9 +32,14 @@ app.get('/', (req, res) => {
 
 app.post('/api/auth/register' , (req,res) => userController.createUser(req,res));
 
+
+// payment with stripe
+
 app.post('/webhook', (req,res) => paymentController.webhook(req,res))
 
+app.post('/api/payment/createSessionUrl' , authenticateToken ,(req ,res) => paymentController.createSession(req as AuthenticatedRequest ,res))
+
 // Local dev listener (ignored on Vercel)
-app.listen(4000, () => console.log('Server running on http://localhost:4000'));
+app.listen(3000, () => console.log('Server running on http://localhost:3000'));
 
 export default app;

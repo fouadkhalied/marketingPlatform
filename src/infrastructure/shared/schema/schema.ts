@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, decimal, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const userRoleEnum = pgEnum("user_role", ["advertiser", "marketing", "admin"]);
+export const adStatusEnum = pgEnum("ad_status", ["draft", "pending", "approved", "rejected", "published", "paused"]);
+export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "completed", "failed", "refunded"]);
 
 export const users = pgTable("users", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -27,7 +29,7 @@ export const users = pgTable("users", {
     descriptionAr: text("description_ar").notNull(),
     targetUrl: text("target_url").notNull(),
     imageUrl: text("image_url"),
-    //status: adStatusEnum("status").notNull().default("draft"),
+    status: adStatusEnum("status").notNull().default("draft"),
     targetAudience: text("target_audience"),
     budgetType: text("budget_type"), // "impressions" or "clicks"
     publishToken: text("publish_token"),
@@ -43,7 +45,7 @@ export const users = pgTable("users", {
     adId: varchar("ad_id").references(() => ads.id),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     impressionsAllocated: integer("impressions_allocated").notNull().default(0),
-    //status: purchaseStatusEnum("status").notNull().default("pending"),
+    status: purchaseStatusEnum("status").notNull().default("pending"),
     currency: text("currency").notNull(),
     method: text("method").notNull(),
     stripeSessionId: text("stripe_session_id"),

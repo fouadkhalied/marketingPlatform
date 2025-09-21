@@ -1,4 +1,4 @@
-import { CreateUser, User } from "../../infrastructure/database/user.type";
+import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 
 export interface userInterface {
     getUser(id: string): Promise<User | undefined>;

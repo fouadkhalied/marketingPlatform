@@ -1,8 +1,14 @@
-import { CreatePaymentDto } from "../dtos/create-payment.dto";
+// Updated PaymentService with validation removed
+import { Request, Response } from 'express';
+import { newPaymentDto, CreatePaymentDto } from "../dtos/create-payment.dto";
 import { PaymentRepository } from "../../domain/repositories/payment.repository";
 import { Payment } from "../../domain/entities/payment.entity";
 import { stripe } from "../../../../infrastructure/config/stripe.config";
 import { StripePaymentHandler } from "../../../../infrastructure/shared/stripe/stripe";
+
+export interface AuthenticatedRequest extends Request {
+    user?: { userId: number; email: string; adsId: number };
+}
 
 export class PaymentService {
     private readonly stripeHandler: StripePaymentHandler;
@@ -11,14 +17,39 @@ export class PaymentService {
         private readonly paymentRepo: PaymentRepository,
         stripeHandler?: StripePaymentHandler
     ) {
-        // Use default instance if none provided
         this.stripeHandler = stripeHandler || stripe;
         this.setupWebhookHandlers();
     }
 
+    async createCheckoutSession(req: AuthenticatedRequest, res: Response): Promise<void> {
+        // Validation is now handled in controller, service just processes the business logic
+        const paymentDto: newPaymentDto = req.body;
+
+        const session = await this.stripeHandler.createCheckoutSession({
+            customPricing: {
+                name: 'Ad Campaign',
+                currency: paymentDto.currency,
+                unitAmount: Math.round(paymentDto.amount * 100), // Convert dollars to cents
+            },
+            quantity: 1,
+            mode: 'payment',
+            successUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/cancel`,
+            metadata: {
+                userId: req.user!.userId.toString(), // Safe to use ! since validation is in controller
+                adId: paymentDto.adId,
+                amount: paymentDto.amount.toString(),
+                adsId: paymentDto.adId
+            }
+        });
+
+        res.json({ 
+            url: session.url,
+            sessionId: session.id
+        });
+    }
+
     async createStripePayment(dto: CreatePaymentDto): Promise<Payment> {
-        console.log('🔄 Creating payment with data:', dto);
-        
         const payment = new Payment(
             dto.userId,
             dto.amount,
@@ -30,8 +61,6 @@ export class PaymentService {
         );
         
         const savedPayment = await this.paymentRepo.save(payment);
-        console.log('✅ Payment saved to database:', savedPayment.id);
-        
         return savedPayment;
     }
 
@@ -49,41 +78,31 @@ export class PaymentService {
         });
     }
 
-    // Move webhook handling logic here to avoid circular dependency
     async handleCheckoutCompleted(sessionData: any): Promise<void> {
-        try {
-            console.log('📦 Processing checkout completed:', sessionData.id);
-            console.log('📦 Session metadata:', sessionData.metadata);
-            
-            // Validate required data
-            if (!sessionData.metadata?.userId) {
-                console.error('❌ Missing userId in session metadata');
-                throw new Error('Missing userId in session metadata');
-            }
-
-            // Construct the payment DTO
-            const paymentDto: CreatePaymentDto = {
-                userId: sessionData.metadata.userId,
-                amount: sessionData.amount_total / 100, // convert cents to dollars
-                currency: sessionData.currency,
-                method: 'stripe', // since this is a Stripe checkout
-                adId: sessionData.metadata?.adId, // optional, if tracking ad purchases
-                stripeSessionId: sessionData.id,
-                stripePaymentIntentId: sessionData.payment_intent || null,
-            };
-
-            // Save payment through PaymentService
-            const payment = await this.createStripePayment(paymentDto);
-            console.log('✅ Payment recorded successfully:', payment.id);
-            
-        } catch (error) {
-            console.error('❌ Error handling checkout completed:', error);
-            throw error; // Re-throw so webhook can return error status
+        // Validate required data from Stripe webhook
+        if (!sessionData.metadata?.userId) {
+            throw new Error('Missing userId in session metadata');
         }
+
+        if (!sessionData.amount_total) {
+            throw new Error('Missing amount_total in session data');
+        }
+
+        const paymentDto: CreatePaymentDto = {
+            userId: sessionData.metadata.userId,
+            amount: sessionData.amount_total / 100,
+            currency: sessionData.currency,
+            method: 'stripe',
+            adId: sessionData.metadata?.adId,
+            stripeSessionId: sessionData.id,
+            stripePaymentIntentId: sessionData.payment_intent || undefined,
+            adsId: sessionData.metadata?.adsId
+        };
+
+        const payment = await this.createStripePayment(paymentDto);
     }
 
     async processWebhook(payload: any, signature: string): Promise<void> {
-        console.log('📨 Processing webhook...');
         await this.stripeHandler.processWebhook(payload, signature);
     }
 }
