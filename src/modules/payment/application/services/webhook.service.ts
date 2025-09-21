@@ -26,7 +26,6 @@ export class WebhookService {
         console.log('✅ Payment recorded:', payment.id);
     }
     
-
     // async handleSubscriptionCreated(subscriptionData: any): Promise<void> {
     //     // Business logic for subscription
     //     await this.userService.activateSubscription({

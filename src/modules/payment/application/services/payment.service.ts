@@ -37,11 +37,11 @@ export class PaymentService {
         });
 
         this.stripeHandler.onWebhookEvent('customer.subscription.created', async (event) => {
-            //await this.webhookService.handleSubscriptionCreated(event.data.object);
+            await this.webhookService.handleCheckoutCompleted(event.data.object);
         });
 
         this.stripeHandler.onWebhookEvent('invoice.payment_succeeded', async (event) => {
-           //await this.webhookService.handleInvoicePaymentSucceeded(event.data.object);
+            await this.webhookService.handleCheckoutCompleted(event.data.object);
         });
     }
 
