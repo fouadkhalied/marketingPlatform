@@ -50,7 +50,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
         // 4. Attach user to request object
         req.user = {
-            userId: parseInt(user.id),
+            userId: user.id,
             email: user.email,
             role: user.role
         };
