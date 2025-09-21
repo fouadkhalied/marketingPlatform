@@ -7,9 +7,9 @@
 	"author": "",
 	"license": "ISC",
 		"scripts": {
-  "dev": "tsx src/api/index.ts",
-  "build": "esbuild src/api/index.ts --platform=node --packages=external --bundle --format=cjs --outfile=api/index.js",
-  "start": "node src/api/index.js",
+  "dev": "tsx api/index.ts",
+  "build": "esbuild api/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+		  "start": "node dist/index.js",
 		  "check": "tsc",
 		  "db:push": "drizzle-kit push --config=src/infrastructure/config/drizzle.config.ts",
 		  "db:generate": "drizzle-kit generate --config=src/infrastructure/config/drizzle.config.ts",
