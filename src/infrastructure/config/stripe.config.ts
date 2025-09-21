@@ -12,21 +12,21 @@ const stripeConfig = {
 // CREATE the stripe instance FIRST
 export const stripe = new StripePaymentHandler(stripeConfig);
 
-// THEN add the event handlers
-stripe.onWebhookEvent('checkout.session.completed', async (event) => {
-    const session = event.data.object as any;
-    console.log('✅ Payment completed:', session.id);
-    // Handle one-time payment
-});
+// // THEN add the event handlers
+// stripe.onWebhookEvent('checkout.session.completed', async (event) => {
+//     const session = event.data.object as any;
+//     console.log('✅ Payment completed:', session.id);
+//     // Handle one-time payment
+// });
 
-stripe.onWebhookEvent('invoice.payment_succeeded', async (event) => {
-    const invoice = event.data.object as any;
-    console.log('✅ Subscription payment succeeded:', invoice.id);
-    // Handle recurring payment
-});
+// stripe.onWebhookEvent('invoice.payment_succeeded', async (event) => {
+//     const invoice = event.data.object as any;
+//     console.log('✅ Subscription payment succeeded:', invoice.id);
+//     // Handle recurring payment
+// });
 
-stripe.onWebhookEvent('customer.subscription.created', async (event) => {
-    const subscription = event.data.object as any;
-    console.log('✅ New subscription created:', subscription.id);
-    // Handle new subscriber
-});
+// stripe.onWebhookEvent('customer.subscription.created', async (event) => {
+//     const subscription = event.data.object as any;
+//     console.log('✅ New subscription created:', subscription.id);
+//     // Handle new subscriber
+// });
