@@ -1,17 +1,11 @@
 import { Request, Response } from "express";
 import { PaymentService } from "../../application/services/payment.service";
+import { WebhookService } from "../../application/services/webhook.service";
 
 export class PaymentController {
-    constructor(private readonly paymentService: PaymentService) {}
-
-    async createPayment(req: Request, res: Response) {
-        try {
-            const payment = await this.paymentService.createPayment(req.body);
-            res.status(201).json(payment);
-        } catch (err: any) {
-            res.status(400).json({ error: err.message });
-        }
-    }
+    constructor(
+        private readonly paymentService: PaymentService
+    ) {}
 
     async webhook(req : Request, res : Response) {
         try {

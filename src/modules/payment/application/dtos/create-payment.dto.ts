@@ -1,6 +1,9 @@
 export interface CreatePaymentDto {
-    amount: number;
-    currency: string;
-    userId: string;
-    method: string;
+    userId: string;                      
+    amount: number;                      
+    currency: string;                    
+    method: string;                      
+    adId?: string;                      
+    stripeSessionId?: string;            
+    stripePaymentIntentId?: string;      
 }

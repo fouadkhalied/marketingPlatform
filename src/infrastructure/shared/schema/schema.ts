@@ -44,6 +44,8 @@ export const users = pgTable("users", {
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     impressionsAllocated: integer("impressions_allocated").notNull().default(0),
     //status: purchaseStatusEnum("status").notNull().default("pending"),
+    currency: text("currency").notNull(),
+    method: text("method").notNull(),
     stripeSessionId: text("stripe_session_id"),
     stripePaymentIntentId: text("stripe_payment_intent_id"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
@@ -189,6 +191,12 @@ export const users = pgTable("users", {
     createdAt: true,
   });
   
+  export const insertPaymentSchema = createInsertSchema(purchases).omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  });
+  
   // Additional validation schemas
   export const loginSchema = z.object({
     email: z.string().email(),
@@ -216,6 +224,8 @@ export const users = pgTable("users", {
     action: z.enum(["approve", "reject", "publish"]),
     reason: z.string().optional(),
   });
+
+  
   
   // Type exports
   export type User = typeof users.$inferSelect;
@@ -228,10 +238,12 @@ export const users = pgTable("users", {
   export type ClickEvent = typeof clicksEvents.$inferSelect;
   export type AggregatedStats = typeof aggregatedStats.$inferSelect;
   export type AuditLog = typeof auditLogs.$inferSelect;
+  export type Payment = typeof purchases.$inferSelect;
   
   export type LoginData = z.infer<typeof loginSchema>;
   export type SignupData = z.infer<typeof signupSchema>;
   export type CreateAdData = z.infer<typeof createAdSchema>;
   export type PurchaseCreditsData = z.infer<typeof purchaseCreditsSchema>;
   export type AdminActionData = z.infer<typeof adminActionSchema>;
+  export type InsertPayment = z.infer<typeof insertPaymentSchema>;
   
