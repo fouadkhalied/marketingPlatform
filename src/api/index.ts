@@ -1,7 +1,7 @@
 // api/index.ts
 import express from 'express';
 
-import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
+import { createUserController } from "../modules/user/interfaces/factories/user.factories";
 const app = express();
 
 app.use(express.json()); // This is crucial!

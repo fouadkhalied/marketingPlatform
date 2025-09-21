@@ -3,15 +3,14 @@
     "installCommand": "npm install",
     "buildCommand": "npm run build",
     "devCommand": "npm run dev",
-    "rewrites": [
-      {
-        "source": "/(.*)",
-        "destination": "/api"
-      }
-    ],
     "functions": {
-      "api/index.ts": {
-        "runtime": "@vercel/node@3.0.7"
-      }
+    "api/index.js": {
+      "runtime": "@vercel/node@3.0.7"
     }
+  },
+    "routes": [
+      { "src": "/(.*)", "dest": "/api/index.js" }
+    ],
+    "outputDirectory": "." 
   }
+  
