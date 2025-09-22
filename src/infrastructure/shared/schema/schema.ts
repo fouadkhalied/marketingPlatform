@@ -113,6 +113,7 @@ export const users = pgTable("users", {
   type: varchar("type").notNull(), // e.g., "EMAIL_VERIFICATION"
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").notNull().default(false),
+  email: varchar("email").notNull().default("blank"),
 
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   });

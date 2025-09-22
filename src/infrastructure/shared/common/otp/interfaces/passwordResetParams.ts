@@ -4,4 +4,3 @@ export interface PasswordResetParams {
     subject?: string;
     expirationMinutes?: number;
 }
-  

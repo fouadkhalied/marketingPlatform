@@ -3,6 +3,7 @@ import { ApiResponseInterface } from "../../../../infrastructure/shared/common/a
 import { JwtService } from "../../../../infrastructure/shared/common/auth/module/jwt.module";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
+import { OTPResult } from "../../../../infrastructure/shared/common/otp/interfaces/optResult";
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
 import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
@@ -131,11 +132,6 @@ export class UserAppService {
         return ErrorBuilder.build(ErrorCode.USER_ALREADY_VERIFIED, "User is already verified");
       }
 
-      // In a real application, you would retrieve the stored OTP and expiration from database
-      // For this example, we'll simulate it
-      const storedOTP = "123456"; // This should come from your database
-      const storedExpiration = new Date(Date.now() + 10 * 60 * 1000); // This should come from your database
-
       const verificationResult = await this.otpService.verifyOTP(
         email, providedOTP
       );
@@ -187,6 +183,73 @@ export class UserAppService {
     }
   }
 
+  // send password reset email
+
+  async sendPasswordResetEmail(email: string) {
+    try {
+      const user = await this.userRepository.getUserByEmail(email);
+      if (!user) {
+        return ErrorBuilder.build(ErrorCode.USER_NOT_FOUND, "User not found");
+      }
+
+      const passwordResetResult = await this.otpService.sendGeneratedPasswordResetToken(email);
+
+      if (passwordResetResult.success) {
+        // In a real application, you would store the new OTP and expiration in database
+        return ResponseBuilder.success({
+          success: true,
+          message: "password reset email sent successfully"
+        });
+      } else {
+        return ErrorBuilder.build(ErrorCode.OTP_SEND_FAILED, passwordResetResult.message || "Failed to send password reset email");
+      }
+
+    } catch (error) {
+      console.error("Error resending OTP:", error);
+      return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to send password reset email");
+    }
+  } 
+
+// Assuming this is within your ApplicationService
+async verifyTokenAndChangePassword(email: string, password: string, token: string) : Promise<ApiResponseInterface<OTPResult>> {
+  try {
+      const user = await this.userRepository.getUserByEmail(email);
+      if (!user) {
+          // Fail fast if user isn't found
+          return ErrorBuilder.build(ErrorCode.USER_NOT_FOUND, "User not found");
+      }
+
+      const verifyToken = await this.otpService.verifyPasswordResetToken(email, token);
+
+      if (!verifyToken.success) {
+          // Return the specific error message from the OTPService
+          return ErrorBuilder.build(ErrorCode.OTP_VERIFICATION_FAILED, verifyToken.error?.message || "");
+      }
+
+      const updatePassword: boolean = await this.userRepository.updatePassword(email, password);
+
+      if (updatePassword) {
+          // Attempt to delete the token. Log the error but don't fail the entire process
+          // since the password was already updated.
+          const deleteResult = await this.otpService.deletePasswordResetToken(token);
+          if (!deleteResult.success) {
+              // Log the failure to delete the token for debugging
+              console.warn(`Failed to delete token for email ${email}: ${deleteResult.message}`);
+          }
+
+          return { success: true, message: "Password updated successfully." };
+      } else {
+          // Handle the case where the password update itself failed
+          return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to update password.");
+      }
+  } catch (error) {
+      // Log the error for debugging purposes
+      console.error("Error in verifyTokenAndChangePassword:", error);
+      
+      // Return a generic error message to the client
+      return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to complete password reset.");
+  }
+}
   // Update Stripe info
   async updateUserStripeInfo(
     id: string,

@@ -47,6 +47,20 @@ interface ResendOTPRequest extends Request {
   };
 }
 
+interface ResetPasswordRequest extends Request {
+  body: {
+    email: string;
+  };
+}
+
+export interface UpdatePasswordRequest extends Request {
+   body: {
+    email: string;
+    password: string;
+    token: string;
+   };
+  }
+
 export interface CheckVerificationRequest extends Request {
   query: {
     email: string;
@@ -291,6 +305,80 @@ export class UserController {
       });
     }
   }
+
+  // Resend verification OTP
+  async sendPasswordResetEmail(req: ResetPasswordRequest, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+         res.status(400).json({
+          success: false,
+          message: 'Email is required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Email is required'
+          }
+        });
+      }
+
+      const result = await this.userService.sendPasswordResetEmail(email);
+      const statusCode = this.getStatusCode(result);
+      
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error('Error resending OTP:', err);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Failed to resend verification OTP',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to resend verification OTP',
+          details: err.message
+        }
+      });
+    }
+  }
+
+
+
+  async updatePassword(req: UpdatePasswordRequest, res: Response): Promise<void> {
+      try {
+       const { email, password, token } = req.body;
+    
+       // Validate that all required fields are present
+       if (!email || !password || !token) {
+        res.status(400).json({
+         success: false,
+         message: 'Email, password, and token are required',
+         error: {
+          code: 'MISSING_REQUIRED_FIELD',
+          message: 'Email, password, and token are required',
+         },
+        });
+        return;
+       }
+    
+       // Call the application service method to handle the business logic
+       const result = await this.userService.verifyTokenAndChangePassword(email, password, token);
+       const statusCode = this.getStatusCode(result);
+    
+       res.status(statusCode).json(result);
+      } catch (err: any) {
+       console.error('Error updating password:', err);
+    
+       res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: {
+         code: 'INTERNAL_SERVER_ERROR',
+         message: 'Failed to update password',
+         details: err.message,
+        },
+       });
+      }
+     }
 
   // Check verification status
   async checkVerificationStatus(req: CheckVerificationRequest, res: Response): Promise<void> {

@@ -51,7 +51,9 @@ app.post('/api/auth/register' , (req,res) => userController.createUser(req,res))
 app.post('/api/auth/verify', (req,res) => userController.verifyUser(req,res));
 app.post('/api/auth/resend-otp', (req,res) => userController.resendVerificationOTP(req,res));
 app.get('/api/auth/verification-status', (req,res) => userController.checkVerificationStatus(req as CheckVerificationRequest ,res));
-app.post('/api/auth/login', (req,res) => userController.login(req,res))
+app.post('/api/auth/login', (req,res) => userController.login(req,res));
+app.post('/api/auth/password-reset-email', (req,res) => userController.sendPasswordResetEmail(req,res));
+app.post('/api/auth/password-reset', (req,res) => userController.updatePassword(req,res));
 
 // payment with stripe
 

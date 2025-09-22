@@ -4,10 +4,13 @@ import { ErrorCode } from "../../errors/enums/basic.error.enum";
 import { ErrorBuilder } from "../../errors/errorBuilder";
 import { OTPResult } from "../interfaces/optResult";
 import { VerificationEmailParams } from "../interfaces/verificationEmailParams";
-import { otps } from "../../../schema/schema";
+import { otps, users } from "../../../schema/schema";
 import { db } from "../../../../db/connection";
 import crypto from 'crypto'; 
 import { PasswordResetParams } from "../interfaces/passwordResetParams";
+import { PasswordResetResult } from "../interfaces/passwordResetResult";
+import { ResponseBuilder } from "../../apiResponse/apiResponseBuilder";
+import { ApiResponseInterface } from "../../apiResponse/interfaces/apiResponse.interface";
 
 export class OTPService {
   private readonly DEFAULT_EXPIRATION_MINUTES = 10;
@@ -26,10 +29,126 @@ export class OTPService {
   }
 
 
-  async sendGeneratedPasswordResetToken(payload: PasswordResetParams) {
+  async sendGeneratedPasswordResetToken(email: string): Promise<PasswordResetResult> {
     
-  }
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    
+    if (!user) {
+        // NOTE: We return a success message here to prevent user enumeration attacks.
+        // It's a security best practice to not reveal if a user exists or not.
+        return ResponseBuilder.success({
+            success: true,
+            message: "If a user with that email exists, a password reset link has been sent.",
+        });
+    }
 
+    try {
+        const { plaintextToken, hashedToken } = this.generatePasswordResetToken();
+        const expiresAt = this.calculateExpirationTime(15);
+
+        await db.insert(otps)
+            .values({
+                id: hashedToken,
+                otpCode: hashedToken,
+                type: "PASSWORD_RESET",
+                email: email,
+                expiresAt,
+                used: false,
+                createdAt: new Date(),
+            })
+            .onConflictDoUpdate({
+                target: otps.id,
+                set: {
+                    otpCode: plaintextToken,
+                    expiresAt,
+                    used: false,
+                },
+            });
+
+        const resetUrl = `https://your-app-domain.com/reset-password?token=${plaintextToken}`;
+        const emailHtml = this.generatePasswordResetEmailTemplate(resetUrl, 15);
+        
+        const emailResult = await this.emailService.sendVerificationEmail(
+            email,
+            "Password Reset",
+            emailHtml
+        );
+
+        if (!emailResult.success) {
+            return ErrorBuilder.build(ErrorCode.EXTERNAL_SERVICE_ERROR, "Failed to send password reset email.");
+        }
+
+        return {
+            success: true,
+            message: "Password reset email sent successfully.",
+            url: resetUrl,
+            expiresAt,
+        };
+
+    } catch (error) {
+        console.error("Failed to send password reset email:", error);
+        return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to initiate password reset.");
+    }
+}
+
+
+
+  // in your OTPService or a dedicated PasswordResetService
+  
+
+async verifyPasswordResetToken(email: string, token: string): Promise<ApiResponseInterface<OTPResult>> {
+  try {
+      // Step 1: Create the hash from the token to use for a secure lookup.
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+      
+      // Step 2: Find the token record in the database using the secure hash.
+      const [record] = await db.select().from(otps).where(eq(otps.otpCode, hashedToken));
+
+      // Step 3: Validate the record in the correct, sequential order.
+      if (!record) {
+        return ErrorBuilder.build(ErrorCode.VALIDATION_ERROR, "record does not exsist");
+      }
+      if (record.type.toUpperCase() !== "PASSWORD_RESET") {
+          return ErrorBuilder.build(ErrorCode.VALIDATION_ERROR, "Invalid or expired token.");
+        }
+      if (new Date() > new Date(record.expiresAt)) {
+          return ErrorBuilder.build(ErrorCode.VALIDATION_ERROR, "Token has expired.");
+      }
+      if (record.used) {
+          return ErrorBuilder.build(ErrorCode.VALIDATION_ERROR, "Token has already been used.");
+      }
+  
+      if (record.email !== email) { 
+          return ErrorBuilder.build(ErrorCode.VALIDATION_ERROR, "Token is not for this email address.");
+      }
+
+      return { success: true, message: "Token is valid." };
+
+  } catch (error) {
+      console.error("Token verification failed:", error);
+      return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Token verification failed.");
+  }
+}
+
+async deletePasswordResetToken(token: string): Promise<OTPResult> {
+  try {
+      // Step 1: Hash the plaintext token to get the secure lookup key.
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+      // Step 2: Delete the record from the database using the secure hash.
+      const result = await db.delete(otps).where(eq(otps.otpCode, hashedToken));
+
+      if (result.rowCount === 0) {
+          return ErrorBuilder.build(ErrorCode.INVALID_OTP, "Token not found for deletion.");
+      }
+
+      return { success: true, message: "Token deleted successfully." };
+
+  } catch (error) {
+      console.error("Failed to delete password reset token:", error);
+      return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to delete token.");
+  }
+}
 
   // OTP generation methods
 
@@ -150,6 +269,22 @@ export class OTPService {
       </div>
     `;
   }
+
+  private generatePasswordResetEmailTemplate(resetUrl: string, expirationMinutes: number): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Password Reset Request</h2>
+        <p>Hello,</p>
+        <p>You have requested to reset your password. Click the link below to continue:</p>
+        <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px;">
+            Reset Password
+        </a>
+        <p>This link will expire in ${expirationMinutes} minutes.</p>
+        <p>If you did not request a password reset, please ignore this email.</p>
+      </div>
+    `;
+  }
+
 
   private async upsertOTP(email: string, newOTP: string, expiresAt: Date) {
     const sanitizedEmail = email.trim().toLowerCase();

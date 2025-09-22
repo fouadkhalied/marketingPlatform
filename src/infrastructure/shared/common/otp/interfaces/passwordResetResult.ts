@@ -3,4 +3,4 @@ export interface PasswordResetResult {
     message?: string;
     url?: string;
     expiresAt?: Date;
-  }
+}

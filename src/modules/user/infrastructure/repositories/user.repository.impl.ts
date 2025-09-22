@@ -70,6 +70,22 @@ export class UserRepositoryImpl implements userInterface {
       
         return user;
       }
+
+
+      async updatePassword(email: string, newPassword: string): Promise<boolean> {
+            // Step 1: Hash the new password securely
+            const hashedPassword = await this.hashPassword(newPassword);
+        
+            // Step 2: Update the user's password in the database
+            const [updatedUser] = await db
+                .update(users)
+                .set({ password: hashedPassword, updatedAt: new Date() })
+                .where(eq(users.email, email))
+                .returning();
+
+            // Step 3: Check if a user was actually updated and return a boolean
+            return !!updatedUser;
+        }
     
       async updateUserStripeInfo(id: string, customerId: string, subscriptionId?: string): Promise<User> {
         const [user] = await db
