@@ -1,6 +1,6 @@
-export interface VerificationEmailParams {
+export interface PasswordResetParams {
     email: string;
-    otp: string;
+    hashedToken: string;
     subject?: string;
     expirationMinutes?: number;
 }

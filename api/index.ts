@@ -1,5 +1,6 @@
 // api/index.ts
 import express from 'express';
+import cors from 'cors';
 
 import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
 import { createPaymentController } from "../src/modules/payment/interfaces/factories/payment.factory";
@@ -8,6 +9,20 @@ import { UserRole } from "../src/infrastructure/shared/common/auth/enums/userRol
 import { CheckVerificationRequest } from "../src/modules/user/interfaces/controllers/user.controller";
 
 const app = express();
+
+// apply cors 
+// ✅ Enable CORS
+app.use(cors({
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5000",
+      "https://marketing-platform-ten.vercel.app"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true, // keep this true if using cookies/JWT in headers
+  }));
+  
 
 // Apply raw body parser specifically to webhook route BEFORE other middleware
 app.use('/webhook', express.raw({ type: 'application/json' }));

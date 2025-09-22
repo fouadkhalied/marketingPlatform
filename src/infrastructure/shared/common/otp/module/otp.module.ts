@@ -6,12 +6,32 @@ import { OTPResult } from "../interfaces/optResult";
 import { VerificationEmailParams } from "../interfaces/verificationEmailParams";
 import { otps } from "../../../schema/schema";
 import { db } from "../../../../db/connection";
+import crypto from 'crypto'; 
+import { PasswordResetParams } from "../interfaces/passwordResetParams";
 
 export class OTPService {
   private readonly DEFAULT_EXPIRATION_MINUTES = 10;
   private readonly DEFAULT_SUBJECT = "Verify your account";
 
   constructor(private readonly emailService: EmailService) {}
+
+  generatePasswordResetToken(): { plaintextToken: string; hashedToken: string } {
+    // Generates a cryptographically secure random string
+    const plaintextToken = crypto.randomBytes(32).toString('hex');
+    
+    // Creates a SHA-256 hash (fingerprint) of the token for secure storage
+    const hashedToken = crypto.createHash('sha256').update(plaintextToken).digest('hex');
+
+    return { plaintextToken, hashedToken };
+  }
+
+
+  async sendGeneratedPasswordResetToken(payload: PasswordResetParams) {
+    
+  }
+
+
+  // OTP generation methods
 
   generateOTP(length: number = 6): string {
     const digits = "0123456789";
