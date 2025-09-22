@@ -3,8 +3,9 @@ import express from 'express';
 
 import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
 import { createPaymentController } from "../src/modules/payment/interfaces/factories/payment.factory";
-import { AuthMiddleware } from "../src/infrastructure/shared/common/auth/module/authModule"
-import { UserRole } from "../src/infrastructure/shared/common/auth/enums/userRole"
+import { AuthMiddleware } from "../src/infrastructure/shared/common/auth/module/authModule";
+import { UserRole } from "../src/infrastructure/shared/common/auth/enums/userRole";
+import { CheckVerificationRequest } from "../src/modules/user/interfaces/controllers/user.controller";
 
 const app = express();
 
@@ -32,6 +33,10 @@ app.get('/', (req, res) => {
 
 app.post('/api/auth/register' , (req,res) => userController.createUser(req,res));
 
+app.post('/api/auth/verify', (req,res) => userController.verifyUser(req,res));
+app.post('/api/auth/resend-otp', (req,res) => userController.resendVerificationOTP(req,res));
+app.get('/api/auth/verification-status', (req,res) => userController.checkVerificationStatus(req as CheckVerificationRequest ,res));
+app.post('/api/auth/login', (req,res) => userController.login(req,res))
 
 // payment with stripe
 

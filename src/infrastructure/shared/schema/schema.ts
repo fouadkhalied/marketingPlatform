@@ -14,6 +14,7 @@ export const users = pgTable("users", {
     email: text("email").notNull().unique(),
     password: text("password").notNull(),
     role: userRoleEnum("role").notNull().default("advertiser"),
+    verified: boolean("verified").notNull().default(false),
     freeViewsCredits: integer("free_views_credits").notNull().default(10000),
     stripeCustomerId: text("stripe_customer_id"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
@@ -101,6 +102,21 @@ export const users = pgTable("users", {
     userAgent: text("user_agent"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
   });
+
+
+  export const otps = pgTable("otps", {
+  // Cache key — could be "email:otp"
+  id: varchar("id").primaryKey(),  
+
+  // Metadata
+  otpCode: varchar("otpCode").notNull(),
+  type: varchar("type").notNull(), // e.g., "EMAIL_VERIFICATION"
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  });
+
   
   // Relations
   export const usersRelations = relations(users, ({ many }) => ({
