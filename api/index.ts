@@ -3,8 +3,8 @@ import express from 'express';
 
 import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
 import { createPaymentController } from "../src/modules/payment/interfaces/factories/payment.factory";
-import { AuthenticatedRequest } from "../src/modules/payment/interfaces/controllers/payment.controller";
-import { authenticateToken } from "../src/modules/user/application/services/auth-app.service";
+import { AuthMiddleware } from "../src/infrastructure/shared/common/auth/module/authModule"
+import { UserRole } from "../src/infrastructure/shared/common/auth/enums/userRole"
 
 const app = express();
 
@@ -37,7 +37,7 @@ app.post('/api/auth/register' , (req,res) => userController.createUser(req,res))
 
 app.post('/webhook', (req,res) => paymentController.webhook(req,res))
 
-app.post('/api/payment/createSessionUrl' , authenticateToken ,(req ,res) => paymentController.createSession(req as AuthenticatedRequest ,res))
+app.post('/api/payment/createSessionUrl' , AuthMiddleware(UserRole.ADVERTISER) , (req ,res) => paymentController.createSession(req ,res))
 
 // Local dev listener (ignored on Vercel)
 app.listen(3000, () => console.log('Server running on http://localhost:3000'));

@@ -5,10 +5,10 @@ import { PaymentRepository } from "../../domain/repositories/payment.repository"
 import { Payment } from "../../domain/entities/payment.entity";
 import { stripe } from "../../../../infrastructure/config/stripe.config";
 import { StripePaymentHandler } from "../../../../infrastructure/shared/stripe/stripe";
-
-export interface AuthenticatedRequest extends Request {
-    user?: { userId: number; email: string; adsId: number };
-}
+import { ApiResponseInterface } from '../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface';
+import { ResponseBuilder } from '../../../../infrastructure/shared/common/apiResponse/apiResponseBuilder';
+import { ErrorCode } from '../../../../infrastructure/shared/common/errors/enums/basic.error.enum';
+import { ErrorBuilder } from '../../../../infrastructure/shared/common/errors/errorBuilder';
 
 export class PaymentService {
     private readonly stripeHandler: StripePaymentHandler;
@@ -21,7 +21,7 @@ export class PaymentService {
         this.setupWebhookHandlers();
     }
 
-    async createCheckoutSession(req: AuthenticatedRequest, res: Response): Promise<void> {
+    async createCheckoutSession(req: Request, res: Response): Promise<ApiResponseInterface<{url : string , sessionId : string}>> {
         // Validation is now handled in controller, service just processes the business logic
         const paymentDto: newPaymentDto = req.body;
 
@@ -36,17 +36,24 @@ export class PaymentService {
             successUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/cancel`,
             metadata: {
-                userId: req.user!.userId.toString(), // Safe to use ! since validation is in controller
+                userId: req.user!.id.toString(), // Safe to use ! since validation is in controller
                 adId: paymentDto.adId,
                 amount: paymentDto.amount.toString(),
                 adsId: paymentDto.adId
             }
         });
 
-        res.json({ 
-            url: session.url,
-            sessionId: session.id
-        });
+        if (!session.url) {
+            return ErrorBuilder.build(
+                ErrorCode.EXTERNAL_SERVICE_ERROR,
+                'Failed to create payment session. Please try again.'
+            )
+        }
+
+        return ResponseBuilder.success({
+            url : session.url , 
+            sessionId : session.id
+        })
     }
 
     async createStripePayment(dto: CreatePaymentDto): Promise<Payment> {

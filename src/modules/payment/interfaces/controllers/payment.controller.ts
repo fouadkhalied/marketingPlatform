@@ -1,23 +1,19 @@
 import { Request, Response } from "express";
 import { PaymentService } from "../../application/services/payment.service";
 
-export interface AuthenticatedRequest extends Request {
-  user?: { userId: number; email: string; adsId: number };
-}
-
 export class PaymentController {
     constructor(
         private readonly paymentService: PaymentService
     ) {}
 
-    async createSession(req: AuthenticatedRequest, res: Response) {
+    async createSession(req: Request, res: Response) {
       try {
           console.log('💳 Creating checkout session');
           console.log('👤 User:', req.user);
           console.log('📦 Request body:', req.body);
           
           // Validation: Check if user is authenticated
-          if (!req.user?.userId) {
+          if (!req.user?.id) {
               return res.status(401).json({ error: 'User not authenticated' });
           }
 
@@ -37,7 +33,15 @@ export class PaymentController {
           }
 
           // Call service after validation passes
-          await this.paymentService.createCheckoutSession(req, res);
+          const serviceResponse = await this.paymentService.createCheckoutSession(req, res);
+
+          if (serviceResponse.success) {
+             res.status(200).send(serviceResponse)
+          } else {
+            const statusCode = serviceResponse.error?.details.httpStatus || 500
+            res.status(statusCode).send(serviceResponse)
+          }
+         
           
       } catch (error: any) {
           console.error('❌ Create session error:', error);
