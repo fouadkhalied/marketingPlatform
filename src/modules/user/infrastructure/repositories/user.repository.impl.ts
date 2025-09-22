@@ -3,7 +3,6 @@ import { userInterface } from "../../domain/repositories/user.repository";
 
 import { eq, and, desc, gte, lte, count, sum } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { randomUUID } from "crypto";
 import { CreateUser, User, users } from "../../../../infrastructure/shared/schema/schema";
 
 export class UserRepositoryImpl implements userInterface {
@@ -52,6 +51,23 @@ export class UserRepositoryImpl implements userInterface {
           .set({ ...updates, updatedAt: new Date() })
           .where(eq(users.id, id))
           .returning();
+        return user;
+      }
+
+      async verifyUser(id: string): Promise<User> {
+        const [user] = await db
+          .update(users)
+          .set({
+            verified: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, id))
+          .returning();
+      
+        if (!user) {
+          throw new Error("User not found");
+        }
+      
         return user;
       }
     

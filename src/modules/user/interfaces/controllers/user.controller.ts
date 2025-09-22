@@ -2,10 +2,19 @@
 import { Request, Response } from 'express';
 import { UserAppService } from "../../application/services/user-app.service";
 import { CreateUser } from '../../../../infrastructure/shared/schema/schema';
+import { ApiResponseInterface } from '../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface';
+import { ERROR_STATUS_MAP } from '../../../../infrastructure/shared/common/errors/mapper/mapperErrorEnum';
 
 // Custom request interfaces for better type safety
 interface CreateUserRequest extends Request {
   body: CreateUser;
+}
+
+interface LoginRequest extends Request {
+  body: {
+    email: string;
+    password: string;
+  };
 }
 
 interface GetUserByIdRequest extends Request {
@@ -25,163 +34,346 @@ interface UpdateStripeInfoRequest extends Request {
   body: { customerId: string; subscriptionId?: string };
 }
 
-// Standardized response interface
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
+interface VerifyUserRequest extends Request {
+  body: {
+    email: string;
+    otp: string;
+  };
+}
+
+interface ResendOTPRequest extends Request {
+  body: {
+    email: string;
+  };
+}
+
+export interface CheckVerificationRequest extends Request {
+  query: {
+    email: string;
+  };
 }
 
 export class UserController {
   constructor(private readonly userService: UserAppService) {}
 
+  // Helper method to get status code from error code
+  private getStatusCode(response: ApiResponseInterface<any>): number {
+    if (response.success) {
+      return 200;
+    }
+    
+    if (response.error?.code && ERROR_STATUS_MAP[response.error.code as keyof typeof ERROR_STATUS_MAP]) {
+      return ERROR_STATUS_MAP[response.error.code as keyof typeof ERROR_STATUS_MAP];
+    }
+    
+    return 500; // Default to internal server error
+  }
+
   // Create a new user
-  async createUser(req: CreateUserRequest, res: Response): Promise<Response<ApiResponse>> {
+  async createUser(req: CreateUserRequest, res: Response): Promise<void> {
     try {
-      const newUser = await this.userService.createUser(req.body);
+      const result = await this.userService.createUser(req.body);
+      const statusCode = this.getStatusCode(result);
       
-      return res.status(201).json({
-        success: true,
-        data: newUser,
-        message: 'User created successfully'
-      });
+      // Use 201 for successful creation, otherwise use the error status
+      const responseStatusCode = result.success ? 201 : statusCode;
+      
+      res.status(responseStatusCode).json(result);
     } catch (err: any) {
       console.error('Error creating user:', err);
       
-      return res.status(400).json({
+      res.status(500).json({
         success: false,
-        error: err.message || 'Failed to create user'
+        message: 'Internal server error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create user',
+          details: err.message
+        }
+      });
+    }
+  }
+
+  // Login user
+  async login(req: LoginRequest, res: Response): Promise<void> {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        res.status(400).json({
+          success: false,
+          message: 'Email and password are required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Email and password are required'
+          }
+        });
+        return;
+      }
+
+      const result = await this.userService.login(email, password);
+      const statusCode = this.getStatusCode(result);
+      
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error('Error during login:', err);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Login failed',
+          details: err.message
+        }
       });
     }
   }
 
   // Get user by ID
-  async getUser(req: GetUserByIdRequest, res: Response): Promise<Response<ApiResponse>> {
+  async getUser(req: GetUserByIdRequest, res: Response): Promise<void> {
     try {
-      const user = await this.userService.getUser(req.params.id);
+      const result = await this.userService.getUser(req.params.id);
+      const statusCode = this.getStatusCode(result);
       
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: "User not found"
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: user
-      });
+      res.status(statusCode).json(result);
     } catch (err: any) {
       console.error('Error fetching user:', err);
       
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        message: 'Internal server error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch user',
+          details: err.message
+        }
       });
     }
   }
 
   // Get user by email
-  async getUserByEmail(req: GetUserByEmailRequest, res: Response): Promise<Response<ApiResponse>> {
+  async getUserByEmail(req: GetUserByEmailRequest, res: Response): Promise<void> {
     try {
       const { email } = req.query;
       
       if (!email) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
-          error: 'Email parameter is required'
+          message: 'Email parameter is required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Email parameter is required'
+          }
         });
+        return;
       }
 
-      const user = await this.userService.getUserByEmail(email);
+      const result = await this.userService.getUserByEmail(email);
+      const statusCode = this.getStatusCode(result);
       
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: "User not found"
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: user
-      });
+      res.status(statusCode).json(result);
     } catch (err: any) {
       console.error('Error fetching user by email:', err);
       
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        message: 'Internal server error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch user by email',
+          details: err.message
+        }
       });
     }
   }
 
   // Get user by username
-  async getUserByUsername(req: GetUserByUsernameRequest, res: Response): Promise<Response<ApiResponse>> {
+  async getUserByUsername(req: GetUserByUsernameRequest, res: Response): Promise<void> {
     try {
       const { username } = req.query;
       
       if (!username) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
-          error: 'Username parameter is required'
+          message: 'Username parameter is required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Username parameter is required'
+          }
         });
       }
 
-      const user = await this.userService.getUserByUsername(username);
+      const result = await this.userService.getUserByUsername(username);
+      const statusCode = this.getStatusCode(result);
       
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: "User not found"
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: user
-      });
+      res.status(statusCode).json(result);
     } catch (err: any) {
       console.error('Error fetching user by username:', err);
       
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        message: 'Internal server error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch user by username',
+          details: err.message
+        }
+      });
+    }
+  }
+
+  async verifyUser(req: VerifyUserRequest, res: Response): Promise<void> {
+    try {
+      const { email, otp } = req.body;
+      
+      if (!email || !otp) {
+        res.status(400).json({
+          success: false,
+          message: 'Email and OTP are required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Email and OTP are required'
+          }
+        });
+      }
+
+      const result = await this.userService.verifyUser(email, otp);
+      const statusCode = this.getStatusCode(result);
+      
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error('Error verifying user:', err);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error during verification',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to verify user',
+          details: err.message
+        }
+      });
+    }
+  }
+
+  // Resend verification OTP
+  async resendVerificationOTP(req: ResendOTPRequest, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+         res.status(400).json({
+          success: false,
+          message: 'Email is required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Email is required'
+          }
+        });
+      }
+
+      const result = await this.userService.resendVerificationOTP(email);
+      const statusCode = this.getStatusCode(result);
+      
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error('Error resending OTP:', err);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Failed to resend verification OTP',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to resend verification OTP',
+          details: err.message
+        }
+      });
+    }
+  }
+
+  // Check verification status
+  async checkVerificationStatus(req: CheckVerificationRequest, res: Response): Promise<void> {
+    try {
+      const { email } = req.query;
+      
+      if (!email) {
+        res.status(400).json({
+          success: false,
+          message: 'Email parameter is required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Email parameter is required'
+          }
+        });
+      }
+
+      const result = await this.userService.getUserByEmail(email);
+      const statusCode = this.getStatusCode(result);
+      
+      if (result.success && result.data) {
+        res.status(200).json({
+          success: true,
+          message: result.data.verified ? 'User is verified' : 'User is not verified',
+          data: {
+            isVerified: result.data.verified,
+            email: result.data.email
+          }
+        });
+      } else {
+        res.status(statusCode).json(result);
+      }
+    } catch (err: any) {
+      console.error('Error checking verification status:', err);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Failed to check verification status',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to check verification status',
+          details: err.message
+        }
       });
     }
   }
 
   // Update Stripe info
-  async updateUserStripeInfo(req: UpdateStripeInfoRequest, res: Response): Promise<Response<ApiResponse>> {
+  async updateUserStripeInfo(req: UpdateStripeInfoRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const { customerId, subscriptionId } = req.body;
 
       if (!customerId) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
-          error: 'Customer ID is required'
+          message: 'Customer ID is required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Customer ID is required'
+          }
         });
       }
 
-      const updatedUser = await this.userService.updateUserStripeInfo(
+      const result = await this.userService.updateUserStripeInfo(
         id,
         customerId,
         subscriptionId
       );
-
-      return res.status(200).json({
-        success: true,
-        data: updatedUser,
-        message: 'Stripe information updated successfully'
-      });
+      
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
     } catch (err: any) {
       console.error('Error updating Stripe info:', err);
       
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        error: 'Failed to update Stripe information'
+        message: 'Failed to update Stripe information',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update Stripe information',
+          details: err.message
+        }
       });
     }
   }

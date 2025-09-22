@@ -6,5 +6,6 @@ export interface userInterface {
     getUserByUsername(username: string): Promise<User | undefined>;
     createUser(user: CreateUser): Promise<User>;
     updateUser(id: string, updates: Partial<User>): Promise<User>;
+    verifyUser(id: string): Promise<User | undefined>
     updateUserStripeInfo(id: string, customerId: string, subscriptionId?: string): Promise<User>;
 }

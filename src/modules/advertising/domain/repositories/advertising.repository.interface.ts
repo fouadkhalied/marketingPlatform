@@ -1,7 +1,9 @@
-import { Advertising } from "../entities/advertising.entity";
+﻿import { Advertising } from "../entities/advertising.entity";
 
 export interface IAdvertisingRepository {
-  save(ad: Advertising): Promise<void>;
-  findById(id: string): Promise<Advertising | null>;
-  findAll(): Promise<Advertising[]>;
+    create(ad: Advertising): Promise<Advertising>;
+    findById(id: string): Promise<Advertising | null>;
+    findAll(): Promise<Advertising[]>;
+    update(id: string, ad: Partial<Advertising>): Promise<Advertising | null>;
+    delete(id: string): Promise<void>;
 }

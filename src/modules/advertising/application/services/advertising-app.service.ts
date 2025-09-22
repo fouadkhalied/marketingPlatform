@@ -1,23 +1,26 @@
-import { Advertising } from "../../domain/entities/advertising.entity";
+﻿import { Advertising } from "../../domain/entities/advertising.entity";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
-import { AdvertisingFactory } from "../../domain/factories/advertising.factory";
 
 export class AdvertisingAppService {
-  constructor(private readonly repo: IAdvertisingRepository) {}
+    constructor(private readonly advertisingRepository: IAdvertisingRepository) {}
 
-  async createAd(
-    title: string,
-    description: string,
-    budget: number,
-    startDate: Date,
-    endDate: Date
-  ): Promise<Advertising> {
-    const ad = AdvertisingFactory.create(title, description, budget, startDate, endDate);
-    await this.repo.save(ad);
-    return ad;
-  }
+    async createAd(ad: Advertising): Promise<Advertising> {
+        return await this.advertisingRepository.create(ad);
+    }
 
-  async getAllAds(): Promise<Advertising[]> {
-    return this.repo.findAll();
-  }
+    async getAdById(id: string): Promise<Advertising | null> {
+        return await this.advertisingRepository.findById(id);
+    }
+
+    async listAds(): Promise<Advertising[]> {
+        return await this.advertisingRepository.findAll();
+    }
+
+    async updateAd(id: string, ad: Partial<Advertising>): Promise<Advertising | null> {
+        return await this.advertisingRepository.update(id, ad);
+    }
+
+    async deleteAd(id: string): Promise<void> {
+        return await this.advertisingRepository.delete(id);
+    }
 }

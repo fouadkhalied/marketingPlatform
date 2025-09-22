@@ -1,22 +1,17 @@
-export class Advertising {
-  constructor(
-    public id: string,
-    public title: string,
-    public description: string,
-    public budget: number,
-    public startDate: Date,
-    public endDate: Date
-  ) {}
-
-  isActive(): boolean {
-    const now = new Date();
-    return now >= this.startDate && now <= this.endDate;
-  }
-
-  increaseBudget(amount: number): void {
-    if (amount <= 0) {
-      throw new Error("Amount must be positive");
-    }
-    this.budget += amount;
-  }
+﻿export class Advertising {
+    constructor(
+        public id: string,
+        public userId: string,
+        public titleEn: string,
+        public titleAr: string,
+        public descriptionEn: string,
+        public descriptionAr: string,
+        public targetUrl: string,
+        public imageUrl?: string,
+        public status: string = "draft",
+        public targetAudience?: string,
+        public budgetType?: string,
+        public createdAt?: Date,
+        public updatedAt?: Date,
+    ) {}
 }
