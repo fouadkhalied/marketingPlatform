@@ -5,7 +5,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
-export const adStatusEnum = pgEnum("ad_status", ["draft", "pending", "approved", "rejected", "published", "paused"]);
+export const adStatusEnum = pgEnum("ad_status", ["pending", "approved", "rejected"]);
 export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "completed", "failed", "refunded"]);
 
 export const users = pgTable("users", {
@@ -30,7 +30,7 @@ export const users = pgTable("users", {
     descriptionAr: text("description_ar").notNull(),
     targetUrl: text("target_url").notNull(),
     imageUrl: text("image_url"),
-    status: adStatusEnum("status").notNull().default("draft"),
+    status: adStatusEnum("status").notNull().default("pending"),
     targetAudience: text("target_audience"),
     budgetType: text("budget_type"), // "impressions" or "clicks"
     publishToken: text("publish_token"),
@@ -174,6 +174,7 @@ export const users = pgTable("users", {
   // Zod schemas
   export const insertUserSchema = createInsertSchema(users).omit({
     id: true,
+    
     createdAt: true,
     updatedAt: true,
     freeViewsCredits: true,
@@ -182,7 +183,7 @@ export const users = pgTable("users", {
   
   export const insertAdSchema = createInsertSchema(ads).omit({
     id: true,
-    userId: true,
+    //userId: true,
     //status: true,
     publishToken: true,
     approvedBy: true,
@@ -249,8 +250,10 @@ export const users = pgTable("users", {
   // Type exports
   export type User = typeof users.$inferSelect;
   export type CreateUser = z.infer<typeof insertUserSchema>;
+
   export type Ad = typeof ads.$inferSelect;
   export type InsertAd = z.infer<typeof insertAdSchema>;
+  
   export type Purchase = typeof purchases.$inferSelect;
   export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
   export type ImpressionEvent = typeof impressionsEvents.$inferSelect;

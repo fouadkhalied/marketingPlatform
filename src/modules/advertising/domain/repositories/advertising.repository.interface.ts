@@ -1,9 +1,10 @@
-﻿import { Advertising } from "../entities/advertising.entity";
+﻿import { Ad, InsertAd } from "../../../../infrastructure/shared/schema/schema";
+import { Advertising } from "../entities/advertising.entity";
 
 export interface IAdvertisingRepository {
-    create(ad: Advertising): Promise<Advertising>;
-    findById(id: string): Promise<Advertising | null>;
-    findAll(): Promise<Advertising[]>;
-    update(id: string, ad: Partial<Advertising>): Promise<Advertising | null>;
+    create(ad: InsertAd): Promise<InsertAd>;
+    findById(id: string): Promise<Ad | null>;
+    findAll(): Promise<Ad[]>;
+    update(id: string, ad: Partial<Ad>): Promise<Ad | null>;
     delete(id: string): Promise<void>;
 }

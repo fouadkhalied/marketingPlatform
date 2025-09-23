@@ -14,6 +14,7 @@ import { createPaymentController } from "../src/modules/payment/interfaces/facto
 import { AuthMiddleware } from "../src/infrastructure/shared/common/auth/module/authModule";
 import { UserRole } from "../src/infrastructure/shared/common/auth/enums/userRole";
 import { CheckVerificationRequest } from "../src/modules/user/interfaces/controllers/user.controller";
+import { createAdvertisingController } from "../src/modules/advertising/interfaces/factories/advertising.factory";
 
 const app = express();
 
@@ -233,6 +234,8 @@ const sanitizeInput = (req: express.Request, res: express.Response, next: expres
 
 const userController = createUserController();
 const paymentController = createPaymentController();
+const advertisingController = createAdvertisingController()
+
 
 // Apply global rate limiting and security
 app.use(globalLimiter);
@@ -295,6 +298,9 @@ app.post('/api/payment/createSessionUrl',
   AuthMiddleware(UserRole.USER),
   (req, res) => paymentController.createSession(req, res)
 );
+
+// Adverstising routes
+app.post('/api/advertising',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.createAd(req,res))
 
 // ============================================
 // 10. ERROR HANDLING
