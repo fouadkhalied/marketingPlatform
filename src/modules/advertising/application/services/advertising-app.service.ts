@@ -127,4 +127,33 @@ export class AdvertisingAppService {
       );
     }
   }
+
+  
+  async approveAd(id: string): Promise<ApiResponseInterface<Ad>> {
+    try {
+      const approvedAd = await this.advertisingRepository.approveAd(id);
+
+      return ResponseBuilder.success(approvedAd);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while approving ad",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  async rejectAd(id: string, reason?: string): Promise<ApiResponseInterface<Ad>> {
+    try {
+      const rejectedAd = await this.advertisingRepository.rejectAd(id, reason);
+
+      return ResponseBuilder.success(rejectedAd);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while rejecting ad",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
 }
