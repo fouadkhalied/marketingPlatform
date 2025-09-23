@@ -179,9 +179,6 @@ async deletePasswordResetToken(token: string): Promise<OTPResult> {
       if (!email || !otp) {
         return ErrorBuilder.build(ErrorCode.VALIDATION_ERROR, "Email and OTP are required");
       }
-      if (!this.isValidEmail(email)) {
-        return ErrorBuilder.build(ErrorCode.VALIDATION_ERROR, "Invalid email format");
-      }
 
       const expiresAt = this.calculateExpirationTime(expirationMinutes);
 
@@ -190,6 +187,9 @@ async deletePasswordResetToken(token: string): Promise<OTPResult> {
       const htmlContent = this.generateEmailTemplate(otp, expirationMinutes);
 
       const emailResult = await this.emailService.sendVerificationEmail(email, subject, htmlContent);
+
+      console.log("Email service result:", JSON.stringify(emailResult, null, 2));
+      console.log(email, subject);
 
       if (!emailResult.success) {
         return ErrorBuilder.build(
@@ -315,8 +315,8 @@ async deletePasswordResetToken(token: string): Promise<OTPResult> {
     }
   }
 
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
+  // private isValidEmail(email: string): boolean {
+  //   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  //   return emailRegex.test(email);
+  // }
 }

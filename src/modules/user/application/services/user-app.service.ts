@@ -18,7 +18,7 @@ export class UserAppService {
   }
 
   // Create a new user
-  async createUser(input: CreateUser): Promise<ApiResponseInterface<User>> {
+  async createUser(input: CreateUser): Promise<ApiResponseInterface<OTPResult>> {
     try {
       // Perform application-level validation
       const existingUser = await this.userRepository.getUserByEmail(input.email);
@@ -26,7 +26,7 @@ export class UserAppService {
         return ErrorBuilder.build(ErrorCode.USER_ALREADY_EXISTS, "Email already exists");
       }
 
-      const newUser = await this.userRepository.createUser(input);
+      await this.userRepository.createUser(input);
       
       // Generate and send OTP for verification
       const otp = this.otpService.generateOTP();
@@ -37,14 +37,16 @@ export class UserAppService {
       });
 
       if (!otpResult.success) {
-        console.warn("Failed to send OTP email for user:", input.email);
-        // You might want to handle this differently - maybe queue for retry
+        return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, otpResult.message || "failed to send otp");
       }
 
-      return ResponseBuilder.success(newUser);
-    } catch (error) {
+      return ResponseBuilder.success({
+        success : true,
+        message : "otp sent to verify email"
+      });
+    } catch (error:any) {
       console.error("Error creating user:", error);
-      return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to create user");
+      return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, error.message);
     }
   }
 

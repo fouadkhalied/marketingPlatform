@@ -4,7 +4,7 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const userRoleEnum = pgEnum("user_role", ["advertiser", "marketing", "admin"]);
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 export const adStatusEnum = pgEnum("ad_status", ["draft", "pending", "approved", "rejected", "published", "paused"]);
 export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "completed", "failed", "refunded"]);
 
@@ -13,7 +13,7 @@ export const users = pgTable("users", {
     username: text("username").notNull().unique(),
     email: text("email").notNull().unique(),
     password: text("password").notNull(),
-    role: userRoleEnum("role").notNull().default("advertiser"),
+    role: userRoleEnum("role").notNull().default("user"),
     verified: boolean("verified").notNull().default(false),
     freeViewsCredits: integer("free_views_credits").notNull().default(10000),
     stripeCustomerId: text("stripe_customer_id"),
