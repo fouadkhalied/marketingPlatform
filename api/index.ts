@@ -296,14 +296,6 @@ app.post('/api/payment/createSessionUrl',
 );
 
 // Adverstising routes
-app.post('/api/advertising',AuthMiddleware(UserRole.USER) , (req,res) => advertisingController.createAd(req,res))
-
-app.get(
-  "/api/advertising/list/:status",
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.listAds(req, res)
-);
-
 app.put(
   "/api/advertising/:id/approve",
   AuthMiddleware(UserRole.ADMIN),
@@ -315,6 +307,15 @@ app.put(
   AuthMiddleware(UserRole.ADMIN),
   (req, res) => advertisingController.rejectAd(req, res)
 );
+app.post('/api/advertising',AuthMiddleware(UserRole.USER) , (req,res) => advertisingController.createAd(req,res))
+
+app.get(
+  "/api/advertising/list/:status",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => advertisingController.listAds(req, res)
+);
+
+
 
 
 app.get(
@@ -373,7 +374,7 @@ process.on('SIGINT', () => {
 
 // Local dev listener (ignored on Vercel)
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(4000, () => console.log('🚀 Secure server running on http://localhost:4000'));
+  app.listen(3000, () => console.log('🚀 Secure server running on http://localhost:3000'));
 }
 
 export default app;
