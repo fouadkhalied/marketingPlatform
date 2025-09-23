@@ -146,4 +146,43 @@ async listAds(req: Request, res: Response): Promise<void> {
       res.status(500).json({ error: "Failed to delete ad", message: error.message });
     }
   }
+
+  // Approve Ad (Admin only)
+  async approveAd(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user?.id || req.user.role !== UserRole.ADMIN) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.FORBIDDEN,
+          "Invalid or missing status field"
+        );
+        res.status(403).json(errorResponse);
+        return;
+      }
+
+      const result = await this.advertisingService.approveAd(req.params.id);
+
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to approve ad", message: error.message });
+    }
+  }
+
+  // Reject Ad (Admin only)
+  async rejectAd(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user?.id || req.user.role !== UserRole.ADMIN) {
+        res.status(403).json({ error: "Forbidden: Admin access required" });
+        return;
+      }
+
+      const { reason } = req.body;
+      const result = await this.advertisingService.rejectAd(req.params.id, reason);
+
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to reject ad", message: error.message });
+    }
+  }
 }

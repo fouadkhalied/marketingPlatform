@@ -326,6 +326,23 @@ app.delete(
   (req, res) => advertisingController.deleteAd(req, res)
 );
 
+// admin use 
+
+app.put(
+  "/api/advertising/:id/approve",
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => advertisingController.approveAd(req, res)
+);
+
+app.put(
+  "/api/advertising/:id/reject",
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => advertisingController.rejectAd(req, res)
+);
+
+
+
+
 // ============================================
 // 10. ERROR HANDLING
 // ============================================

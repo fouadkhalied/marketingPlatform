@@ -39,6 +39,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
+    
     async findAllForAdmin(status: AdStatus, pagination: PaginationParams): Promise<PaginatedResponse<Ad>> {
       try {
         const { page, limit } = pagination;
@@ -121,8 +122,6 @@ export class AdvertisingRepository implements IAdvertisingRepository {
       }
     }
     
-    
-  
     async update(id: string, ad: Partial<InsertAd>): Promise<Ad | null> {
       try {
         const [result] = await db.update(ads).set(ad).where(eq(ads.id, id)).returning();
@@ -148,5 +147,67 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
-  }
-  
+
+    async approveAd(id: string): Promise<Ad> {
+      try {
+        const [result] = await db
+          .update(ads)
+          .set({ 
+            status: "approved",
+            updatedAt: new Date()
+          })
+          .where(eq(ads.id, id))
+          .returning();
+        
+        if (!result) {
+          throw ErrorBuilder.build(
+            ErrorCode.DATABASE_ERROR,
+            "Ad not found or failed to approve"
+          );
+        }
+        
+        return result as Ad;
+      } catch (error) {
+        throw ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          "Failed to approve ad",
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
+
+    async rejectAd(id: string, reason?: string): Promise<Ad> {
+      try {
+        const updateData: any = {
+          status: "rejected",
+          updatedAt: new Date()
+        };
+
+        // Add rejection reason if provided
+        if (reason) {
+          updateData.rejectionReason = reason;
+        }
+
+        const [result] = await db
+          .update(ads)
+          .set(updateData)
+          .where(eq(ads.id, id))
+          .returning();
+        
+        if (!result) {
+          throw ErrorBuilder.build(
+            ErrorCode.DATABASE_ERROR,
+            "Ad not found or failed to reject"
+          );
+        }
+        
+        return result as Ad;
+      } catch (error) {
+        throw ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          "Failed to reject ad",
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
+}
