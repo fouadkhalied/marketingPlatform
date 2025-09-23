@@ -300,7 +300,31 @@ app.post('/api/payment/createSessionUrl',
 );
 
 // Adverstising routes
-app.post('/api/advertising',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.createAd(req,res))
+app.post('/api/advertising',AuthMiddleware(UserRole.USER) , (req,res) => advertisingController.createAd(req,res))
+
+app.get(
+  "/api/advertising/list/:status",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => advertisingController.listAds(req, res)
+);
+
+app.get(
+  "/api/advertising/:id",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => advertisingController.getAd(req, res)
+);
+
+app.put(
+  "/api/advertising/:id",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => advertisingController.updateAd(req, res)
+);
+
+app.delete(
+  "/api/advertising/:id",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => advertisingController.deleteAd(req, res)
+);
 
 // ============================================
 // 10. ERROR HANDLING

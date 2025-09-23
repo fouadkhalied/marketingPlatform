@@ -1,10 +1,11 @@
-﻿import { Ad, InsertAd } from "../../../../infrastructure/shared/schema/schema";
-import { Advertising } from "../entities/advertising.entity";
+﻿import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
+import { Ad, InsertAd } from "../../../../infrastructure/shared/schema/schema";
 
 export interface IAdvertisingRepository {
-    create(ad: InsertAd): Promise<InsertAd>;
+    create(ad: InsertAd): Promise<string>;
     findById(id: string): Promise<Ad | null>;
-    findAll(): Promise<Ad[]>;
-    update(id: string, ad: Partial<Ad>): Promise<Ad | null>;
-    delete(id: string): Promise<void>;
-}
+    findAllForAdmin(status: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
+    findAllForUser(status: string, userId: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
+    update(id: string, ad: Partial<InsertAd>): Promise<Ad | null>;
+    delete(id: string): Promise<boolean>;
+  }  

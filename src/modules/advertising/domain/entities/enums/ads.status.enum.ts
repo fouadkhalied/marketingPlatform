@@ -1,0 +1,1 @@
+export type AdStatus = "pending" | "approved" | "rejected";

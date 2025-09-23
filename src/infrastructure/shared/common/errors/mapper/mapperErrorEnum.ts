@@ -19,7 +19,7 @@ export const ERROR_STATUS_MAP: Record<ErrorCode, number> = {
   
   // Resource Not Found Errors (404)
   [ErrorCode.RESOURCE_NOT_FOUND]: 404,
-  [ErrorCode.POST_NOT_FOUND]: 404,
+  [ErrorCode.AD_NOT_FOUND]: 404,
   [ErrorCode.USER_NOT_FOUND]: 404,
   
   // User-specific Errors

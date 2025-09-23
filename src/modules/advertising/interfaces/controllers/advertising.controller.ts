@@ -1,80 +1,149 @@
 ﻿import { Request, Response } from "express";
 import { AdvertisingAppService } from "../../application/services/advertising-app.service";
-import { CreateAdData, createAdSchema, InsertAd } from "../../../../infrastructure/shared/schema/schema";
+import { ApiResponseInterface } from "../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface";
+import { ERROR_STATUS_MAP } from "../../../../infrastructure/shared/common/errors/mapper/mapperErrorEnum";
+import { UserRole } from "../../../../infrastructure/shared/common/auth/enums/userRole";
+import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
+import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
+import { AdStatus } from "../../domain/entities/enums/ads.status.enum";
+import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 
 export class AdvertisingController {
-    constructor(private readonly advertisingService: AdvertisingAppService) {}
+  constructor(private readonly advertisingService: AdvertisingAppService) {}
 
-    
-async createAd(req: Request, res: Response): Promise<void> {
+  // ✅ Helper method to get status code from error code
+  private getStatusCode(response: ApiResponseInterface<any>): number {
+    if (response.success) {
+      return 200;
+    }
+    if (
+      response.error?.code &&
+      ERROR_STATUS_MAP[response.error.code as keyof typeof ERROR_STATUS_MAP]
+    ) {
+      return ERROR_STATUS_MAP[
+        response.error.code as keyof typeof ERROR_STATUS_MAP
+      ];
+    }
+    return 500; // default to internal server error
+  }
+
+   private isAdStatus(value: any): value is AdStatus {
+    return ["pending", "approved", "rejected"].includes(value);
+  }
+
+  // ✅ Create Ad
+  async createAd(req: Request, res: Response): Promise<void> {
     try {
-        if (!req.user?.id) {
-            res.status(401).json({ error: "User not authenticated" });
-            return;
-          }
-        
-        const adData =  {
-            ...req.body,
-            userId: req.user.id
-          };
-
-      const validation = createAdSchema.safeParse(adData);
-  
-      if (!validation.success) {
-        res.status(400).json({ error: "Validation failed", details: validation.error.errors });
+      if (!req.user?.id) {
+        res.status(401).json({ error: "User not authenticated" });
         return;
-      }      
-      
-      const createdAd = await this.advertisingService.createAd(validation.data);
-  
-      res.status(201).json({
-        message: "Ad created successfully",
-        createdAd
-      });
+      }
+
+      const result = await this.advertisingService.createAd(req.body, req.user.id)
+
+      const statusCode = this.getStatusCode(result);
+      const responseStatusCode = result.success ? 201 : statusCode;
+
+      res.status(responseStatusCode).json(result);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to create ad", message: error.message });
     }
   }
+
+  // ✅ Get Ad by ID
+  async getAd(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await this.advertisingService.getAdById(req.params.id);
+
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch ad", message: error.message });
+    }
+  }
+
+  // ✅ List Ads
+async listAds(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user?.id || !req.user?.role) {
+        res.status(401).json({ error: "User not authenticated" });
+        return;
+      }
+
+      const { status } = req.params;
+
+      const { limit, page } = req.query;
+
+          // ✅ Pagination handling (default: page=1, limit=10)
+      const pagination: PaginationParams = {
+      page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
+      limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+      };
       
-    
+  
+      // ✅ Validate status field
+      if (!status) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.VALIDATION_ERROR,
+          "Invalid or missing status field"
+        );
+        res.status(400).json(errorResponse);
+        return;
+      }
 
-    async getAd(req: Request, res: Response): Promise<void> {
-        try {
-            const ad = await this.advertisingService.getAdById(req.params.id);
-            if (!ad) {
-                res.status(404).json({ message: "Ad not found" });
-                return;
-            }
-            res.json(ad);
-        } catch (err: any) {
-            res.status(400).json({ error: err.message });
-        }
+      if (!this.isAdStatus(status)) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.VALIDATION_ERROR,
+          "status must be pending or approved or rejected only"
+        );
+        res.status(400).json(errorResponse);
+        return;
+      }
+  
+      let result;
+  
+      // ✅ Role-based factory
+      if (req.user.role === UserRole.USER) {
+        result = await this.advertisingService.listAdsForUser( status , req.user.id , pagination);
+      } else if (req.user.role === UserRole.ADMIN) {
+        result = await this.advertisingService.listAdsForAdmin(status , pagination);
+      } else {
+        res.status(403).json({ error: "Forbidden: role not allowed" });
+        return;
+      }
+  
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to list ads", message: error.message });
     }
+  }
+  
 
-    async listAds(req: Request, res: Response): Promise<void> {
-        const ads = await this.advertisingService.listAds();
-        res.json(ads);
-    }
+  // ✅ Update Ad
+  async updateAd(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await this.advertisingService.updateAd(
+        req.params.id,
+        req.body
+      );
 
-    async updateAd(req: Request, res: Response): Promise<void> {
-        try {
-            const ad = await this.advertisingService.updateAd(req.params.id, req.body);
-            if (!ad) {
-                res.status(404).json({ message: "Ad not found" });
-                return;
-            }
-            res.json(ad);
-        } catch (err: any) {
-            res.status(400).json({ error: err.message });
-        }
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update ad", message: error.message });
     }
+  }
 
-    async deleteAd(req: Request, res: Response): Promise<void> {
-        try {
-            await this.advertisingService.deleteAd(req.params.id);
-            res.status(204).send();
-        } catch (err: any) {
-            res.status(400).json({ error: err.message });
-        }
+  // ✅ Delete Ad
+  async deleteAd(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await this.advertisingService.deleteAd(req.params.id);
+
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete ad", message: error.message });
     }
+  }
 }
