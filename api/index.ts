@@ -6,7 +6,6 @@ import rateLimit from 'express-rate-limit';
 import slowDown from 'express-slow-down';
 import compression from 'compression';
 import hpp from 'hpp';
-import xss from 'xss-clean';
 
 
 import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
@@ -99,9 +98,6 @@ const speedLimiter = slowDown({
 // ============================================
 
 // Prevent NoSQL injection attacks
-
-// Prevent XSS attacks
-app.use(xss());
 
 // Prevent HTTP Parameter Pollution
 app.use(hpp({
@@ -364,7 +360,7 @@ process.on('SIGINT', () => {
 
 // Local dev listener (ignored on Vercel)
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(3000, () => console.log('🚀 Secure server running on http://localhost:3000'));
+  app.listen(4000, () => console.log('🚀 Secure server running on http://localhost:4000'));
 }
 
 export default app;
