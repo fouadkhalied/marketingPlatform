@@ -261,8 +261,8 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
       "https://graph.facebook.com/v20.0/oauth/access_token",
       {
         params: {
-          client_id: appConfig.FACEBOOK_APP_ID,
-          client_secret: appConfig.FACEBOOK_APP_SECRET,
+          client_id: appConfig.FACEBOOK_APP_OAUTH_ID,
+          client_secret: appConfig.FACEBOOK_APP_OAUTH_SECRET,
           redirect_uri: appConfig.FACEBOOK_REDIRECT_URI,
           code,
         },
