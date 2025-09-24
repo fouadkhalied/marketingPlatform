@@ -426,6 +426,24 @@ export class UserController {
     }
   }
 
+  async facebookOuth(req:Request, res:Response) {
+    const { code } = req.query;
+
+    // Exchange code for access token
+    const access_token = await this.userService.tokenExchange(code) 
+  
+    // // Get user info
+    // const userResponse = await axios.get(
+    //   "https://graph.facebook.com/me?fields=id,name,email",
+    //   { params: { access_token } }
+    // );
+  
+    res.json({
+      token: access_token
+     // user: userResponse.data,
+    });
+  }
+
   // Update Stripe info
   async updateUserStripeInfo(req: UpdateStripeInfoRequest, res: Response): Promise<void> {
     try {

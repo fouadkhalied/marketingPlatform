@@ -315,9 +315,6 @@ app.get(
   (req, res) => advertisingController.listAds(req, res)
 );
 
-
-
-
 app.get(
   "/api/advertising/:id",
   AuthMiddleware(UserRole.USER),
@@ -335,6 +332,10 @@ app.delete(
   AuthMiddleware(UserRole.USER),
   (req, res) => advertisingController.deleteAd(req, res)
 );
+
+// face Outh
+
+app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOuth(req,res));
 
 // ============================================
 // 10. ERROR HANDLING

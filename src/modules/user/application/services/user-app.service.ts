@@ -1,3 +1,4 @@
+import axios from "axios";
 import { ResponseBuilder } from "../../../../infrastructure/shared/common/apiResponse/apiResponseBuilder";
 import { ApiResponseInterface } from "../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface";
 import { JwtService } from "../../../../infrastructure/shared/common/auth/module/jwt.module";
@@ -7,6 +8,7 @@ import { OTPResult } from "../../../../infrastructure/shared/common/otp/interfac
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
 import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
+import { appConfig } from "../../../../infrastructure/config/app.config";
 
 export class UserAppService {
   constructor(
@@ -252,6 +254,25 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
       return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to complete password reset.");
   }
 }
+
+  // oauth facebook 
+  async tokenExchange(code : any) : Promise<string> {
+    const tokenResponse = await axios.get(
+      "https://graph.facebook.com/v20.0/oauth/access_token",
+      {
+        params: {
+          client_id: appConfig.FACEBOOK_APP_ID,
+          client_secret: appConfig.FACEBOOK_APP_SECRET,
+          redirect_uri: appConfig.FACEBOOK_REDIRECT_URI,
+          code,
+        },
+      }
+    );
+
+    return tokenResponse.data.access_token as string
+  }
+
+
   // Update Stripe info
   async updateUserStripeInfo(
     id: string,
