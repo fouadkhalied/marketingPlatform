@@ -310,7 +310,7 @@ app.put(
 app.post('/api/advertising',AuthMiddleware(UserRole.USER) , (req,res) => advertisingController.createAd(req,res))
 
 app.get(
-  "/api/advertising/list/:status",
+  "/api/advertising/list",
   AuthMiddleware(UserRole.USER),
   (req, res) => advertisingController.listAds(req, res)
 );

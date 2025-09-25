@@ -9,12 +9,15 @@ import { OTPService } from "../../../../infrastructure/shared/common/otp/module/
 import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
 import { appConfig } from "../../../../infrastructure/config/app.config";
+import { FacebookAuthService } from "../../../../infrastructure/shared/common/auth/module/facebookAuth.module";
+import { FacebookTokenResponse } from "../../../../infrastructure/shared/common/auth/interfaces/facebookAuthResponse";
 
 export class UserAppService {
   constructor(
     private readonly userRepository: UserRepositoryImpl,
     private readonly otpService: OTPService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly facebookAuthService: FacebookAuthService 
   ) {
     
   }
@@ -256,22 +259,12 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
 }
 
   // oauth facebook 
-  async tokenExchange(code : any) : Promise<string> {
-    const tokenResponse = await axios.get(
-      "https://graph.facebook.com/v20.0/oauth/access_token",
-      {
-        params: {
-          client_id: appConfig.FACEBOOK_APP_ID,
-          client_secret: appConfig.FACEBOOK_APP_SECRET,
-          redirect_uri: appConfig.FACEBOOK_REDIRECT_URI,
-          code,
-        },
-      }
-    );
+  async tokenExchange(code : any, state: any) : Promise<string> {
+    
+    const tokenResponse : FacebookTokenResponse = await this.facebookAuthService.exchangeCodeForToken(code, state);
 
-    return tokenResponse.data.access_token as string
+    return tokenResponse.access_token as string
   }
-
 
   // Update Stripe info
   async updateUserStripeInfo(

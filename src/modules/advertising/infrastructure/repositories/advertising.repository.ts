@@ -4,7 +4,7 @@ import { db } from "../../../../infrastructure/db/connection";
 import { Ad, ads , InsertAd } from "../../../../infrastructure/shared/schema/schema";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
-import { AdStatus } from "../../domain/entities/enums/ads.status.enum";
+import { AdStatus } from "../../domain/enums/ads.status.enum";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 
 export class AdvertisingRepository implements IAdvertisingRepository {
@@ -39,24 +39,48 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
+
     
-    async findAllForAdmin(status: AdStatus, pagination: PaginationParams): Promise<PaginatedResponse<Ad>> {
+    async findAllForAdmin(
+      status: string, // still string from request
+      pagination: PaginationParams
+    ): Promise<PaginatedResponse<Ad>> {
       try {
         const { page, limit } = pagination;
         const offset = (page - 1) * limit;
     
-        // Count total records
-        const [{ count }] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(ads)
-          .where(eq(ads.status, status));
+        // 👇 define allowed enum values
+        const allowedStatuses = ["pending", "approved", "rejected"] as const;
+        type AdStatus = (typeof allowedStatuses)[number];
     
-        const results = await db
+        // 👇 check if status is valid enum value
+        const isValidStatus = (s: string): s is AdStatus =>
+          allowedStatuses.includes(s as AdStatus);
+    
+        let whereCondition;
+        if (status !== "all" && isValidStatus(status)) {
+          whereCondition = eq(ads.status, status);
+        }
+    
+        // Count total records
+        const countQuery = db
+          .select({ count: sql<number>`count(*)` })
+          .from(ads);
+    
+        if (whereCondition) countQuery.where(whereCondition);
+    
+        const [{ count }] = await countQuery;
+    
+        // Fetch paginated results
+        const resultsQuery = db
           .select()
           .from(ads)
-          .where(eq(ads.status, status))
           .limit(limit)
           .offset(offset);
+    
+        if (whereCondition) resultsQuery.where(whereCondition);
+    
+        const results = await resultsQuery;
     
         const totalCount = Number(count);
         const totalPages = Math.ceil(totalCount / limit);
@@ -81,21 +105,42 @@ export class AdvertisingRepository implements IAdvertisingRepository {
       }
     }
     
-    async findAllForUser(status: AdStatus, userId: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>> {
+    
+    async findAllForUser(
+      status: string | undefined, // 👈 request input is plain string
+      userId: string,
+      pagination: PaginationParams
+    ): Promise<PaginatedResponse<Ad>> {
       try {
         const { page, limit } = pagination;
         const offset = (page - 1) * limit;
     
-        // Count total records
+        // 👇 define allowed statuses
+        const allowedStatuses = ["pending", "approved", "rejected"] as const;
+        type AdStatus = (typeof allowedStatuses)[number];
+    
+        const isValidStatus = (s: string): s is AdStatus =>
+          allowedStatuses.includes(s as AdStatus);
+    
+        // ✅ Build condition
+        let whereCondition;
+        if (status && isValidStatus(status)) {
+          whereCondition = and(eq(ads.status, status), eq(ads.userId, userId));
+        } else {
+          whereCondition = eq(ads.userId, userId);
+        }
+    
+        // ✅ Count total records
         const [{ count }] = await db
           .select({ count: sql<number>`count(*)` })
           .from(ads)
-          .where(and(eq(ads.status, status), eq(ads.userId, userId)));
+          .where(whereCondition);
     
+        // ✅ Fetch paginated results
         const results = await db
           .select()
           .from(ads)
-          .where(and(eq(ads.status, status), eq(ads.userId, userId)))
+          .where(whereCondition)
           .limit(limit)
           .offset(offset);
     
@@ -121,6 +166,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
+    
     
     async update(id: string, ad: Partial<InsertAd>): Promise<Ad | null> {
       try {

@@ -5,8 +5,8 @@ import { ERROR_STATUS_MAP } from "../../../../infrastructure/shared/common/error
 import { UserRole } from "../../../../infrastructure/shared/common/auth/enums/userRole";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
-import { AdStatus } from "../../domain/entities/enums/ads.status.enum";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
+import { AdStatus } from "../../domain/enums/ads.status.enum";
 
 export class AdvertisingController {
   constructor(private readonly advertisingService: AdvertisingAppService) {}
@@ -63,35 +63,22 @@ export class AdvertisingController {
   }
 
   // ✅ List Ads
-async listAds(req: Request, res: Response): Promise<void> {
+  async listAds(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user?.id || !req.user?.role) {
         res.status(401).json({ error: "User not authenticated" });
         return;
       }
-
-      const { status } = req.params;
-
-      const { limit, page } = req.query;
-
-          // ✅ Pagination handling (default: page=1, limit=10)
-      const pagination: PaginationParams = {
-      page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
-      limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
-      };
-      
   
-      // ✅ Validate status field
-      if (!status) {
-        const errorResponse = ErrorBuilder.build(
-          ErrorCode.VALIDATION_ERROR,
-          "Invalid or missing status field"
-        );
-        res.status(400).json(errorResponse);
-        return;
-      }
-
-      if (!this.isAdStatus(status)) {
+      const { limit, page, status } = req.query;
+  
+      // ✅ Normalize status into a string
+      const normalizedStatus = typeof status === "string" && status.trim() !== ""
+        ? status.trim()
+        : "all"; // 👈 always a string now
+  
+      // ✅ Validate only if it’s not "all"
+      if (normalizedStatus !== "all" && !this.isAdStatus(normalizedStatus)) {
         const errorResponse = ErrorBuilder.build(
           ErrorCode.VALIDATION_ERROR,
           "status must be pending or approved or rejected only"
@@ -100,13 +87,26 @@ async listAds(req: Request, res: Response): Promise<void> {
         return;
       }
   
+      // ✅ Pagination handling (default: page=1, limit=10)
+      const pagination: PaginationParams = {
+        page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
+        limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+      };
+  
       let result;
   
       // ✅ Role-based factory
       if (req.user.role === UserRole.USER) {
-        result = await this.advertisingService.listAdsForUser( status , req.user.id , pagination);
+        result = await this.advertisingService.listAdsForUser(
+          normalizedStatus,
+          req.user.id,
+          pagination
+        );
       } else if (req.user.role === UserRole.ADMIN) {
-        result = await this.advertisingService.listAdsForAdmin(status , pagination);
+        result = await this.advertisingService.listAdsForAdmin(
+          normalizedStatus,
+          pagination
+        );
       } else {
         res.status(403).json({ error: "Forbidden: role not allowed" });
         return;

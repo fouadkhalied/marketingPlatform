@@ -427,10 +427,11 @@ export class UserController {
   }
 
   async facebookOuth(req:Request, res:Response) {
-    const { code } = req.query;
+    const { code , state } = req.query;
 
     // Exchange code for access token
-    const access_token = await this.userService.tokenExchange(code) 
+    const access_token = await this.userService.tokenExchange(code, state);
+     
   
     // // Get user info
     // const userResponse = await axios.get(

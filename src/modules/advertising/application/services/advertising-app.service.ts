@@ -4,7 +4,7 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { Ad, createAdSchema } from "../../../../infrastructure/shared/schema/schema";
-import { AdStatus } from "../../domain/entities/enums/ads.status.enum";
+import { AdStatus } from "../../domain/enums/ads.status.enum";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
 
 export class AdvertisingAppService {
@@ -60,7 +60,10 @@ export class AdvertisingAppService {
     }
   }
 
-  async listAdsForAdmin(status: AdStatus, pagination : PaginationParams): Promise<ApiResponseInterface<PaginatedResponse<Ad>>> {
+  async listAdsForAdmin(
+    status: string,
+    pagination: PaginationParams
+  ): Promise<ApiResponseInterface<PaginatedResponse<Ad>>> {
     try {
       const ads = await this.advertisingRepository.findAllForAdmin(status, pagination);
       return ResponseBuilder.success(ads);
@@ -73,7 +76,11 @@ export class AdvertisingAppService {
     }
   }
 
-  async listAdsForUser(status: AdStatus, userId: string, pagination : PaginationParams): Promise<ApiResponseInterface<PaginatedResponse<Ad>>>  {
+  async listAdsForUser(
+    status: string, // 👈 always string
+    userId: string,
+    pagination: PaginationParams
+  ): Promise<ApiResponseInterface<PaginatedResponse<Ad>>> {
     try {
       const ads = await this.advertisingRepository.findAllForUser(status, userId, pagination);
       return ResponseBuilder.success(ads);
@@ -85,6 +92,8 @@ export class AdvertisingAppService {
       );
     }
   }
+  
+  
 
   async updateAd(id: string, ad: Partial<Ad>): Promise<ApiResponseInterface<Ad | null>> {
     try {

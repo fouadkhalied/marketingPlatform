@@ -7,6 +7,8 @@ import { z } from "zod";
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 export const adStatusEnum = pgEnum("ad_status", ["pending", "approved", "rejected"]);
 export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "completed", "failed", "refunded"]);
+export const pagesTypeEnum = pgEnum("page_type", ["facebook", "instagram", "snapchat"]);
+
 
 export const users = pgTable("users", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -16,6 +18,8 @@ export const users = pgTable("users", {
     role: userRoleEnum("role").notNull().default("user"),
     verified: boolean("verified").notNull().default(false),
     freeViewsCredits: integer("free_views_credits").notNull().default(10000),
+    adsCount: integer("adsCount").default(0),
+    totalSpend: integer("totalSpend").default(0),
     stripeCustomerId: text("stripe_customer_id"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
@@ -24,6 +28,7 @@ export const users = pgTable("users", {
   export const ads = pgTable("ads", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull().references(() => users.id),
+    //pageId: varchar("page").references(() => socialMediaPages.id),
     titleEn: text("title_en").notNull(),
     titleAr: text("title_ar").notNull(),
     descriptionEn: text("description_en").notNull(),
@@ -37,6 +42,18 @@ export const users = pgTable("users", {
     approvedBy: varchar("approved_by").references(() => users.id),
     rejectionReason: text("rejection_reason"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
+    updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+  });
+
+  export const socialMediaPages = pgTable("social_media_pages", {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id),
+    pageType: pagesTypeEnum("pageType").notNull(),
+    pageId: text("page_id").notNull(),
+    pageName: text("page_name").notNull(),
+    pageAccessToken: text("page_access_token").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    connectedAt: timestamp("connected_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
   });
   
@@ -268,4 +285,3 @@ export const users = pgTable("users", {
   export type PurchaseCreditsData = z.infer<typeof purchaseCreditsSchema>;
   export type AdminActionData = z.infer<typeof adminActionSchema>;
   export type InsertPayment = z.infer<typeof insertPaymentSchema>;
-  
