@@ -4,7 +4,6 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { Ad, createAdSchema } from "../../../../infrastructure/shared/schema/schema";
-import { AdStatus } from "../../domain/enums/ads.status.enum";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
 
 export class AdvertisingAppService {
@@ -92,6 +91,29 @@ export class AdvertisingAppService {
       );
     }
   }
+
+
+  async getAdsByTitle(title: string, params: PaginationParams): Promise<ApiResponseInterface<Ad[]>> {
+    try {
+      const ads = await this.advertisingRepository.findByTitle(title, params);
+  
+      if (!ads || ads.data.length === 0) {
+        return ErrorBuilder.build(
+          ErrorCode.AD_NOT_FOUND,
+          `No ads found with title: ${title}`
+        );
+      }
+      
+      return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while fetching ads by title",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+  
   
   
 

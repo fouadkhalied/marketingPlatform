@@ -296,6 +296,9 @@ app.post('/api/payment/createSessionUrl',
 );
 
 // Adverstising routes
+
+app.get("/api/advertising/search", AuthMiddleware(UserRole.USER), (req,res) => advertisingController.getAdsByTitle(req,res))
+
 app.put(
   "/api/advertising/:id/approve",
   AuthMiddleware(UserRole.ADMIN),

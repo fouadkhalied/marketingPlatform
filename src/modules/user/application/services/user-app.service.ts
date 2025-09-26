@@ -8,10 +8,9 @@ import { OTPResult } from "../../../../infrastructure/shared/common/otp/interfac
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
 import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
-import { appConfig } from "../../../../infrastructure/config/app.config";
 import { FacebookAuthService } from "../../../../infrastructure/shared/common/auth/module/facebookAuth.module";
 import { FacebookTokenResponse } from "../../../../infrastructure/shared/common/auth/interfaces/facebookAuthResponse";
-import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
+import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 
 export class UserAppService {
   constructor(
@@ -258,7 +257,6 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
       return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to complete password reset.");
   }
 }
-
   // oauth facebook 
   async tokenExchange(code : any, state: any) : Promise<string> {
     
@@ -268,7 +266,6 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
   }
 
   // get all users 
-
   async getUsers(params: PaginationParams): Promise<ApiResponseInterface<Partial<User>[]>> {
     try {
       const users = await this.userRepository.getUsers(params);
@@ -276,7 +273,7 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
     } catch (error) {
        return ErrorBuilder.build(
       ErrorCode.INTERNAL_SERVER_ERROR,
-      "Unexpected error while listing ads for admin",
+      "Unexpected error while listing users for admin",
       error instanceof Error ? error.message : error)
     }
 }

@@ -1,4 +1,4 @@
-﻿import { and, eq, sql } from "drizzle-orm";
+﻿import { and, eq, like, or, sql } from "drizzle-orm";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
 import { db } from "../../../../infrastructure/db/connection";
 import { Ad, ads , InsertAd } from "../../../../infrastructure/shared/schema/schema";
@@ -39,6 +39,63 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
+
+    async findByTitle(
+      title: string,
+      pagination: PaginationParams
+    ): Promise<PaginatedResponse<Ad>> {
+      try {
+        const { page, limit } = pagination;
+        const offset = (page - 1) * limit;
+    
+        // ✅ Count total records matching title (Arabic OR English)
+        const [{ count }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(ads)
+          .where(
+            or(
+              like(ads.titleEn, `%${title}%`),
+              like(ads.titleAr, `%${title}%`)
+            )
+          );
+    
+        // ✅ Fetch paginated results
+        const results = await db
+          .select()
+          .from(ads)
+          .where(
+            or(
+              like(ads.titleEn, `%${title}%`),
+              like(ads.titleAr, `%${title}%`)
+            )
+          )
+          .limit(limit)
+          .offset(offset);
+    
+        const totalCount = Number(count);
+        const totalPages = Math.ceil(totalCount / limit);
+    
+        return {
+          data: results as Ad[],
+          pagination: {
+            currentPage: page,
+            limit,
+            totalCount,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrevious: page > 1,
+          },
+        };
+      } catch (error) {
+        throw ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          "Failed to fetch ads by title",
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
+    
+    
 
     
     async findAllForAdmin(

@@ -120,6 +120,37 @@ export class AdvertisingController {
   }
   
 
+  // ✅ Get Ads by Title (En or Ar)
+async getAdsByTitle(req: Request, res: Response): Promise<void> {
+  try {
+    const { page , limit , title } = req.query;
+
+    const pagination: PaginationParams = {
+      page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
+      limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+    };
+
+    if (!title) {
+      const errorResponse = ErrorBuilder.build(
+        ErrorCode.VALIDATION_ERROR,
+        "Title parameter is required"
+      );
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    const result = await this.advertisingService.getAdsByTitle(title.toString(), pagination);
+
+    const statusCode = this.getStatusCode(result);
+    res.status(statusCode).json(result);
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: "Failed to fetch ads by title", message: error.message });
+  }
+}
+
+
   // ✅ Update Ad
   async updateAd(req: Request, res: Response): Promise<void> {
     try {
