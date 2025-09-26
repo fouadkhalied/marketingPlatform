@@ -11,6 +11,7 @@ import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repos
 import { appConfig } from "../../../../infrastructure/config/app.config";
 import { FacebookAuthService } from "../../../../infrastructure/shared/common/auth/module/facebookAuth.module";
 import { FacebookTokenResponse } from "../../../../infrastructure/shared/common/auth/interfaces/facebookAuthResponse";
+import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 
 export class UserAppService {
   constructor(
@@ -264,6 +265,13 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
     const tokenResponse : FacebookTokenResponse = await this.facebookAuthService.exchangeCodeForToken(code, state);
 
     return tokenResponse.access_token as string
+  }
+
+  // get all users 
+
+  async getUsers(params: PaginationParams) : Promise<ApiResponseInterface<PaginatedResponse<Partial<User>>>> {
+       const users = await this.userRepository.getUsers(params);
+       return ResponseBuilder.success(users);
   }
 
   // Update Stripe info

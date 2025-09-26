@@ -1,9 +1,10 @@
 import { db } from "../../../../infrastructure/db/connection";
 import { userInterface } from "../../domain/repositories/user.repository";
 
-import { eq, and, desc, gte, lte, count, sum } from "drizzle-orm";
+import { eq, and, desc, gte, lte, count, sum, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { CreateUser, User, users } from "../../../../infrastructure/shared/schema/schema";
+import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 
 export class UserRepositoryImpl implements userInterface {
     async hashPassword(password: string): Promise<string> {
@@ -86,6 +87,54 @@ export class UserRepositoryImpl implements userInterface {
             // Step 3: Check if a user was actually updated and return a boolean
             return !!updatedUser;
         }
+
+
+      
+    async getUsers(pagination: PaginationParams): Promise<PaginatedResponse<Partial<User>>> {
+      try {
+          const { page, limit } = pagination;
+          const offset = (page - 1) * limit;
+
+          // Count total records
+          const countQuery = db
+              .select({ count: sql<number>`count(*)` })
+              .from(users);
+
+          const [{ count }] = await countQuery;
+
+          // Fetch paginated results ordered by creation date (newest first)
+          const results = await db
+              .select({
+                username: users.username,
+                role: users.role,
+                verified: users.verified,
+                freeCredits: users.freeViewsCredits
+            })
+              .from(users)
+              .orderBy(desc(users.createdAt))
+              .limit(limit)
+              .offset(offset);
+
+          const totalCount = Number(count);
+          const totalPages = Math.ceil(totalCount / limit);
+
+          return {
+              data: results as Partial<User>[],
+              pagination: {
+                  currentPage: page,
+                  limit,
+                  totalCount,
+                  totalPages,
+                  hasNext: page < totalPages,
+                  hasPrevious: page > 1,
+              },
+          };
+      } catch (error) {
+          throw new Error(
+              `Failed to fetch users: ${error instanceof Error ? error.message : error}`
+          );
+      }
+  }
     
       async updateUserStripeInfo(id: string, customerId: string, subscriptionId?: string): Promise<User> {
         const [user] = await db

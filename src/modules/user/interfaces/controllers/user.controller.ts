@@ -4,6 +4,7 @@ import { UserAppService } from "../../application/services/user-app.service";
 import { CreateUser } from '../../../../infrastructure/shared/schema/schema';
 import { ApiResponseInterface } from '../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface';
 import { ERROR_STATUS_MAP } from '../../../../infrastructure/shared/common/errors/mapper/mapperErrorEnum';
+import { PaginationParams } from '../../../../infrastructure/shared/common/pagination.vo';
 
 // Custom request interfaces for better type safety
 interface CreateUserRequest extends Request {
@@ -443,6 +444,34 @@ export class UserController {
       token: access_token
      // user: userResponse.data,
     });
+  }
+
+  async getUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const { limit, page } = req.query;
+
+      const pagination: PaginationParams = {
+        page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
+        limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+      };
+  
+      const result = await this.userService.getUsers(pagination);
+      const statusCode = this.getStatusCode(result);
+      
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error('Error fetching users:', err);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch users',
+          details: err.message
+        }
+      });
+    }
   }
 
   // Update Stripe info

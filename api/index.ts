@@ -307,6 +307,7 @@ app.put(
   AuthMiddleware(UserRole.ADMIN),
   (req, res) => advertisingController.rejectAd(req, res)
 );
+
 app.post('/api/advertising',AuthMiddleware(UserRole.USER) , (req,res) => advertisingController.createAd(req,res))
 
 app.get(
@@ -334,8 +335,10 @@ app.delete(
 );
 
 // face Outh
-
 app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOuth(req,res));
+
+// get users 
+app.get('/api/users',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.getUsers(req,res))
 
 // ============================================
 // 10. ERROR HANDLING
