@@ -63,16 +63,16 @@ export class AdvertisingAppService {
   async listAdsForAdmin(
     status: string,
     pagination: PaginationParams
-  ): Promise<ApiResponseInterface<PaginatedResponse<Ad>>> {
+  ): Promise<ApiResponseInterface<Ad[]>> {
     try {
       const ads = await this.advertisingRepository.findAllForAdmin(status, pagination);
-      return ResponseBuilder.success(ads);
+      return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
     } catch (error) {
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Unexpected error while listing ads for admin",
         error instanceof Error ? error.message : error
-      );
+    );
     }
   }
 

@@ -28,12 +28,12 @@ export class ResponseBuilder {
     data: T[],
     pagination: PaginatedResponse<any>["pagination"],
     message = "Request successful"
-  ): ApiResponseInterface<T[]> & { pagination: PaginatedResponse<any>["pagination"] } {
+): ApiResponseInterface<T[]> & { pagination: PaginatedResponse<any>["pagination"] } {
     return {
-      success: true,
-      message,
-      data,
-      pagination
+        success: true,
+        message,
+        data,
+        pagination
     };
-  }
+}
 }

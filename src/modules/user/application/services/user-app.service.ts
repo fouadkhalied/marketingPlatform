@@ -269,10 +269,17 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
 
   // get all users 
 
-  async getUsers(params: PaginationParams) : Promise<ApiResponseInterface<PaginatedResponse<Partial<User>>>> {
-       const users = await this.userRepository.getUsers(params);
-       return ResponseBuilder.success(users);
-  }
+  async getUsers(params: PaginationParams): Promise<ApiResponseInterface<Partial<User>[]>> {
+    try {
+      const users = await this.userRepository.getUsers(params);
+      return ResponseBuilder.paginatedSuccess(users.data, users.pagination);
+    } catch (error) {
+       return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      "Unexpected error while listing ads for admin",
+      error instanceof Error ? error.message : error)
+    }
+}
 
   // Update Stripe info
   async updateUserStripeInfo(
