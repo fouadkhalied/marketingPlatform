@@ -5,6 +5,7 @@ import { CreateUser } from '../../../../infrastructure/shared/schema/schema';
 import { ApiResponseInterface } from '../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface';
 import { ERROR_STATUS_MAP } from '../../../../infrastructure/shared/common/errors/mapper/mapperErrorEnum';
 import { PaginationParams } from '../../../../infrastructure/shared/common/pagination.vo';
+import { appConfig } from '../../../../infrastructure/config/app.config';
 
 // Custom request interfaces for better type safety
 interface CreateUserRequest extends Request {
@@ -427,23 +428,71 @@ export class UserController {
     }
   }
 
-  async facebookOuth(req:Request, res:Response) {
-    const { code , state } = req.query;
+  
+  async facebookOAuth(req: Request, res: Response): Promise<void> {
+    try {
+      const { code, state } = req.query;
 
-    // Exchange code for access token
-    const access_token = await this.userService.tokenExchange(code, state);
-     
-  
-    // // Get user info
-    // const userResponse = await axios.get(
-    //   "https://graph.facebook.com/me?fields=id,name,email",
-    //   { params: { access_token } }
-    // );
-  
-    res.json({
-      token: access_token
-     // user: userResponse.data,
-    });
+      // Validate required parameters
+      if (!code) {
+        res.status(400).json({
+          error: "Missing authorization code",
+          message: "Facebook authorization code is required"
+        });
+        return;
+      }
+
+      if (!state) {
+        res.status(400).json({
+          error: "Missing state parameter",
+          message: "State parameter is required for security"
+        });
+        return;
+      }
+
+      // Exchange code for access token and get user data
+      const authResult = await this.userService.tokenExchange(
+        code as string, 
+        state as string, 
+        appConfig.FACEBOOK_APP_SECRET_STATE
+      );
+
+      // Return success response
+      res.json({
+        success: true,
+        data: {
+          accessToken: authResult.data
+        }
+      });
+
+    } catch (error) {
+      console.error("Facebook OAuth error:", error);
+      
+      // Handle different types of errors
+      if (error instanceof Error) {
+        if (error.message.includes("Invalid state parameter")) {
+          res.status(400).json({
+            error: "Invalid state parameter",
+            message: "Possible CSRF attack detected"
+          });
+          return;
+        }
+
+        if (error.message.includes("Facebook OAuth error")) {
+          res.status(400).json({
+            error: "Facebook authentication failed",
+            message: "Invalid authorization code or Facebook service error"
+          });
+          return;
+        }
+      }
+
+      // Generic error response
+      res.status(500).json({
+        error: "Internal server error",
+        message: "Facebook authentication failed"
+      });
+    }
   }
 
   async getUsers(req: Request, res: Response): Promise<void> {

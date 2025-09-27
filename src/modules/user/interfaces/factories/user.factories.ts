@@ -2,7 +2,7 @@
 import { JwtService } from "../../../../infrastructure/shared/common/auth/module/jwt.module";
 import { EmailService } from "../../../../infrastructure/shared/common/email/module/resend.module";
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
-import { FacebookAuthService } from "../../application/services/facebookAuth.service";
+import { FacebookAuthService } from "../../application/services/facebook-app.service";
 import { UserAppService } from "../../application/services/user-app.service";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
 import { UserController } from "../controllers/user.controller";

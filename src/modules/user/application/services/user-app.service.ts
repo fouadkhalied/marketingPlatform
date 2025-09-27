@@ -7,16 +7,16 @@ import { OTPResult } from "../../../../infrastructure/shared/common/otp/interfac
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
 import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
-import { FacebookAuthService } from "./facebookAuth.service";
 import { FacebookTokenResponse } from "../../../../infrastructure/shared/common/auth/interfaces/facebookAuthResponse";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
+import { FacebookPageService } from "./facebook-app.service";
 
 export class UserAppService {
   constructor(
     private readonly userRepository: UserRepositoryImpl,
     private readonly otpService: OTPService,
     private readonly jwtService: JwtService,
-    private readonly facebookAuthService: FacebookAuthService 
+    private readonly facebookAuthService: FacebookPageService
   ) {
     
   }
@@ -256,12 +256,40 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
       return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to complete password reset.");
   }
 }
-  // oauth facebook 
-  async tokenExchange(code : any, state: any) : Promise<string> {
-    
-    const tokenResponse : FacebookTokenResponse = await this.facebookAuthService.exchangeCodeForToken(code, state);
 
-    return tokenResponse.access_token as string
+  // oauth facebook 
+  async tokenExchange(code: string , userId: string, state?: string, expectedState?: string): Promise<{
+    data: any;
+  }> {
+    try {
+      // Validate state parameter for CSRF protection
+      if (expectedState && state !== expectedState) {
+        throw new Error("Invalid state parameter - possible CSRF attack");
+      }
+
+      // Exchange code for token
+      const tokenResponse = await this.facebookAuthService.exchangeCodeForToken({
+        code
+      });
+
+      const savePageData = await this.facebookAuthService.getUserPagesAndSaveTokens(tokenResponse.access_token, userId);
+
+      // // Validate the token
+      // const isValidToken = await this.facebookAuthService.validateToken(tokenResponse.access_token);
+      // if (!isValidToken) {
+      //   throw new Error("Received invalid access token from Facebook");
+      // }
+
+      // Get user profile
+      //const user = await this.facebookAuthService.getUserProfile(tokenResponse.access_token);
+
+      return {
+        data : savePageData.savedPages
+      };
+    } catch (error) {
+      console.error("Facebook OAuth token exchange failed:", error);
+      throw new Error("Facebook authentication failed");
+    }
   }
 
   // get all users 
