@@ -258,9 +258,7 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
 }
 
   // oauth facebook 
-  async tokenExchange(code: string , userId: string, state?: string, expectedState?: string): Promise<{
-    data: any;
-  }> {
+  async tokenExchange(code: string , userId: string, state?: string, expectedState?: string): Promise<ApiResponseInterface<{data : any}>> {
     try {
       // Validate state parameter for CSRF protection
       if (expectedState && state !== expectedState) {
@@ -283,9 +281,7 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
       // Get user profile
       //const user = await this.facebookAuthService.getUserProfile(tokenResponse.access_token);
 
-      return {
-        data : savePageData.savedPages
-      };
+      return ResponseBuilder.success({data : savePageData.savedPages}, "access token for page saved successfully");
     } catch (error) {
       console.error("Facebook OAuth token exchange failed:", error);
       throw new Error("Facebook authentication failed");
