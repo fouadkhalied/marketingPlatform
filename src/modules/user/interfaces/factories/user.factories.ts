@@ -2,6 +2,7 @@
 import { JwtService } from "../../../../infrastructure/shared/common/auth/module/jwt.module";
 import { EmailService } from "../../../../infrastructure/shared/common/email/module/resend.module";
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
+import { FacebookAuthService } from "../../application/services/facebookAuth.service";
 import { UserAppService } from "../../application/services/user-app.service";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
 import { UserController } from "../controllers/user.controller";
@@ -21,11 +22,13 @@ export function createUserController(): UserController {
 
   const otpService = new OTPService(emailService);
 
+  const facebookAuthService = new FacebookAuthService()
+
   // Pass the actual environment variable value, not the string
   const jwtService = new JwtService(jwtSecret);
 
   // Pass repository to application service
-  const userService = new UserAppService(userRepository, otpService, jwtService);
+  const userService = new UserAppService(userRepository, otpService, jwtService, facebookAuthService);
 
   // Pass application service to controller
   const userController = new UserController(userService);

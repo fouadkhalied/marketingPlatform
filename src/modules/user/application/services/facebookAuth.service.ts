@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from "axios";
-import { FacebookTokenResponse } from "../interfaces/facebookAuthResponse";
+import { FacebookTokenResponse } from "../../../../infrastructure/shared/common/auth/interfaces/facebookAuthResponse";
+import { appConfig } from "../../../../infrastructure/config/app.config";
 
 export class FacebookAuthService {
   private axiosInstance: AxiosInstance;
@@ -8,16 +9,14 @@ export class FacebookAuthService {
   private redirectUri: string;
 
   constructor(
-    clientId: string,
-    clientSecret: string,
-    redirectUri: string
+
   ) {
     this.axiosInstance = axios.create({
       baseURL: "https://graph.facebook.com/v20.0",
     });
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
-    this.redirectUri = redirectUri;
+    this.clientId = appConfig.FACEBOOK_APP_ID;
+    this.clientSecret = appConfig.FACEBOOK_APP_SECRET;
+    this.redirectUri = appConfig.FACEBOOK_REDIRECT_URI;
   }
 
   async exchangeCodeForToken(code: any, state?: any): Promise<FacebookTokenResponse> {

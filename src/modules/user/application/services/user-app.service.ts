@@ -1,4 +1,3 @@
-import axios from "axios";
 import { ResponseBuilder } from "../../../../infrastructure/shared/common/apiResponse/apiResponseBuilder";
 import { ApiResponseInterface } from "../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface";
 import { JwtService } from "../../../../infrastructure/shared/common/auth/module/jwt.module";
@@ -8,7 +7,7 @@ import { OTPResult } from "../../../../infrastructure/shared/common/otp/interfac
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
 import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
-import { FacebookAuthService } from "../../../../infrastructure/shared/common/auth/module/facebookAuth.module";
+import { FacebookAuthService } from "./facebookAuth.service";
 import { FacebookTokenResponse } from "../../../../infrastructure/shared/common/auth/interfaces/facebookAuthResponse";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 
