@@ -288,6 +288,10 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
     }
   }
 
+
+  // generate facebook auth url 
+  
+
   // get all users 
   async getUsers(params: PaginationParams): Promise<ApiResponseInterface<Partial<User>[]>> {
     try {

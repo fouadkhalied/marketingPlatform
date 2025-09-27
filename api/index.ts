@@ -337,8 +337,10 @@ app.delete(
   (req, res) => advertisingController.deleteAd(req, res)
 );
 
-// face Outh
+// facebook Outh
 app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(req,res));
+
+app.get('/api/auth/facebook/generateAuthUrl', AuthMiddleware(UserRole.USER), (req,res) => userController.generateFacebookAuthUrl(req,res))
 
 // get users 
 app.get('/api/users',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.getUsers(req,res))

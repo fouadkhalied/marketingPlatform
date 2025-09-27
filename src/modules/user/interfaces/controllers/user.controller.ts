@@ -432,7 +432,7 @@ export class UserController {
 
   async facebookOAuth(req: Request, res: Response): Promise<void> {
     try {
-      const { code, state } = req.query;
+      const { user_id ,code, state } = req.query;
   
       // Validate required parameters
       if (!code) {
@@ -459,7 +459,7 @@ export class UserController {
         return;
       }
   
-      if (!req.user?.id) {
+      if (!user_id) {
         res.status(401).json({
           success: false,
           message: "User must be authenticated",
@@ -470,13 +470,11 @@ export class UserController {
         });
         return;
       }
-  
-      const userId = req.user.id;
-  
+    
       // Exchange code for access token and get user data
       const authResult = await this.userService.tokenExchange(
         code as string, 
-        userId,
+        user_id as string,
         state as string, 
         appConfig.FACEBOOK_APP_SECRET_STATE,
       );
@@ -560,6 +558,35 @@ export class UserController {
       });
     }
   }
+
+  // When generating Facebook OAuth URL
+async generateFacebookAuthUrl(req: Request, res: Response): Promise<void> {
+
+  if (!req.user?.id) {
+    res.status(401).json({
+      success: false,
+      message: "User must be authenticated",
+      error: {
+        code: "UNAUTHORIZED",
+        message: "User must be authenticated"
+      }
+    });
+    return;
+  }
+
+  const userId = req.user.id;
+
+  const redirectUri = `https://marketing-platform-six.vercel.app/api/auth/facebook/callback`;
+  
+  const authUrl = `https://www.facebook.com/v23.0/dialog/oauth?` +
+    `client_id=${appConfig.FACEBOOK_APP_ID}&` +
+    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+    `state=${appConfig.FACEBOOK_APP_SECRET_STATE}&` +
+    `scope=email,public_profile,pages_show_list,pages_read_engagement,pages_read_user_content,pages_manage_engagement`+
+    `user_id=${userId}`;
+
+    res.status(200).send({url: authUrl})
+}
 
   async getUsers(req: Request, res: Response): Promise<void> {
     try {
