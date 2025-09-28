@@ -28,7 +28,8 @@ export const users = pgTable("users", {
   export const ads = pgTable("ads", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull().references(() => users.id),
-    //pageId: varchar("page").references(() => socialMediaPages.id),
+    postIdOnPlatform: varchar("post_id_on_platform").notNull(),
+    pageId: varchar("page_id").references(() => socialMediaPages.pageId),
     titleEn: text("title_en").notNull(),
     titleAr: text("title_ar").notNull(),
     descriptionEn: text("description_en").notNull(),
@@ -49,7 +50,7 @@ export const users = pgTable("users", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull().references(() => users.id),
     pageType: pagesTypeEnum("pageType").notNull(),
-    pageId: text("page_id").notNull(),
+    pageId: text("page_id").notNull().unique(),
     pageName: text("page_name").notNull(),
     pageAccessToken: text("page_access_token").notNull(),
     isActive: boolean("is_active").notNull().default(true),
@@ -148,6 +149,10 @@ export const users = pgTable("users", {
       fields: [ads.userId],
       references: [users.id],
     }),
+    page: one(socialMediaPages, {
+      fields: [ads.pageId],
+      references: [socialMediaPages.pageId],
+    }),
     approver: one(users, {
       fields: [ads.approvedBy],
       references: [users.id],
@@ -156,6 +161,14 @@ export const users = pgTable("users", {
     impressionsEvents: many(impressionsEvents),
     clicksEvents: many(clicksEvents),
     aggregatedStats: many(aggregatedStats),
+  }));
+
+  export const socialMediaPagesRelations = relations(socialMediaPages, ({ one, many }) => ({
+    user: one(users, {
+      fields: [socialMediaPages.userId],
+      references: [users.id],
+    }),
+    ads: many(ads), // This allows you to query all ads for a specific page
   }));
   
   export const purchasesRelations = relations(purchases, ({ one }) => ({

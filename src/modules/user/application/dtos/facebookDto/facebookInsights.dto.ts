@@ -1,12 +1,8 @@
 export interface FacebookPostInsights {
-    post_id: string;
-    insights: Array<{
-      name: string;
-      values: Array<{
-        value: number;
-        end_time: string;
-      }>;
-      title: string;
-      description: string;
-    }>;
-  }
+  post_id: string;
+  insights: {
+    likes: number;
+    comments: number;
+    shares: number;
+  };
+}

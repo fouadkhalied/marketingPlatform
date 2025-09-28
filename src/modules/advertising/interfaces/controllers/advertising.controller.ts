@@ -216,4 +216,109 @@ async getAdsByTitle(req: Request, res: Response): Promise<void> {
       res.status(500).json({ error: "Failed to reject ad", message: error.message });
     }
   }
+
+  // ✅ Get All Pages For User
+async getAllPagesForUser(req: Request, res: Response): Promise<void> {
+  try {
+    if (!req.user?.id || !req.user?.role) {
+      res.status(401).json({ error: "User not authenticated" });
+      return;
+    }
+
+    const { page, limit, isActive } = req.query;
+
+    // ✅ Pagination handling
+    const pagination: PaginationParams = {
+      page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
+      limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+    };
+
+    // ✅ Validate isActive
+    if (typeof isActive === "undefined" || !["true", "false"].includes(isActive.toString())) {
+      const errorResponse = ErrorBuilder.build(
+        ErrorCode.VALIDATION_ERROR,
+        "isActive query parameter is required"
+      );
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    const isActiveBool = isActive === "true" || isActive === "1";
+
+    const result = await this.advertisingService.listPagesForUser(
+      isActiveBool,
+      req.user.id,
+      pagination
+    );
+
+    const statusCode = this.getStatusCode(result);
+    res.status(statusCode).json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: "Failed to fetch pages", message: error.message });
+  }
+}
+
+
+async getPostsFromPage(req: Request, res: Response) {
+  try {
+    const  userId  = req.user?.id; // from Auth middleware
+    const { pageId } = req.params;
+    const { page = "1", limit = "10" } = req.query;
+
+    if (!userId || !pageId) {
+      const errorResponse = ErrorBuilder.build(
+        ErrorCode.VALIDATION_ERROR,
+        "userId and pageId are required"
+      );
+      return res.status(400).json(errorResponse);
+    }
+
+    const pagination: PaginationParams = {
+      page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
+      limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+    };
+
+    const posts = await this.advertisingService.listPostsFromPageForUser(
+      userId,
+      pageId,
+      pagination
+    );
+
+    const statusCode = this.getStatusCode(posts);
+    res.status(statusCode).json(posts);
+  } catch (err: any) {
+    console.error("Error in getPostsFromPage:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+
+
+async getPostInsights(req: Request, res: Response): Promise<void> {
+  try {
+    const { pageId, postId } = req.params;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      const errorResponse = ErrorBuilder.build(
+        ErrorCode.UNAUTHORIZED,
+        "userId and pageId are required"
+      );
+      res.status(400).json(errorResponse);
+    }
+
+    const result = await this.advertisingService.getPostInsights(userId, pageId, postId);
+    
+    const statusCode = this.getStatusCode(result);
+    res.status(statusCode).json(result);
+  } catch (error) {
+    const errorResponse = ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      "Failed to get post insights",
+      error instanceof Error ? error.message : error
+    );
+    res.status(500).json(errorResponse);
+  }
+
+}
 }

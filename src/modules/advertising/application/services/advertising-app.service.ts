@@ -4,10 +4,17 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { Ad, createAdSchema } from "../../../../infrastructure/shared/schema/schema";
+import { FacebookPostInsights } from "../../../user/application/dtos/facebookDto/facebookInsights.dto";
+import { FacebookPost } from "../../../user/application/dtos/facebookDto/facebookPost.dto";
+import { FacebookPageService } from "../../../user/application/services/facebook-app.service";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
+import { autheticatedPage } from "../dto/authenticatedPage.dto";
 
 export class AdvertisingAppService {
-  constructor(private readonly advertisingRepository: IAdvertisingRepository) {}
+  constructor(
+    private readonly advertisingRepository: IAdvertisingRepository,
+    private readonly facebookService: FacebookPageService
+  ) {}
 
   async createAd(object: any, userId: string): Promise<ApiResponseInterface<{ AdId: string }>> {
     try {
@@ -64,7 +71,7 @@ export class AdvertisingAppService {
     pagination: PaginationParams
   ): Promise<ApiResponseInterface<Ad[]>> {
     try {
-      const ads = await this.advertisingRepository.findAllForAdmin(status, pagination);
+      const ads = await this.advertisingRepository.findAllAdsForAdmin(status, pagination);
       return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
     } catch (error) {
       return ErrorBuilder.build(
@@ -79,10 +86,10 @@ export class AdvertisingAppService {
     status: string, // 👈 always string
     userId: string,
     pagination: PaginationParams
-  ): Promise<ApiResponseInterface<PaginatedResponse<Ad>>> {
+  ): Promise<ApiResponseInterface<Ad[]>> {
     try {
-      const ads = await this.advertisingRepository.findAllForUser(status, userId, pagination);
-      return ResponseBuilder.success(ads);
+      const ads = await this.advertisingRepository.findAllAdsForUser(status, userId, pagination);
+      return ResponseBuilder.paginatedSuccess(ads.data,ads.pagination);
     } catch (error) {
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
@@ -187,7 +194,88 @@ export class AdvertisingAppService {
       );
     }
   }
+
+
+
+
+  // get all user autheticated pages (facebook , instagram , snapchat)
+  async listPagesForUser(
+    isActive: boolean,
+    userId: string,
+    pagination: PaginationParams
+  ): Promise<ApiResponseInterface<autheticatedPage[]>> {
+    try {
+      const pages = await this.advertisingRepository.getAllPagesForUser(isActive, userId, pagination);
+      return ResponseBuilder.paginatedSuccess(pages.data, pages.pagination);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while listing ads for user",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+
+  async listPostsFromPageForUser(
+    userId: string,
+    pageId: string,
+    pagination: PaginationParams
+  ): Promise<ApiResponseInterface<FacebookPost[]>> {
+    try {
+
+      const pageAccessToken = await this.advertisingRepository.getPageAccessTokenById(userId,pageId);
+      if (!pageAccessToken) {
+        return ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR, "failed to retirve page access token for page id"
+        )
+      }
+
+      const pages = await this.facebookService.getPagePosts(userId,pageId,pageAccessToken,{limit: pagination.limit});
+
+      return ResponseBuilder.facebookPaginatedSuccess(pages.posts, pages.paging);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while retriving post from page",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+
+  async getPostInsights(
+    userId: string,
+    pageId: string,
+    postIdOnPlatform: string
+  ): Promise<ApiResponseInterface<FacebookPostInsights>> {
+    try {
+      // Get the page access token using the correct pageId
+      const pageAccessToken = await this.advertisingRepository.getPageAccessTokenById(userId, pageId);
+      if (!pageAccessToken) {
+        return ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR, 
+          "Failed to retrieve page access token for page id"
+        );
+      }
+
+      console.log(pageAccessToken);
+      
+  
+      // Call the Facebook service with correct parameters
+      const insights = await this.facebookService.getPostInsights(
+        userId,           // userId for logging
+        postIdOnPlatform, // post id
+        pageAccessToken   // The page access token
+      );
+  
+      return ResponseBuilder.success(insights);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while retrieving post insights",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
 }
-
-
-

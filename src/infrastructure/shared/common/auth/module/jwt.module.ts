@@ -1,12 +1,13 @@
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from "bcrypt";
 import { JwtPayload } from '../interfaces/jwtPayload';
+import { appConfig } from '../../../../config/app.config';
 
 export class JwtService {
 
   private secretKey : string
-  constructor(secretKey: string) {
-    this.secretKey = secretKey
+  constructor() {
+    this.secretKey = appConfig.JWT_SECRET
   }
 
   sign(payload : JwtPayload) : string {

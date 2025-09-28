@@ -7,7 +7,6 @@ import { OTPResult } from "../../../../infrastructure/shared/common/otp/interfac
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
 import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
-import { FacebookTokenResponse } from "../../../../infrastructure/shared/common/auth/interfaces/facebookAuthResponse";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { FacebookPageService } from "./facebook-app.service";
 
@@ -290,7 +289,19 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
 
 
   // generate facebook auth url 
-  
+  async generateFacebookAuthUrl(userId: string) : Promise<string> {
+    const redirectUri = "https://marketing-platform-six.vercel.app/api/auth/facebook/callback";
+      const state = `12345_${userId}`;
+      
+      const authUrl = `https://www.facebook.com/v23.0/dialog/oauth?` +
+        `client_id=562659103570379&` +
+        `redirect_uri=${redirectUri}&` +
+        `state=${state}&` +
+        `scope=email,public_profile,pages_show_list,pages_read_engagement,pages_read_user_content,pages_manage_engagement&` +
+        `response_type=code`;
+
+        return authUrl
+  }
 
   // get all users 
   async getUsers(params: PaginationParams): Promise<ApiResponseInterface<Partial<User>[]>> {

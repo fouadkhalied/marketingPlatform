@@ -299,6 +299,32 @@ app.post('/api/payment/createSessionUrl',
 
 app.get("/api/advertising/search", AuthMiddleware(UserRole.USER), (req,res) => advertisingController.getAdsByTitle(req,res))
 
+app.post('/api/advertising',AuthMiddleware(UserRole.USER) , (req,res) => advertisingController.createAd(req,res))
+
+app.get(
+  "/api/advertising/list",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => advertisingController.listAds(req, res)
+);
+
+app.get(
+  "/api/advertising/list/userPages",
+  AuthMiddleware(UserRole.USER),
+  (req,res) => advertisingController.getAllPagesForUser(req,res)
+)
+
+app.get(
+  "/api/advertising/list/pages/:pageId/posts",
+  AuthMiddleware(UserRole.USER),
+  (req,res) => advertisingController.getPostsFromPage(req,res)
+)
+
+app.get(
+  "/api/advertising/insights/pages/:pageId/posts/:postId",
+  AuthMiddleware(UserRole.USER),
+  (req,res) => advertisingController.getPostInsights(req,res)
+)
+
 app.put(
   "/api/advertising/:id/approve",
   AuthMiddleware(UserRole.ADMIN),
@@ -309,14 +335,6 @@ app.put(
   "/api/advertising/:id/reject",
   AuthMiddleware(UserRole.ADMIN),
   (req, res) => advertisingController.rejectAd(req, res)
-);
-
-app.post('/api/advertising',AuthMiddleware(UserRole.USER) , (req,res) => advertisingController.createAd(req,res))
-
-app.get(
-  "/api/advertising/list",
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.listAds(req, res)
 );
 
 app.get(
@@ -343,7 +361,9 @@ app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(
 app.get('/api/auth/facebook/generateAuthUrl', AuthMiddleware(UserRole.USER), (req,res) => userController.generateFacebookAuthUrl(req,res))
 
 // get users 
-app.get('/api/users',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.getUsers(req,res))
+app.get('/api/users',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.getUsers(req,res));
+
+
 
 // ============================================
 // 10. ERROR HANDLING

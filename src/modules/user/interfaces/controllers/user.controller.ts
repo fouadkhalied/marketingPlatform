@@ -580,15 +580,7 @@ export class UserController {
     const userId = req.user.id;
   
     // Add userId as query parameter to YOUR redirect URI
-      const redirectUri = "https://marketing-platform-six.vercel.app/api/auth/facebook/callback";
-      const state = `12345_${userId}`;
-      
-      const authUrl = `https://www.facebook.com/v23.0/dialog/oauth?` +
-        `client_id=562659103570379&` +
-        `redirect_uri=${redirectUri}&` +
-        `state=${state}&` +
-        `scope=email,public_profile,pages_show_list,pages_read_engagement,pages_read_user_content,pages_manage_engagement&` +
-        `response_type=code`;
+    const authUrl = await this.userService.generateFacebookAuthUrl(userId);
 
     res.status(200).json({ success: true, data: { url: authUrl } });
   }

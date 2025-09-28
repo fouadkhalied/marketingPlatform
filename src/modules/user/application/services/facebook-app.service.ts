@@ -197,205 +197,164 @@ export class FacebookPageService {
   }
 
   // 1. Get Page Posts with improved error handling
-  async getPagePosts(
-    pageId: string,
-    pageAccessToken: string,
-    options: {
-      limit?: number;
-      since?: string;
-      until?: string;
-      fields?: string[];
-    } = {}
-  ): Promise<{
-    posts: FacebookPost[];
-    paging?: {
-      next?: string;
-      previous?: string;
-    };
-  }> {
-    try {
-      // Validate access first - this will throw ErrorBuilder errors if invalid
-      await this.validatePageAccess(pageId, pageAccessToken);
+  
+// In your FacebookPageService.getPagePosts method, remove the fields parameter entirely:
 
-      // Log API usage 
-      await this.facebookRepository.logApiUsage("system", `/${pageId}/posts`, new Date());
+async getPagePosts(
+  userId:string,
+  pageId: string,
+  pageAccessToken: string,
+  options: {
+    limit?: number;
+    since?: string;
+    until?: string;
+    fields?: string[];
+    userId?: string;
+  } = {}
+): Promise<{
+  posts: FacebookPost[];
+  paging?: {
+    next?: string;
+    previous?: string;
+  };
+}> {
+  try {
+    // Validate access first
+    await this.validatePageAccess(pageId, pageAccessToken);
 
-      const defaultFields = [
-        "id",
-        "message",
-        "story",
-        "created_time",
-        "updated_time",
-        "type",
-        "status_type",
-        "permalink_url",
-        "full_picture",
-        "attachments{type,url,media}"
-      ];
-
-      const response = await this.axiosInstance.get<{
-        data: FacebookPost[];
-        paging?: {
-          next?: string;
-          previous?: string;
-        };
-      }>(`/${pageId}/posts`, {
-        params: {
-          access_token: pageAccessToken,
-          limit: options.limit || 25,
-          fields: (options.fields || defaultFields).join(","),
-          ...(options.since && { since: options.since }),
-          ...(options.until && { until: options.until }),
-        },
-      });
-
-      if (!response.data.data) {
-        return { posts: [] };
+    // Log API usage
+    if (options.userId) {
+      try {
+        await this.facebookRepository.logApiUsage(userId, `/${pageId}/posts`, new Date());
+      } catch (logError) {
+        console.warn('Failed to log API usage:', logError);
       }
-
-      return {
-        posts: response.data.data,
-        paging: response.data.paging,
-      };
-
-    } catch (error) {
-      // Re-throw ErrorBuilder errors from validation
-      if (error instanceof Error && error.message.includes("ErrorBuilder")) {
-        throw error;
-      }
-      
-      if (error instanceof AxiosError) {
-        const errorCode = error.response?.data?.error?.code;
-        const errorMessage = error.response?.data?.error?.message || error.message;
-        
-        // Handle specific Facebook API errors
-        if (errorCode === 190) {
-          throw ErrorBuilder.build(
-            ErrorCode.UNAUTHORIZED, 
-            `Access token expired. Please re-authenticate: ${appConfig.FACEBOOK_AUTH_URL}`
-          );
-        } else if (errorCode === 200 || errorCode === 10) {
-          throw ErrorBuilder.build(
-            ErrorCode.FORBIDDEN, 
-            `Insufficient permissions to access page posts. Please re-authenticate: ${appConfig.FACEBOOK_AUTH_URL}`
-          );
-        } else if (errorCode === 803) {
-          throw ErrorBuilder.build(
-            ErrorCode.FORBIDDEN, 
-            `Some posts may be unavailable due to privacy restrictions. Re-authenticate: ${appConfig.FACEBOOK_AUTH_URL}`
-          );
-        } else if (errorCode === 613) {
-          throw ErrorBuilder.build(
-            ErrorCode.TOO_MANY_REQUESTS, 
-            "Rate limit exceeded. Please try again later"
-          );
-        }
-        
-        throw ErrorBuilder.build(
-          ErrorCode.BAD_REQUEST, 
-          `Failed to fetch page posts: ${errorMessage}`
-        );
-      }
-      
-      throw ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Unknown error occurred while fetching page posts");
     }
-  }
 
+    // Make the API call without any fields parameter - just like your browser test
+    const response = await this.axiosInstance.get<{
+      data: FacebookPost[];
+      paging?: {
+        next?: string;
+        previous?: string;
+      };
+    }>(`/${pageId}/posts`, {
+      params: {
+        access_token: pageAccessToken,
+        limit: options.limit || 25,
+        // Remove fields parameter completely - let Facebook return default fields
+        ...(options.since && { since: options.since }),
+        ...(options.until && { until: options.until }),
+      },
+    });
+
+    if (!response.data.data) {
+      return { posts: [] };
+    }
+
+    return {
+      posts: response.data.data,
+      paging: response.data.paging,
+    };
+
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("ErrorBuilder")) {
+      throw error;
+    }
+    
+    if (error instanceof AxiosError) {
+      const errorCode = error.response?.data?.error?.code;
+      const errorMessage = error.response?.data?.error?.message || error.message;
+      
+      throw ErrorBuilder.build(
+        ErrorCode.BAD_REQUEST, 
+        `Failed to fetch page posts: ${errorMessage}`
+      );
+    }
+    
+    throw ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Unknown error occurred while fetching page posts");
+  }
+}
   // 2. Get Post Insights with improved error handling
   async getPostInsights(
+    userId: string,
     postId: string,
-    pageAccessToken: string,
-    metrics: string[] = [
-      "post_impressions",
-      "post_engaged_users",
-      "post_clicks",
-      "post_reactions_like_total",
-      "post_reactions_love_total",
-      "post_reactions_wow_total",
-      "post_reactions_haha_total",
-      "post_reactions_sorry_total",
-      "post_reactions_anger_total"
-    ]
+    pageAccessToken: string
   ): Promise<FacebookPostInsights> {
     try {
-      // Log API usage 
-
-      await this.facebookRepository.logApiUsage("system", `/${postId}/insights`, new Date());
-
+      // Log API usage
+      await this.facebookRepository.logApiUsage(userId, `/${postId}/insights`, new Date());
+  
+      // Build the fields URL
+      const fields = [
+        "likes.summary(true).limit(0)",
+        "comments.summary(true).limit(0)",
+        "shares"
+      ].join(",");
+      
       const response = await this.axiosInstance.get<{
-        data: Array<{
-          name: string;
-          values: Array<{
-            value: number;
-            end_time: string;
-          }>;
-          title: string;
-          description: string;
-        }>;
-      }>(`/${postId}/insights`, {
+        likes: { summary: { total_count: number } };
+        comments: { summary: { total_count: number } };
+        shares?: { count: number };
+      }>(`/${postId}`, {
         params: {
           access_token: pageAccessToken,
-          metric: metrics.join(","),
+          fields,
         },
       });
-
-      if (!response.data.data) {
-        throw ErrorBuilder.build(
-          ErrorCode.AD_NOT_FOUND, 
-          "No insights data available for this post"
-        );
-      }
-
-      return {
-        post_id: postId,
-        insights: response.data.data,
-      };
-
-    } catch (error) {
-      // Re-throw ErrorBuilder errors
-      if (error instanceof Error && error.message.includes("ErrorBuilder")) {
-        throw error;
-      }
       
+      // Transform response into a unified insights object
+      const data: FacebookPostInsights = {
+        post_id: postId,
+        insights: {
+          likes: response.data.likes?.summary?.total_count || 0,
+          comments: response.data.comments?.summary?.total_count || 0,
+          shares: response.data.shares?.count || 0,
+        },
+      };
+      
+  
+      return data;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("ErrorBuilder")) throw error;
+  
       if (error instanceof AxiosError) {
         const errorCode = error.response?.data?.error?.code;
         const errorMessage = error.response?.data?.error?.message || error.message;
-        
-        // Handle specific insights errors
+  
         if (errorCode === 100) {
           throw ErrorBuilder.build(
-            ErrorCode.AD_NOT_FOUND, 
+            ErrorCode.AD_NOT_FOUND,
             "Post not found or you don't have permission to view its insights"
           );
         } else if (errorCode === 190) {
           throw ErrorBuilder.build(
-            ErrorCode.UNAUTHORIZED, 
+            ErrorCode.UNAUTHORIZED,
             `Access token expired or invalid. Please re-authenticate: ${appConfig.FACEBOOK_AUTH_URL}`
           );
         } else if (errorCode === 200 || errorCode === 10) {
           throw ErrorBuilder.build(
-            ErrorCode.FORBIDDEN, 
+            ErrorCode.FORBIDDEN,
             `Insufficient permissions to access post insights. Please re-authenticate: ${appConfig.FACEBOOK_AUTH_URL}`
           );
-        } else if (errorCode === 613) {
+        } else if (errorCode === 613 || errorCode === 17) {
           throw ErrorBuilder.build(
-            ErrorCode.TOO_MANY_REQUESTS, 
+            ErrorCode.TOO_MANY_REQUESTS,
             "Rate limit exceeded. Please try again later"
           );
-        } else if (errorCode === 17) {
-          throw ErrorBuilder.build(
-            ErrorCode.TOO_MANY_REQUESTS, 
-            "User request limit reached. Please try again later"
-          );
         }
-        
+  
         throw ErrorBuilder.build(
-          ErrorCode.BAD_REQUEST, 
+          ErrorCode.BAD_REQUEST,
           `Failed to fetch post insights: ${errorMessage}`
         );
       }
-      
-      throw ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Unknown error occurred while fetching post insights");
+  
+      throw ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unknown error occurred while fetching post insights"
+      );
     }
   }
+  
 }

@@ -10,17 +10,13 @@ import { UserController } from "../controllers/user.controller";
 
 // Factory function to create the fully wired controller
 export function createUserController(): UserController {
-  // Validate required environment variables
-  const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) {
-    throw new Error("JWT_SECRET environment variable is required");
-  }
 
   // Create repository implementation (infrastructure)
   const userRepository = new UserRepositoryImpl();
 
   const facebookRepository = new FacebookPageRepositoryImpl();
 
+  // Create services 
   const emailService = new EmailService();
 
   const otpService = new OTPService(emailService);
@@ -28,13 +24,14 @@ export function createUserController(): UserController {
   const facebookPageService = new FacebookPageService(facebookRepository)
 
   // Pass the actual environment variable value, not the string
-  const jwtService = new JwtService(jwtSecret);
+  const jwtService = new JwtService();
 
-  // Pass repository to application service
+  // Pass repository and services to application service 
   const userService = new UserAppService(userRepository, otpService, jwtService, facebookPageService);
 
   // Pass application service to controller
   const userController = new UserController(userService);
 
   return userController;
+
 }
