@@ -18,7 +18,7 @@ export class JwtService {
         role: payload.role,
       },
       this.secretKey,
-      { expiresIn: '1h' }
+      { expiresIn: '30d' }
     );
   }
 

@@ -61,7 +61,6 @@ export const users = pgTable("users", {
   export const purchases = pgTable("purchases", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull().references(() => users.id),
-    adId: varchar("ad_id").references(() => ads.id),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     impressionsAllocated: integer("impressions_allocated").notNull().default(0),
     status: purchaseStatusEnum("status").notNull().default("pending"),
@@ -175,11 +174,7 @@ export const users = pgTable("users", {
     user: one(users, {
       fields: [purchases.userId],
       references: [users.id],
-    }),
-    ad: one(ads, {
-      fields: [purchases.adId],
-      references: [ads.id],
-    }),
+    })
   }));
   
   export const impressionsEventsRelations = relations(impressionsEvents, ({ one, many }) => ({
