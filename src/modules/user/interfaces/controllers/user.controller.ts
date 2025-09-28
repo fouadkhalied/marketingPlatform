@@ -149,8 +149,20 @@ export class UserController {
   }
 
   // Get user by ID
-  async getUser(req: GetUserByIdRequest, res: Response): Promise<void> {
+  async getUser(req: Request, res: Response): Promise<void> {
     try {
+      if (!req.params.id) {
+        res.status(401).json({
+          success: false,
+          message: "User must be authenticated",
+          error: {
+            code: "UNAUTHORIZED",
+            message: "User must be authenticated"
+          }
+        });
+        return;
+      }
+      
       const result = await this.userService.getUser(req.params.id);
       const statusCode = this.getStatusCode(result);
       
@@ -467,8 +479,7 @@ export class UserController {
           message: "User must be authenticated",
           error: {
             code: "UNAUTHORIZED",
-            message: "User must be authenticated",
-            da : userId
+            message: "User must be authenticated"
           }
         });
         return;

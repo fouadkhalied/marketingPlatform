@@ -3,7 +3,7 @@ import { userInterface } from "../../domain/repositories/user.repository";
 
 import { eq, and, desc, gte, lte, count, sum, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { CreateUser, User, users } from "../../../../infrastructure/shared/schema/schema";
+import { CreateUser, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 
 export class UserRepositoryImpl implements userInterface {
@@ -19,8 +19,53 @@ export class UserRepositoryImpl implements userInterface {
         return isValid ? user : null;
       }
     
-      async getUser(id: string): Promise<User | undefined> {
-        const [user] = await db.select().from(users).where(eq(users.id, id));
+      async getUser(id: string): Promise<Partial<User & { socialMediaPages: Array<{ pageId: string; pageName: string; pageType: string; isActive: boolean }> }> | undefined> {
+        const result = await db
+          .select({
+            id: users.id,
+            username: users.username,
+            email: users.email,
+            role: users.role,
+            verified: users.verified,
+            freeViewsCredits: users.freeViewsCredits,
+            createdAt: users.createdAt,
+            adsCount: users.adsCount,
+            totalSpend: users.totalSpend,
+            // Social media page fields
+            pageId: socialMediaPages.pageId,
+            pageName: socialMediaPages.pageName,
+            pageType: socialMediaPages.pageType,
+            isActive: socialMediaPages.isActive,
+          })
+          .from(users)
+          .leftJoin(socialMediaPages, eq(users.id, socialMediaPages.userId))
+          .where(eq(users.id, id));
+      
+        if (result.length === 0) {
+          return undefined;
+        }
+      
+        // Group the results to handle multiple social media pages
+        const user = {
+          id: result[0].id,
+          username: result[0].username,
+          email: result[0].email,
+          role: result[0].role,
+          verified: result[0].verified,
+          freeViewsCredits: result[0].freeViewsCredits,
+          createdAt: result[0].createdAt,
+          adsCount: result[0].adsCount,
+          totalSpend: result[0].totalSpend,
+          socialMediaPages: result
+            .filter(row => row.pageId !== null) // Filter out null joins
+            .map(row => ({
+              pageId: row.pageId!,
+              pageName: row.pageName!,
+              pageType: row.pageType!,
+              isActive: row.isActive!,
+            }))
+        };
+      
         return user;
       }
     
@@ -105,10 +150,14 @@ export class UserRepositoryImpl implements userInterface {
           // Fetch paginated results ordered by creation date (newest first)
           const results = await db
               .select({
+                id: users.id,
                 username: users.username,
+                email: users.email,
                 role: users.role,
-                verified: users.verified,
-                freeCredits: users.freeViewsCredits
+                freeViewsCredits: users.freeViewsCredits,
+                createdAt: users.createdAt,
+                adsCount: users.adsCount,
+                totalSpend: users.totalSpend
             })
               .from(users)
               .orderBy(desc(users.createdAt))

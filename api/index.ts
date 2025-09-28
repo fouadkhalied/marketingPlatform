@@ -362,8 +362,7 @@ app.get('/api/auth/facebook/generateAuthUrl', AuthMiddleware(UserRole.USER), (re
 
 // get users 
 app.get('/api/users',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.getUsers(req,res));
-
-
+app.get('/api/users/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.getUser(req,res));
 
 // ============================================
 // 10. ERROR HANDLING
