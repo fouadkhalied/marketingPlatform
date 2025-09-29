@@ -8,4 +8,5 @@ export interface userInterface {
     updateUser(id: string, updates: Partial<User>): Promise<User>;
     verifyUser(id: string): Promise<User | undefined>
     updateUserStripeInfo(id: string, customerId: string, subscriptionId?: string): Promise<User>;
+    deleteUser(id: string): Promise<boolean>
 }

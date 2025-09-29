@@ -56,6 +56,7 @@ export class UserRepositoryImpl implements userInterface {
           freeViewsCredits: result[0].freeViewsCredits,
           createdAt: result[0].createdAt,
           adsCount: result[0].adsCount,
+          balance: result[0].balance,
           totalSpend: result[0].totalSpend,
           socialMediaPages: result
             .filter(row => row.pageId !== null) // Filter out null joins
@@ -91,6 +92,30 @@ export class UserRepositoryImpl implements userInterface {
           .returning();
         return user;
       }
+
+      async deleteUser(id: string): Promise<boolean> {
+        const [deleted] = await db.delete(users).where(eq(users.id, id)).returning();
+        return !!deleted;
+      }
+
+      async makeUserAdmin(id: string): Promise<User> {
+        const [user] = await db
+          .update(users)
+          .set({
+            role: 'admin',
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, id))
+          .returning();
+      
+        if (!user) {
+          throw new Error("User not found");
+        }
+      
+        return user;
+      }
+      
+
     
       async updateUser(id: string, updates: Partial<User>): Promise<User> {
         const [user] = await db

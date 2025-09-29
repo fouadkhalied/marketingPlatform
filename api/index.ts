@@ -365,7 +365,14 @@ app.get('/api/auth/facebook/generateAuthUrl', AuthMiddleware(UserRole.USER), (re
 
 // get users 
 app.get('/api/users',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.getUsers(req,res));
+
 app.get('/api/users/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.getUser(req,res));
+
+// delete user
+app.delete('/api/users/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.deleteUser(req,res));
+
+// promote user to admin 
+app.put('/api/users/promote/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.makeUserAdmin(req,res));
 
 // ============================================
 // 10. ERROR HANDLING

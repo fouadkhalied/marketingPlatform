@@ -53,6 +53,36 @@ export class UserAppService {
     }
   }
 
+    // Promote user to admin
+  async makeUserAdmin(id: string): Promise<ApiResponseInterface<User>> {
+      try {
+        const user = await this.userRepository.makeUserAdmin(id);
+        if (!user) {
+          return ErrorBuilder.build(ErrorCode.USER_NOT_FOUND, "User not found");
+        }
+        return ResponseBuilder.success(user, "User promoted to admin successfully");
+      } catch (error) {
+        console.error("Error promoting user to admin:", error);
+        return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to promote user to admin");
+      }
+    }  
+
+      // Delete user by ID
+  async deleteUser(id: string): Promise<ApiResponseInterface<null>> {
+    try {
+      const deletedUser = await this.userRepository.deleteUser(id);
+
+      if (!deletedUser) {
+        return ErrorBuilder.build(ErrorCode.USER_NOT_FOUND, "User not found");
+      }
+
+      return ResponseBuilder.success(null, "User deleted successfully");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to delete user");
+    }
+  }
+
   async login(email: string, password: string): Promise<ApiResponseInterface<{token: string}>> {
     try {
       // 1. Find the user by email
@@ -84,7 +114,7 @@ export class UserAppService {
   }
 
   // Get user by ID
-  async getUser(id: string): Promise<ApiResponseInterface<User>> {
+  async getUser(id: string): Promise<ApiResponseInterface<Partial<User & { socialMediaPages: Array<{ pageId: string; pageName: string; pageType: string; isActive: boolean }> }> | undefined>> {
     try {
       const user = await this.userRepository.getUser(id);
       if (!user) {
@@ -314,7 +344,7 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
       "Unexpected error while listing users for admin",
       error instanceof Error ? error.message : error)
     }
-}
+  }
 
   // Update Stripe info
   async updateUserStripeInfo(

@@ -112,6 +112,53 @@ export class UserController {
     }
   }
 
+  async makeUserAdmin(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        const errorResponse = ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "User ID is required")
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      const result = await this.userService.makeUserAdmin(id);
+      const statusCode = this.getStatusCode(result);
+
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error("Error promoting user to admin:", err);
+
+      const errorResponse = ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to promote user to admin", err.message);
+
+      res.status(500).json(errorResponse);
+    }
+  }
+
+
+  async deleteUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        const errorResponse = ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "User ID is required")
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      const result = await this.userService.deleteUser(id);
+      const statusCode = this.getStatusCode(result);
+
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error("Error deleting user:", err);
+
+      const errorResponse = ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to delete user", err.message);
+
+      res.status(500).json(errorResponse);
+    }
+  }
+
   // Login user
   async login(req: LoginRequest, res: Response): Promise<void> {
     try {
