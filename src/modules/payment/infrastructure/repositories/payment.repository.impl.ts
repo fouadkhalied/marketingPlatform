@@ -1,15 +1,15 @@
-import { PaymentRepository } from "../../domain/repositories/payment.repository";
-import { Payment } from "../../domain/entities/payment.entity";
-import { db } from "../../../../infrastructure/db/connection";
-import { purchases, users } from "../../../../infrastructure/shared/schema/schema";
 import { eq, sql } from "drizzle-orm";
+import { db } from "../../../../infrastructure/db/connection";
+import { InsertPurchase, Purchase, purchases, users } from "../../../../infrastructure/shared/schema/schema";
+import { PaymentRepository } from "../../domain/repositories/payment.repository";
 
 export class PaymentRepositoryImpl implements PaymentRepository {
-    async save(payment: Payment): Promise<Payment> {
+    async save(payment: InsertPurchase): Promise<Purchase> {
         try {
             console.log('💾 Saving payment to database...', {
                 userId: payment.userId,
                 amount: payment.amount,
+                status: payment.status,
                 currency: payment.currency,
                 method: payment.method,
                 stripeSessionId: payment.stripeSessionId
@@ -17,93 +17,199 @@ export class PaymentRepositoryImpl implements PaymentRepository {
 
             // Use transaction to ensure both operations succeed or both fail
             const result = await db.transaction(async (tx) => {
+                // Check if payment already exists (prevent duplicate processing)
+                if (payment.stripeSessionId) {
+                    const existingPayment = await tx
+                        .select()
+                        .from(purchases)
+                        .where(eq(purchases.stripeSessionId, payment.stripeSessionId))
+                        .limit(1);
+
+                    if (existingPayment.length > 0) {
+                        console.log('⚠️ Payment already processed, skipping:', payment.stripeSessionId);
+                        return existingPayment[0];
+                    }
+                }
+
                 // 1. Insert the payment record
                 const [savedPayment] = await tx
                     .insert(purchases)
                     .values({
                         userId: payment.userId,
-                        amount: payment.amount.toString(), // number -> string for DB
+                        amount: payment.amount.toString(),
                         currency: payment.currency,
                         method: payment.method,
-                        status: 'completed', // Add status if needed
+                        status: payment.status || 'pending',
                         stripeSessionId: payment.stripeSessionId || null,
                         stripePaymentIntentId: payment.stripePaymentIntentId || null,
-                        impressionsAllocated: payment.impressionsAllocated || 0,
-                        createdAt: payment.createdAt || new Date()
                     })
                     .returning();
-
-                // 2. Update user balance (add credits)
-                // Assuming you want to add impressions based on the payment amount
-                // You might want to calculate credits based on your pricing logic
-                const creditsToAdd = payment.impressionsAllocated || Math.floor(payment.amount * 100); // Example: $1 = 100 credits
                 
-                await tx
-                    .update(users)
-                    .set({
-                        freeViewsCredits: sql`${users.freeViewsCredits} + ${creditsToAdd}`,
-                        totalSpend: sql`${users.totalSpend} + ${Math.floor(payment.amount * 100)}`, // Store as cents
-                        updatedAt: new Date()
-                    })
-                    .where(eq(users.id, payment.userId));
+                // 2. Only add balance if payment is completed
+                if (payment.status === 'completed') {
+                    const amountToAdd = typeof payment.amount === 'string' 
+                        ? parseFloat(payment.amount) 
+                        : payment.amount;
+                    
+                    await tx
+                        .update(users)
+                        .set({
+                            balance: sql`${users.balance} + ${amountToAdd}`,
+                            updatedAt: new Date()
+                        })
+                        .where(eq(users.id, payment.userId));
+
+                    console.log('✅ Balance added to user account', {
+                        userId: payment.userId,
+                        amountAdded: amountToAdd
+                    });
+                }
 
                 console.log('✅ Transaction completed successfully', {
                     paymentId: savedPayment.id,
-                    creditsAdded: creditsToAdd,
-                    userId: payment.userId
+                    userId: payment.userId,
+                    status: savedPayment.status
                 });
 
                 return savedPayment;
             });
 
-            // Convert amount back to number for the entity
-            return {
-                ...result,
-                amount: parseFloat(result.amount),
-            } as Payment;
+            return result;
             
         } catch (error) {
             console.error('❌ Transaction failed - rolling back:', error);
-            throw new Error(`Failed to save payment and update user balance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw new Error(`Failed to save payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
-    async findById(id: string): Promise<Payment | null> {
+    async findById(id: string): Promise<Purchase | null> {
         try {
-            const result = await db
+            const [result] = await db
                 .select()
                 .from(purchases)
                 .where(eq(purchases.id, id))
                 .limit(1);
 
-            if (result.length === 0) {
-                return null;
-            }
-
-            const payment = result[0];
-            return {
-                ...payment,
-                amount: parseFloat(payment.amount),
-            } as Payment;
+            return result || null;
         } catch (error) {
             console.error('❌ Database find error:', error);
             return null;
         }
     }
 
-    // Optional: Method to get user's current balance
+    async findBySessionId(sessionId: string): Promise<Purchase | null> {
+        try {
+            const [result] = await db
+                .select()
+                .from(purchases)
+                .where(eq(purchases.stripeSessionId, sessionId))
+                .limit(1);
+
+            return result || null;
+        } catch (error) {
+            console.error('❌ Database find error:', error);
+            return null;
+        }
+    }
+
+    async updateStatus(
+        sessionId: string, 
+        status: 'pending' | 'completed' | 'failed' | 'refunded'
+    ): Promise<boolean> {
+        try {
+            await db.transaction(async (tx) => {
+                const [payment] = await tx
+                    .select()
+                    .from(purchases)
+                    .where(eq(purchases.stripeSessionId, sessionId))
+                    .limit(1);
+
+                if (!payment) {
+                    throw new Error('Payment not found');
+                }
+
+                // Update payment status
+                await tx
+                    .update(purchases)
+                    .set({ 
+                        status,
+                        updatedAt: new Date()
+                    })
+                    .where(eq(purchases.stripeSessionId, sessionId));
+
+                // If changing from pending to completed, add balance
+                if (payment.status === 'pending' && status === 'completed') {
+                    const amountToAdd = parseFloat(payment.amount);
+                    
+                    await tx
+                        .update(users)
+                        .set({
+                            balance: sql`${users.balance} + ${amountToAdd}`,
+                            updatedAt: new Date()
+                        })
+                        .where(eq(users.id, payment.userId));
+
+                    console.log('✅ Balance added after status update', {
+                        userId: payment.userId,
+                        amountAdded: amountToAdd
+                    });
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error('❌ Error updating payment status:', error);
+            return false;
+        }
+    }
+
     async getUserBalance(userId: string): Promise<number> {
         try {
             const [user] = await db
-                .select({ freeViewsCredits: users.freeViewsCredits })
+                .select({ balance: users.balance })
                 .from(users)
                 .where(eq(users.id, userId))
                 .limit(1);
 
-            return user?.freeViewsCredits || 0;
+            return user?.balance || 0;
         } catch (error) {
             console.error('❌ Error fetching user balance:', error);
             return 0;
+        }
+    }
+
+    async getPurchaseHistory(
+        filter: { userId: string },
+        pagination: { page: number; limit: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }
+    ) {
+        try {
+            const offset = (pagination.page - 1) * pagination.limit;
+
+            const [items, totalCount] = await Promise.all([
+                db
+                    .select()
+                    .from(purchases)
+                    .where(eq(purchases.userId, filter.userId))
+                    .orderBy(sql`${purchases.createdAt} ${pagination.sortOrder || 'desc'}`)
+                    .limit(pagination.limit)
+                    .offset(offset),
+                db
+                    .select({ count: sql<number>`count(*)` })
+                    .from(purchases)
+                    .where(eq(purchases.userId, filter.userId))
+                    .then(res => Number(res[0].count))
+            ]);
+
+            return {
+                items,
+                total: totalCount,
+                page: pagination.page,
+                limit: pagination.limit,
+                totalPages: Math.ceil(totalCount / pagination.limit)
+            };
+        } catch (error) {
+            console.error('❌ Error fetching purchase history:', error);
+            throw error;
         }
     }
 }

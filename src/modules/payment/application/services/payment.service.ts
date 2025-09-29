@@ -1,8 +1,7 @@
-// Updated PaymentService with new Payment entity structure
 import { Request, Response } from 'express';
 import { newPaymentDto, CreatePaymentDto } from "../dtos/create-payment.dto";
 import { PaymentRepository } from "../../domain/repositories/payment.repository";
-import { Payment } from "../../domain/entities/payment.entity";
+import { InsertPurchase } from "../../../../infrastructure/shared/schema/schema";
 import { stripe } from "../../../../infrastructure/config/stripe.config";
 import { StripePaymentHandler } from "../../../../infrastructure/shared/stripe/stripe";
 import { ApiResponseInterface } from '../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface';
@@ -12,7 +11,6 @@ import { ErrorBuilder } from '../../../../infrastructure/shared/common/errors/er
 
 export class PaymentService {
     private readonly stripeHandler: StripePaymentHandler;
-    private readonly CREDITS_PER_DOLLAR = 1000; // Configure based on your pricing model
 
     constructor(
         private readonly paymentRepo: PaymentRepository,
@@ -22,13 +20,10 @@ export class PaymentService {
         this.setupWebhookHandlers();
     }
 
-    async createCheckoutSession(req: Request, res: Response): Promise<ApiResponseInterface<{url : string , sessionId : string}>> {
+    async createCheckoutSession(req: Request, res: Response): Promise<ApiResponseInterface<{url: string, sessionId: string}>> {
         try {
             const paymentDto: newPaymentDto = req.body;
             const userId = req.user!.id.toString();
-
-            // Calculate impressions/credits that will be allocated
-            const impressionsToAllocate = Math.floor(paymentDto.amount * this.CREDITS_PER_DOLLAR);
 
             const session = await this.stripeHandler.createCheckoutSession({
                 customPricing: {
@@ -43,8 +38,6 @@ export class PaymentService {
                 metadata: {
                     userId,
                     amount: paymentDto.amount.toString(),
-                    impressionsAllocated: impressionsToAllocate.toString(),
-                    adId: paymentDto.adId?.toString() || '',
                 }
             });
 
@@ -56,20 +49,17 @@ export class PaymentService {
             }
 
             // Create pending payment record
-            const pendingPayment = new Payment(
+            const pendingPaymentData: InsertPurchase = {
                 userId,
-                paymentDto.amount,
-                paymentDto.currency,
-                'stripe',
-                impressionsToAllocate,
-                'pending',
-                session.id,
-                undefined, // payment intent will be set later
-                paymentDto.adId
-            );
+                amount: paymentDto.amount.toString(),
+                currency: paymentDto.currency,
+                method: 'stripe',
+                status: 'pending',
+                stripeSessionId: session.id,
+            };
 
             // Save pending payment (without credits allocation yet)
-            await this.createPendingPayment(pendingPayment);
+            await this.paymentRepo.save(pendingPaymentData);
 
             return ResponseBuilder.success({
                 url: session.url,
@@ -85,47 +75,28 @@ export class PaymentService {
         }
     }
 
-    async createPendingPayment(payment: Payment): Promise<Payment> {
+    async createCompletedPayment(dto: CreatePaymentDto): Promise<void> {
         try {
-            // For pending payments, we don't want to add credits yet
-            // This will be handled in the webhook when payment is confirmed
-            return await this.paymentRepo.save(payment);
-        } catch (error) {
-            console.error('❌ Error creating pending payment:', error);
-            throw new Error('Failed to create pending payment record');
-        }
-    }
-
-    async createStripePayment(dto: CreatePaymentDto): Promise<Payment> {
-        try {
-            const impressionsAllocated = dto.impressionsAllocated || 
-                Math.floor(dto.amount * this.CREDITS_PER_DOLLAR);
-
-            const payment = new Payment(
-                dto.userId,
-                dto.amount,
-                dto.currency,
-                dto.method,
-                impressionsAllocated,
-                'completed', // Mark as completed since this is called from webhook
-                dto.stripeSessionId,
-                dto.stripePaymentIntentId,
-                dto.adsId
-            );
+            const paymentData: InsertPurchase = {
+                userId: dto.userId,
+                amount: dto.amount.toString(),
+                currency: dto.currency,
+                method: dto.method,
+                status: 'completed',
+                stripeSessionId: dto.stripeSessionId,
+                stripePaymentIntentId: dto.stripePaymentIntentId,
+            };
             
             // This will trigger the transaction in repository (save payment + add credits)
-            const savedPayment = await this.paymentRepo.save(payment);
+            await this.paymentRepo.save(paymentData);
             
             console.log('✅ Payment completed and credits added:', {
-                paymentId: savedPayment.id,
                 userId: dto.userId,
-                creditsAdded: impressionsAllocated,
                 amount: dto.amount
             });
 
-            return savedPayment;
         } catch (error) {
-            console.error('❌ Error creating stripe payment:', error);
+            console.error('❌ Error creating completed payment:', error);
             throw new Error(`Failed to process payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
@@ -159,26 +130,26 @@ export class PaymentService {
                 throw new Error('Missing amount_total in session data');
             }
 
-            const impressionsAllocated = sessionData.metadata?.impressionsAllocated ? 
-                parseInt(sessionData.metadata.impressionsAllocated) : 
-                Math.floor((sessionData.amount_total / 100) * this.CREDITS_PER_DOLLAR);
+            // Check if payment already processed (idempotency check)
+            const existingPayment = await this.paymentRepo.findBySessionId(sessionData.id);
+            if (existingPayment && existingPayment.status === 'completed') {
+                console.log('⚠️ Payment already processed, skipping:', sessionData.id);
+                return;
+            }
 
             const paymentDto: CreatePaymentDto = {
                 userId: sessionData.metadata.userId,
-                amount: sessionData.amount_total / 100,
+                amount: sessionData.amount_total / 100, // Convert cents to dollars
                 currency: sessionData.currency,
                 method: 'stripe',
                 stripeSessionId: sessionData.id,
                 stripePaymentIntentId: sessionData.payment_intent || undefined,
-                adsId: sessionData.metadata?.adId || undefined,
-                impressionsAllocated
             };
 
-            await this.createStripePayment(paymentDto);
+            await this.createCompletedPayment(paymentDto);
             
         } catch (error) {
             console.error('❌ Error handling checkout completed:', error);
-            // You might want to implement retry logic or alert administrators
             throw error;
         }
     }
@@ -196,15 +167,11 @@ export class PaymentService {
     async handlePaymentFailed(paymentIntentData: any): Promise<void> {
         try {
             // Mark payment as failed if it exists
-            const paymentId = paymentIntentData.metadata?.paymentId;
-            if (paymentId) {
-                const payment = await this.paymentRepo.findById(paymentId);
-                if (payment && payment.canProcess()) {
-                    payment.markAsFailed();
-                    await this.paymentRepo.save(payment);
-                }
+            const sessionId = paymentIntentData.metadata?.sessionId;
+            if (sessionId) {
+                await this.paymentRepo.updateStatus(sessionId, 'failed');
+                console.log('❌ Payment marked as failed:', paymentIntentData.id);
             }
-            console.log('❌ Payment failed:', paymentIntentData.id);
         } catch (error) {
             console.error('❌ Error handling payment failure:', error);
         }
@@ -219,14 +186,29 @@ export class PaymentService {
         }
     }
 
-    // Helper method to get payment status
-    // async getPaymentStatus(sessionId: string): Promise<Payment | null> {
-    //     try {
-    //         // You might want to add a method to find by session ID in your repository
-    //         return await this.paymentRepo.findBySessionId?.(sessionId) || null;
-    //     } catch (error) {
-    //         console.error('❌ Error getting payment status:', error);
-    //         return null;
-    //     }
-    // }
+    async getPaymentStatus(sessionId: string) {
+        try {
+            return await this.paymentRepo.findBySessionId(sessionId);
+        } catch (error) {
+            console.error('❌ Error getting payment status:', error);
+            return null;
+        }
+    }
+
+    async getPurchaseHistory(userId: string, page: number = 1, limit: number = 10) {
+        try {
+            const result = await this.paymentRepo.getPurchaseHistory(
+                { userId },
+                { page, limit, sortBy: 'createdAt', sortOrder: 'desc' }
+            );
+
+            return ResponseBuilder.success(result);
+        } catch (error) {
+            console.error('❌ Error getting purchase history:', error);
+            return ErrorBuilder.build(
+                ErrorCode.INTERNAL_SERVER_ERROR,
+                'Failed to fetch purchase history'
+            );
+        }
+    }
 }

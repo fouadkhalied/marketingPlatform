@@ -18,7 +18,7 @@ export class PaymentController {
           }
 
           // Validation: Check required fields in request body
-          const { amount, currency, adId } = req.body;
+          const { amount , currency } = req.body;
 
           if (!amount || amount <= 0) {
               return res.status(400).json({ error: 'Valid amount is required' });
@@ -26,10 +26,6 @@ export class PaymentController {
 
           if (!currency) {
               return res.status(400).json({ error: 'Currency is required' });
-          }
-
-          if (!adId) {
-              return res.status(400).json({ error: 'Ad ID is required' });
           }
 
           // Call service after validation passes
@@ -40,9 +36,7 @@ export class PaymentController {
           } else {
             const statusCode = serviceResponse.error?.details.httpStatus || 500
             res.status(statusCode).send(serviceResponse)
-          }
-         
-          
+          } 
       } catch (error: any) {
           console.error('❌ Create session error:', error);
           res.status(500).json({ 
@@ -73,4 +67,31 @@ export class PaymentController {
       }
   }
 
+
+  async getPurchaseHistory(req: Request, res: Response): Promise<void> {
+    try {
+        const userId = req.user!.id;
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+
+        // Validate pagination params
+        if (page < 1 || limit < 1 || limit > 100) {
+            res.status(400).json({
+                success: false,
+                message: 'Invalid pagination parameters'
+            });
+            return;
+        }
+
+        const result = await this.paymentService.getPurchaseHistory(userId, page, limit);
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error('❌ Controller error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch purchase history'
+        });
+    }
+ }
 }

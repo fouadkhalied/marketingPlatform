@@ -20,6 +20,7 @@ export const users = pgTable("users", {
     freeViewsCredits: integer("free_views_credits").notNull().default(10000),
     adsCount: integer("adsCount").default(0),
     totalSpend: integer("totalSpend").default(0),
+    balance: integer("balance").default(0),
     stripeCustomerId: text("stripe_customer_id"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
@@ -62,7 +63,7 @@ export const users = pgTable("users", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull().references(() => users.id),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-    impressionsAllocated: integer("impressions_allocated").notNull().default(0),
+    //impressionsAllocated: integer("impressions_allocated").notNull().default(0),
     status: purchaseStatusEnum("status").notNull().default("pending"),
     currency: text("currency").notNull(),
     method: text("method").notNull(),
@@ -220,8 +221,8 @@ export const users = pgTable("users", {
   export const insertPurchaseSchema = createInsertSchema(purchases).omit({
     id: true,
    //status: true,
-    stripeSessionId: true,
-    stripePaymentIntentId: true,
+    // stripeSessionId: true,
+    // stripePaymentIntentId: true,
     createdAt: true,
     updatedAt: true,
   });
