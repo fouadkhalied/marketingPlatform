@@ -1,7 +1,7 @@
 ﻿import { and, eq, like, or, sql } from "drizzle-orm";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
 import { db } from "../../../../infrastructure/db/connection";
-import { Ad, ads , InsertAd, socialMediaPages } from "../../../../infrastructure/shared/schema/schema";
+import { Ad, ads , InsertAd, socialMediaPages, users } from "../../../../infrastructure/shared/schema/schema";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { AdStatus } from "../../domain/enums/ads.status.enum";
@@ -406,6 +406,43 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
+
+    async assignCreditToAd(userId: string, adId: string, credit: number, budgetType:string): Promise<Ad | null> {
+      return await db.transaction(async (tx) => {
+        // 1. Subtract from user balance
+        await tx
+          .update(users)
+          .set({ balance: sql`${users.balance} - ${credit}` })
+          .where(eq(users.id, userId));
     
+        // 2. Add to ad balance
+        const [updatedAd] = await tx
+          .update(ads)
+          .set({
+            budgetCredit: sql`${ads.budgetCredit} + ${credit}`,
+            budgetType: budgetType,
+            updatedAt: new Date(),
+          })
+          .where(eq(ads.id, adId))
+          .returning();
     
+        return updatedAd ?? null;
+      });
+    }
+    
+
+    async hasSufficientBalance(userId: string, credit: number): Promise<boolean> {
+      const [user] = await db
+        .select({ balance: users.balance })
+        .from(users)
+        .where(eq(users.id, userId));
+    
+      if (!user) {
+        throw new Error("User not found");
+      }
+    
+      const balance = user.balance ?? 0; // treat null as 0
+
+      return balance >= credit;
+    }
 }

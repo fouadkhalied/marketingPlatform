@@ -1,6 +1,4 @@
 import { resend, senderEmail } from "../config/resend.config";
-import { ErrorCode } from "../../errors/enums/basic.error.enum";
-import { ErrorBuilder } from "../../errors/errorBuilder";
 
 export interface EmailResult {
   success: boolean;

@@ -40,6 +40,7 @@ export const users = pgTable("users", {
     status: adStatusEnum("status").notNull().default("pending"),
     targetAudience: text("target_audience"),
     budgetType: text("budget_type"), // "impressions" or "clicks"
+    budgetCredit: integer("budget_credit").notNull().default(0),
     publishToken: text("publish_token"),
     approvedBy: varchar("approved_by").references(() => users.id),
     rejectionReason: text("rejection_reason"),

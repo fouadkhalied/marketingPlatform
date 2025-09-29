@@ -327,7 +327,12 @@ app.get(
   AuthMiddleware(UserRole.USER),
   (req,res) => advertisingController.getPostInsights(req,res)
 )
-
+app.post(
+  "/api/advertising/:id/assign-credit",
+  AuthMiddleware(UserRole.USER),
+  sanitizeInput,
+  (req,res)=>advertisingController.assignCreditToAd(req,res)
+)
 app.put(
   "/api/advertising/:id/approve",
   AuthMiddleware(UserRole.ADMIN),

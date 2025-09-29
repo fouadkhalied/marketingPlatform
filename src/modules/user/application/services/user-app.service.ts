@@ -220,11 +220,17 @@ export class UserAppService {
 
   // send password reset email
 
-  async sendPasswordResetEmail(email: string) {
+  async sendPasswordResetEmail(email: string): Promise<ApiResponseInterface<{ success: boolean; message: string }>> {
     try {
+
       const user = await this.userRepository.getUserByEmail(email);
+      
       if (!user) {
         return ErrorBuilder.build(ErrorCode.USER_NOT_FOUND, "User not found");
+      }
+
+      if (user.verified) {
+        return ErrorBuilder.build(ErrorCode.USER_ALREADY_VERIFIED, "User is already verified");
       }
 
       const passwordResetResult = await this.otpService.sendGeneratedPasswordResetToken(email);

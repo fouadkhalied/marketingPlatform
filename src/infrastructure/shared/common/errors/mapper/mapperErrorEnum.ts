@@ -16,6 +16,7 @@ export const ERROR_STATUS_MAP: Record<ErrorCode, number> = {
   [ErrorCode.AUTO_LOGIN_FAILED]: 401,
   [ErrorCode.INVALID_PASSWORD]: 401,
   [ErrorCode.INVALID_CREDENTIALS]: 401,
+  [ErrorCode.INSUFFICIENT_BALANCE]:402,
      
   // Resource Not Found Errors (404)
   [ErrorCode.RESOURCE_NOT_FOUND]: 404,
