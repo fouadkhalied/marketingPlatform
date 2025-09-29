@@ -25,10 +25,41 @@ export class PaymentRepositoryImpl implements PaymentRepository {
                         .where(eq(purchases.stripeSessionId, payment.stripeSessionId))
                         .limit(1);
 
-                    if (existingPayment.length > 0) {
-                        console.log('⚠️ Payment already processed, skipping:', payment.stripeSessionId);
-                        return existingPayment[0];
-                    }
+                        if (existingPayment.length > 0) {
+                            console.log('⚠️ Payment already exists, checking status...');
+                            
+                            // If existing is pending and new is completed, update it
+                            if (existingPayment[0].status === 'pending' && payment.status === 'completed') {
+                                console.log('Updating pending payment to completed');
+                                
+                                const [updatedPayment] = await tx
+                                    .update(purchases)
+                                    .set({ 
+                                        status: 'completed',
+                                        stripePaymentIntentId: payment.stripePaymentIntentId,
+                                        updatedAt: new Date()
+                                    })
+                                    .where(eq(purchases.stripeSessionId, payment.stripeSessionId))
+                                    .returning();
+                                
+                                // Add balance
+                                const amountToAdd = typeof payment.amount === 'string' 
+                                    ? parseFloat(payment.amount) 
+                                    : payment.amount;
+                                
+                                await tx
+                                    .update(users)
+                                    .set({
+                                        balance: sql`${users.balance} + ${amountToAdd}`,
+                                        updatedAt: new Date()
+                                    })
+                                    .where(eq(users.id, payment.userId));
+                                
+                                return updatedPayment;
+                            }
+                            
+                            return existingPayment[0];
+                        }
                 }
 
                 // 1. Insert the payment record
@@ -46,30 +77,30 @@ export class PaymentRepositoryImpl implements PaymentRepository {
                     .returning();
                 
                 // 2. Only add balance if payment is completed
-                if (payment.status === 'completed') {
-                    const amountToAdd = typeof payment.amount === 'string' 
-                        ? parseFloat(payment.amount) 
-                        : payment.amount;
+                // if (payment.status === 'completed') {
+                //     const amountToAdd = typeof payment.amount === 'string' 
+                //         ? parseFloat(payment.amount) 
+                //         : payment.amount;
                     
-                    await tx
-                        .update(users)
-                        .set({
-                            balance: sql`${users.balance} + ${amountToAdd}`,
-                            updatedAt: new Date()
-                        })
-                        .where(eq(users.id, payment.userId));
+                //     await tx
+                //         .update(users)
+                //         .set({
+                //             balance: sql`${users.balance} + ${amountToAdd}`,
+                //             updatedAt: new Date()
+                //         })
+                //         .where(eq(users.id, payment.userId));
 
-                    console.log('✅ Balance added to user account', {
-                        userId: payment.userId,
-                        amountAdded: amountToAdd
-                    });
-                }
+                //     console.log('✅ Balance added to user account', {
+                //         userId: payment.userId,
+                //         amountAdded: amountToAdd
+                //     });
+                // }
 
-                console.log('✅ Transaction completed successfully', {
-                    paymentId: savedPayment.id,
-                    userId: payment.userId,
-                    status: savedPayment.status
-                });
+                // console.log('✅ Transaction completed successfully', {
+                //     paymentId: savedPayment.id,
+                //     userId: payment.userId,
+                //     status: savedPayment.status
+                // });
 
                 return savedPayment;
             });
