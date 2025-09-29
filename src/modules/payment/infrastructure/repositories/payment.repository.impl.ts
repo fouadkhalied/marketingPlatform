@@ -184,13 +184,14 @@ export class PaymentRepositoryImpl implements PaymentRepository {
     ) {
         try {
             const offset = (pagination.page - 1) * pagination.limit;
+            //const sortOrder = pagination.sortOrder || 'desc';
 
             const [items, totalCount] = await Promise.all([
                 db
                     .select()
                     .from(purchases)
                     .where(eq(purchases.userId, filter.userId))
-                    .orderBy(sql`${purchases.createdAt} ${pagination.sortOrder || 'desc'}`)
+                    //.orderBy(sortOrder === 'desc' ? sql`${purchases.createdAt} desc` : sql`${purchases.createdAt} asc`)
                     .limit(pagination.limit)
                     .offset(offset),
                 db

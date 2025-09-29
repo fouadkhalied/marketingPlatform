@@ -48,25 +48,29 @@ export class PaymentController {
 
   // Webhook endpoint
   async webhook(req: Request, res: Response) {
-      try {
-          console.log('🎣 Webhook received');
-          const signature = req.headers['stripe-signature'] as string;
-          
-          if (!signature) {
-              console.error('❌ Missing Stripe signature');
-              return res.status(400).send('Missing signature');
-          }
+    try {
+        console.log('🎣 Webhook received');
+        console.log('Event type check...');
+        
+        const signature = req.headers['stripe-signature'] as string;
+        
+        if (!signature) {
+            console.error('❌ Missing Stripe signature');
+            return res.status(400).json({ error: 'Missing signature' });
+        }
 
-          await this.paymentService.processWebhook(req.body, signature);
-          
-          console.log('✅ Webhook processed successfully');
-          res.json({ received: true });
-      } catch (error: any) {
-          console.error('❌ Webhook error:', error);
-          res.status(400).send(`Webhook Error: ${error.message}`);
-      }
-  }
-
+        // This MUST use the same paymentService instance
+        await this.paymentService.processWebhook(req.body, signature);
+        
+        console.log('✅ Webhook processed successfully');
+        res.status(200).json({ received: true });
+        
+    } catch (error: any) {
+        console.error('❌ Webhook error:', error);
+        res.status(400).json({ error: `Webhook Error: ${error.message}` });
+    }
+}
+  
 
   async getPurchaseHistory(req: Request, res: Response): Promise<void> {
     try {

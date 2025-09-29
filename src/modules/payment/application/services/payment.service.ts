@@ -102,21 +102,19 @@ export class PaymentService {
     }
 
     private setupWebhookHandlers(): void {
+        console.log('🔧 Setting up webhook handlers...');
+        
         this.stripeHandler.onWebhookEvent('checkout.session.completed', async (event) => {
+            console.log('🎯 checkout.session.completed event received!');
             await this.handleCheckoutCompleted(event.data.object);
         });
 
-        this.stripeHandler.onWebhookEvent('customer.subscription.created', async (event) => {
-            await this.handleSubscriptionCreated(event.data.object);
-        });
-
-        this.stripeHandler.onWebhookEvent('invoice.payment_succeeded', async (event) => {
-            await this.handleInvoicePaymentSucceeded(event.data.object);
-        });
-
         this.stripeHandler.onWebhookEvent('payment_intent.payment_failed', async (event) => {
+            console.log('🎯 payment_intent.payment_failed event received!');
             await this.handlePaymentFailed(event.data.object);
         });
+
+        console.log('✅ Webhook handlers registered:', Array.from(this.stripeHandler['webhookHandlers'].keys()));
     }
 
     async handleCheckoutCompleted(sessionData: any): Promise<void> {

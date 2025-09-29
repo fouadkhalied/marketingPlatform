@@ -31,6 +31,7 @@ export class UserRepositoryImpl implements userInterface {
             createdAt: users.createdAt,
             adsCount: users.adsCount,
             totalSpend: users.totalSpend,
+            balance:users.balance,
             // Social media page fields
             pageId: socialMediaPages.pageId,
             pageName: socialMediaPages.pageName,
