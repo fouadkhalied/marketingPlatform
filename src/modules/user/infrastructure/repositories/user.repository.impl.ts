@@ -14,6 +14,10 @@ export class UserRepositoryImpl implements userInterface {
       async validateUser(email: string, password: string): Promise<User | null> {
         const user = await this.getUserByEmail(email);
         if (!user) return null;
+
+        if (!user.password) {
+          return null
+        }
         
         const isValid = await bcrypt.compare(password, user.password);
         return isValid ? user : null;
@@ -80,9 +84,13 @@ export class UserRepositoryImpl implements userInterface {
         const [user] = await db.select().from(users).where(eq(users.username, username));
         return user;
       }
-    
       async createUser(insertUser: CreateUser): Promise<User> {
+        if (!insertUser.password) {
+          throw new Error("Password is required for normal users");
+        }
+      
         const hashedPassword = await this.hashPassword(insertUser.password);
+      
         const [user] = await db
           .insert(users)
           .values({
@@ -90,8 +98,10 @@ export class UserRepositoryImpl implements userInterface {
             password: hashedPassword,
           })
           .returning();
+      
         return user;
       }
+      
 
       async deleteUser(id: string): Promise<boolean> {
         const [deleted] = await db.delete(users).where(eq(users.id, id)).returning();
