@@ -72,6 +72,20 @@ export class AuthController {
         });
       }
     }
+
+    async setGoogleStrategy(passport: any): Promise<void> {
+      try {
+        // Make sure your authService has a reference to GoogleAppService
+        if (typeof this.authService.setupGoogleStrategy === 'function') {
+          await this.authService.setupGoogleStrategy(passport);
+          console.log('✅ Google strategy registered');
+        } else {
+          console.warn('⚠️ setUpGoogleStrategy function not found in AuthService');
+        }
+      } catch (err: any) {
+        console.error('Failed to set up Google strategy:', err);
+      }
+    }  
   
     // Handle authentication failure
     async authFailure(req: Request, res: Response): Promise<void> {

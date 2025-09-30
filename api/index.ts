@@ -15,6 +15,8 @@ import { UserRole } from "../src/infrastructure/shared/common/auth/enums/userRol
 import { CheckVerificationRequest } from "../src/modules/user/interfaces/controllers/user.controller";
 import { createAdvertisingController } from "../src/modules/advertising/interfaces/factories/advertising.factory";
 import { createAuthController } from "../src/modules/auth/interfaces/factories/auth.controller.factory";
+import passport from 'passport';
+import session from 'express-session';
 
 const app = express();
 
@@ -42,6 +44,18 @@ app.use(helmet({
     preload: true
   }
 }));
+
+app.use(passport.initialize());
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'fallbackSecret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { httpOnly: true, secure: false } // set secure: true in production
+  })
+);
+
 
 // ============================================
 // 2. RATE LIMITING
@@ -229,7 +243,9 @@ const sanitizeInput = (req: express.Request, res: express.Response, next: expres
 // 8. CONTROLLER SETUP
 // ============================================
 
-const authController = createAuthController()
+const authController = createAuthController();
+authController.setGoogleStrategy(passport);
+
 const userController = createUserController();
 const paymentController = createPaymentController();
 const advertisingController = createAdvertisingController();

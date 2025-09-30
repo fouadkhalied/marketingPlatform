@@ -97,7 +97,7 @@ export class UserAppService {
       }
     
       // 3. Compare the provided password with the stored hash
-      const isPasswordValid = await this.jwtService.comparePassword(password, user.password);
+      const isPasswordValid = await this.jwtService.comparePassword(password, user.password, "normal");
       if (!isPasswordValid) {
         return ErrorBuilder.build(ErrorCode.INVALID_CREDENTIALS, "Wrong password");
       }

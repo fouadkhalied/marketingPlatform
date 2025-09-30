@@ -8,7 +8,8 @@ declare global {
       user?: {
         id: string;
         email: string;
-        role: typeof userRoleEnum.enumValues[number];
+        role: string;
+        oauth:string;
       };
     }
   }

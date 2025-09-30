@@ -35,7 +35,14 @@ export class JwtService {
   }
 
 
-  async comparePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
-    return bcrypt.compare(plainPassword, hashedPassword);
+  async comparePassword(plainPassword: string, hashedPassword: string | null , oauth: string): Promise<boolean> {
+    if (oauth === "normal") {
+      if (!hashedPassword) return false; // cannot compare if password is missing
+      return await bcrypt.compare(plainPassword, hashedPassword);
+    }
+    
+    else if (oauth === "google") return true
+    else if (oauth === "facebook") return true
+    else return false
   }
 }

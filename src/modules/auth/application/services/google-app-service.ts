@@ -125,8 +125,7 @@ export class GoogleAppService {
   async authGoogleCallback() {
     return [
       passport.authenticate("google", {
-        failureRedirect: "/api/auth/google/failure",
-        session: true,
+        failureRedirect: "/api/auth/google/failure"
       }),
       async (req: Request, res: Response) => {
         const user = req.user as User; // ✅ already DB user
