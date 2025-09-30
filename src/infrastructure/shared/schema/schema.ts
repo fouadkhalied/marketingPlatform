@@ -29,7 +29,7 @@ export const users = pgTable("users", {
   export const ads = pgTable("ads", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull().references(() => users.id),
-    postIdOnPlatform: varchar("post_id_on_platform").notNull(),
+    postIdOnPlatform: varchar("post_id_on_platform").notNull().unique(),
     pageId: varchar("page_id").references(() => socialMediaPages.pageId),
     titleEn: text("title_en").notNull(),
     titleAr: text("title_ar").notNull(),
@@ -39,7 +39,7 @@ export const users = pgTable("users", {
     imageUrl: text("image_url"),
     status: adStatusEnum("status").notNull().default("pending"),
     targetAudience: text("target_audience"),
-    budgetType: text("budget_type"), // "impressions" or "clicks"
+    budgetType: text("budget_type").notNull(), // "impressions" or "clicks"
     budgetCredit: integer("budget_credit").notNull().default(0),
     publishToken: text("publish_token"),
     approvedBy: varchar("approved_by").references(() => users.id),

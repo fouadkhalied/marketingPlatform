@@ -251,8 +251,6 @@ export class AdvertisingAppService {
           "Failed to retrieve page access token for page id"
         );
       }
-
-      console.log(pageAccessToken);
       
   
       // Call the Facebook service with correct parameters
@@ -276,8 +274,7 @@ export class AdvertisingAppService {
   async assignCreditToAd(
     userId: string,
     adId: string,
-    credit: number,
-    budgetType: string
+    credit: number
   ): Promise<ApiResponseInterface<{ success: boolean; adId: string; credit: number }>> {
     try {
       // 1. Check if user has enough balance
@@ -290,7 +287,7 @@ export class AdvertisingAppService {
       }
   
       // 2. Run transaction (repo handles atomicity)
-      const result = await this.advertisingRepository.assignCreditToAd(userId, adId, credit, budgetType);
+      const result = await this.advertisingRepository.assignCreditToAd(userId, adId, credit);
   
       if (!result) {
         return ErrorBuilder.build(

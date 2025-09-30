@@ -353,21 +353,10 @@ async assignCreditToAd(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const allowedBudgetTypes = ["impressions","clicks"];
-    if (!budgetType || !allowedBudgetTypes.includes(budgetType)) {
-      const errorResponse = ErrorBuilder.build(
-        ErrorCode.VALIDATION_ERROR,
-        `budgetType must be one of: ${allowedBudgetTypes.join(", ")}`
-      );
-      res.status(400).json(errorResponse);
-      return;
-    }
-
     const result = await this.advertisingService.assignCreditToAd(
       req.user.id,
       adId,
-      Number(credit),
-      budgetType
+      Number(credit)
     );
 
     const statusCode = this.getStatusCode(result);

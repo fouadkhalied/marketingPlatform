@@ -15,6 +15,6 @@ export interface IAdvertisingRepository {
     rejectAd(id: string, reason?: string): Promise<Ad>;
     getAllPagesForUser(isActive: boolean, userId: string, params: PaginationParams) : Promise<PaginatedResponse<autheticatedPage>>
     getPageAccessTokenById(userId: string,pageId: string): Promise<string | null>
-    assignCreditToAd(userId: string, adId: string, credit: number,budgetType:string): Promise<Ad | null>
+    assignCreditToAd(userId: string, adId: string, credit: number): Promise<Ad | null>
     hasSufficientBalance(userId: string, credit: number): Promise<boolean>
 }  

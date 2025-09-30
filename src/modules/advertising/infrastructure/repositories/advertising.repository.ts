@@ -407,7 +407,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
       }
     }
 
-    async assignCreditToAd(userId: string, adId: string, credit: number, budgetType:string): Promise<Ad | null> {
+    async assignCreditToAd(userId: string, adId: string, credit: number): Promise<Ad | null> {
       return await db.transaction(async (tx) => {
         // 1. Subtract from user balance
         await tx
@@ -420,7 +420,6 @@ export class AdvertisingRepository implements IAdvertisingRepository {
           .update(ads)
           .set({
             budgetCredit: sql`${ads.budgetCredit} + ${credit}`,
-            budgetType: budgetType,
             updatedAt: new Date(),
           })
           .where(eq(ads.id, adId))
