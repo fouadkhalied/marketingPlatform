@@ -119,7 +119,7 @@ app.use(cors({
       "http://localhost:3002",
       "http://localhost:3003",
       "http://localhost:5000",
-      "https://marketing-platform-ten.vercel.app"
+      "https://marketing-platform-six.vercel.app"
     ];
     
     // Allow requests with no origin (mobile apps, curl, etc.)
@@ -291,7 +291,6 @@ app.post('/api/auth/password-reset',
 
 
 // google auth routes
-
 app.get(
   '/api/auth/google',
   (req, res, next) => authController.googleAuth(req, res, next)
@@ -321,7 +320,6 @@ app.get(
   '/api/auth/google/me',
   (req, res) => authController.me(req, res)
 );
-
 
 // Payment routes
 app.post('/webhook', (req, res) => paymentController.webhook(req, res));
