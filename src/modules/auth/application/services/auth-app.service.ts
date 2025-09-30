@@ -51,7 +51,7 @@ export class AuthService {
 
   // Generate Google Auth URL (API response)
   async generateGoogleAuthUrl(): Promise<ApiResponseInterface<{ url: string }>> {
-    const url = await this.googleAppService.generateGoogleAuthUrl();
+    const url : string = await this.googleAppService.generateGoogleAuthUrl();
     return ResponseBuilder.success({ url });
   }
 }
