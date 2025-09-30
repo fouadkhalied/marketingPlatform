@@ -235,7 +235,7 @@ const sanitizeInput = (req: express.Request, res: express.Response, next: expres
 // ============================================
 
 const authController = createAuthController();
-authController.setGoogleStrategy(passport);
+authController.setGoogleStrategy();
 
 const userController = createUserController();
 const paymentController = createPaymentController();
