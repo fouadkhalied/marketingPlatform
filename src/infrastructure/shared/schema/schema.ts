@@ -8,24 +8,27 @@ export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 export const adStatusEnum = pgEnum("ad_status", ["pending", "approved", "rejected"]);
 export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "completed", "failed", "refunded"]);
 export const pagesTypeEnum = pgEnum("page_type", ["facebook", "instagram", "snapchat"]);
-
+export const oauthEnum = pgEnum("oauth_provider", ["normal", "google", "facebook"]);
 
 export const users = pgTable("users", {
-    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    username: text("username").notNull().unique(),
-    email: text("email").notNull().unique(),
-    password: text("password").notNull(),
-    role: userRoleEnum("role").notNull().default("user"),
-    verified: boolean("verified").notNull().default(false),
-    freeViewsCredits: integer("free_views_credits").notNull().default(10000),
-    adsCount: integer("adsCount").default(0),
-    totalSpend: integer("totalSpend").default(0),
-    balance: integer("balance").default(0),
-    stripeCustomerId: text("stripe_customer_id"),
-    createdAt: timestamp("created_at").notNull().default(sql`now()`),
-    updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
-  });
-  
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").unique(),
+  email: text("email").notNull().unique(),
+  password: text("password"), // nullable now
+  googleId: text("google_id"),
+  facebookId: text("facebook_id"),
+  oauth: oauthEnum("oauth").notNull().default("normal"), // <--- new
+  role: userRoleEnum("role").notNull().default("user"),
+  verified: boolean("verified").notNull().default(false),
+  freeViewsCredits: integer("free_views_credits").notNull().default(10000),
+  adsCount: integer("adsCount").default(0),
+  totalSpend: integer("totalSpend").default(0),
+  balance: integer("balance").default(0),
+  stripeCustomerId: text("stripe_customer_id"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
   export const ads = pgTable("ads", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull().references(() => users.id),
@@ -207,6 +210,16 @@ export const users = pgTable("users", {
     freeViewsCredits: true,
     stripeCustomerId: true,
   });
+
+  export const insertGoogleUserSchema = createInsertSchema(users).omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    freeViewsCredits: true,
+    stripeCustomerId: true,
+    password: true,       
+    facebookId: true,    
+  })
   
   export const insertAdSchema = createInsertSchema(ads).omit({
     id: true,
@@ -277,6 +290,7 @@ export const users = pgTable("users", {
   // Type exports
   export type User = typeof users.$inferSelect;
   export type CreateUser = z.infer<typeof insertUserSchema>;
+  export type CreateGoogleUser = z.infer<typeof insertGoogleUserSchema>;
 
   export type Ad = typeof ads.$inferSelect;
   export type InsertAd = z.infer<typeof insertAdSchema>;

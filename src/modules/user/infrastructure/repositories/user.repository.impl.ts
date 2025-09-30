@@ -1,7 +1,7 @@
 import { db } from "../../../../infrastructure/db/connection";
 import { userInterface } from "../../domain/repositories/user.repository";
 
-import { eq, and, desc, gte, lte, count, sum, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { CreateUser, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
@@ -115,8 +115,6 @@ export class UserRepositoryImpl implements userInterface {
         return user;
       }
       
-
-    
       async updateUser(id: string, updates: Partial<User>): Promise<User> {
         const [user] = await db
           .update(users)
@@ -142,7 +140,6 @@ export class UserRepositoryImpl implements userInterface {
       
         return user;
       }
-
 
       async updatePassword(email: string, newPassword: string): Promise<boolean> {
             // Step 1: Hash the new password securely

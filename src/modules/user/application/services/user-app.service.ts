@@ -90,20 +90,20 @@ export class UserAppService {
       if (!user) {
         return ErrorBuilder.build(ErrorCode.INVALID_CREDENTIALS, "Invalid credentials");
       }
+
+      // 2. Ensure the user is verified before allowing login
+      if (!user.verified) {
+        return ErrorBuilder.build(ErrorCode.USER_NOT_VERIFIED, "Account not verified. Please check your email for the verification code.");
+      }
     
-      // 2. Compare the provided password with the stored hash
+      // 3. Compare the provided password with the stored hash
       const isPasswordValid = await this.jwtService.comparePassword(password, user.password);
       if (!isPasswordValid) {
         return ErrorBuilder.build(ErrorCode.INVALID_CREDENTIALS, "Wrong password");
       }
     
-      // 3. Ensure the user is verified before allowing login
-      if (!user.verified) {
-        return ErrorBuilder.build(ErrorCode.USER_NOT_VERIFIED, "Account not verified. Please check your email for the verification code.");
-      }
-    
       // 4. Generate a JWT token
-      const payload = { userId: user.id, email: user.email, role: user.role };
+      const payload = { userId: user.id, email: user.email, role: user.role , oauth: "normal"};
       const token = this.jwtService.sign(payload);
     
       return ResponseBuilder.success({token : token});

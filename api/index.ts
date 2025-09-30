@@ -14,6 +14,7 @@ import { AuthMiddleware } from "../src/infrastructure/shared/common/auth/module/
 import { UserRole } from "../src/infrastructure/shared/common/auth/enums/userRole";
 import { CheckVerificationRequest } from "../src/modules/user/interfaces/controllers/user.controller";
 import { createAdvertisingController } from "../src/modules/advertising/interfaces/factories/advertising.factory";
+import { createAuthController } from "../src/modules/auth/interfaces/factories/auth.controller.factory";
 
 const app = express();
 
@@ -228,9 +229,10 @@ const sanitizeInput = (req: express.Request, res: express.Response, next: expres
 // 8. CONTROLLER SETUP
 // ============================================
 
+const authController = createAuthController()
 const userController = createUserController();
 const paymentController = createPaymentController();
-const advertisingController = createAdvertisingController()
+const advertisingController = createAdvertisingController();
 
 
 // Apply global rate limiting and security
@@ -286,6 +288,40 @@ app.post('/api/auth/password-reset',
   passwordResetLimiter,
   (req, res) => userController.updatePassword(req, res)
 );
+
+
+// google auth routes
+
+app.get(
+  '/api/auth/google',
+  (req, res, next) => authController.googleAuth(req, res, next)
+);
+
+app.get(
+  '/api/auth/google/login',
+  (req, res, next) => authController.googleAuthCallback(req, res, next)
+);
+
+app.get(
+  '/api/auth/google/generateAuthUrl',
+  (req, res) => authController.generateGoogleAuthUrl(req, res)
+);
+
+app.get(
+  '/api/auth/google/failure',
+  (req, res) => authController.authFailure(req, res)
+);
+
+app.post(
+  '/api/auth/google/logout',
+  (req, res) => authController.logout(req, res)
+);
+
+app.get(
+  '/api/auth/google/me',
+  (req, res) => authController.me(req, res)
+);
+
 
 // Payment routes
 app.post('/webhook', (req, res) => paymentController.webhook(req, res));

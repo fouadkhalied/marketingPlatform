@@ -1,0 +1,175 @@
+import { User } from "../../../../infrastructure/shared/schema/schema";
+import { ResponseBuilder } from "../../../../infrastructure/shared/common/apiResponse/apiResponseBuilder";
+import { ApiResponseInterface } from "../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface";
+import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
+import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
+import { UserRole } from "../../../../infrastructure/shared/common/auth/enums/userRole";
+import { GoogleRepositoryImpl } from "../../infrastructure/repositories/google.repository.impl";
+import passport from "passport";
+import { Request, Response } from "express";
+import { JwtService } from "../../../../infrastructure/shared/common/auth/module/jwt.module";
+import { JwtPayload } from "../../../../infrastructure/shared/common/auth/interfaces/jwtPayload";
+import { Strategy as GoogleStrategy, Profile } from "passport-google-oauth20";
+import { appConfig } from "../../../../infrastructure/config/app.config";
+
+export class GoogleAppService {
+  constructor(
+    private readonly googleRepository: GoogleRepositoryImpl,
+    private readonly jwtService: JwtService
+  ) {}
+
+  // 1. Handle Google login (find or create user)
+  async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
+    try {
+      let user = await this.googleRepository.getUserByGoogleId(profile.id);
+
+      if (!user) {
+        user = await this.createUserFromGoogle(profile);
+      }
+
+      return ResponseBuilder.success(user);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Google login failed",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  // 2. Create user with OAuth flag
+  async createUserFromGoogle(profile: any): Promise<User> {
+    const newUser = await this.googleRepository.createUser({
+      googleId: profile.id,
+      email: profile.emails?.[0]?.value || "",
+      username: profile.displayName || "Google User",
+      role: UserRole.USER,
+      oauth: "google",
+      verified: true,
+    });
+  
+    return newUser;
+  }
+
+  async generateGoogleAuthUrl(): Promise<string> {
+    const clientId = appConfig.GOOGLE_CLIENT_ID;
+    const redirectUri = `${appConfig.GOOGLE_CALLBACK_URL}`;
+    const scope = 'profile email';
+    const responseType = 'code';
+    const accessType = 'offline';
+    const prompt = 'consent';
+
+    const params = new URLSearchParams({
+      client_id: clientId!,
+      redirect_uri: redirectUri,
+      scope: scope,
+      response_type: responseType,
+      access_type: accessType,
+      prompt: prompt
+    });
+
+    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  }
+
+  async setUpGoogleStrategy(
+    passport:any
+  ) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID!,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          callbackURL: `${process.env.BACKEND_URL}/auth/google/callback`,
+        },
+        async (accessToken: string, refreshToken: string, profile:any, done: (error: any, user?: User | false) => void ) => {
+          try {
+            // Try to find user in DB
+            let user = await this.googleRepository.getUserByGoogleId(profile.id);
+  
+            // Create if not exists
+            if (!user) {
+              user = await this.googleRepository.createUser({
+                googleId: profile.id,
+                email: profile.emails?.[0]?.value || "",
+                username: profile.displayName || "Google User",
+                role: "user",
+                oauth: "google",
+                verified: true,
+              });
+            }
+  
+            // ✅ Passport attaches DB user to req.user
+            return done(null, user);
+          } catch (err) {
+            return done(err, false);
+          }
+        }
+      )
+    );
+  
+    // Serialize/deserialize for session (if you keep sessions enabled)
+    passport.serializeUser((user: any, done: (error: any, user?: User | false) => void) => done(null, user.id));
+    passport.deserializeUser(async (id: string, done: (error: any, user?: User | false) => void) => {
+      const user = await this.googleRepository.getUserByGoogleId(id);
+      done(null, user ?? false);
+    });
+  }
+
+  async authGoogle() {
+    return passport.authenticate("google", {
+      scope: ["profile", "email"],
+    });
+  }
+
+  // Google OAuth callback
+  async authGoogleCallback() {
+    return [
+      passport.authenticate("google", {
+        failureRedirect: "/auth/google/failure",
+        session: true,
+      }),
+      async (req: Request, res: Response) => {
+        const user = req.user as User; // ✅ already DB user
+  
+        const jwtPayload: JwtPayload = {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          oauth: "google",
+        };
+  
+        const token = this.jwtService.sign(jwtPayload);
+  
+        res.cookie("auth_token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+  
+        res.json({ token });
+      },
+    ];
+  }
+  
+
+  // Auth failure
+  async authFailure(req: Request, res: Response) {
+    res.status(401).json({ error: "Google authentication failed" });
+  }
+
+  // Logout
+  async logout(req: Request, res: Response) {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  }
+
+  // Get current user
+  async me(req: Request, res: Response) {
+    res.json({ user: req.user });
+  }
+  
+}

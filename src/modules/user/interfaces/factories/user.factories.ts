@@ -21,7 +21,7 @@ export function createUserController(): UserController {
 
   const otpService = new OTPService(emailService);
 
-  const facebookPageService = new FacebookPageService(facebookRepository)
+  const facebookPageService = new FacebookPageService(facebookRepository);
 
   // Pass the actual environment variable value, not the string
   const jwtService = new JwtService();

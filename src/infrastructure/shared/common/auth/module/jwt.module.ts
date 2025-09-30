@@ -16,6 +16,7 @@ export class JwtService {
         userId: payload.userId,
         email: payload.email,
         role: payload.role,
+        aouth: payload.oauth
       },
       this.secretKey,
       { expiresIn: '30d' }
