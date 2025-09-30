@@ -64,7 +64,6 @@
 		"@types/passport-local": "^1.0.38",
 		"@types/ws": "^8.5.13",
 		"drizzle-kit": "^0.31.4",
-		"esbuild": "^0.25.10",
 		"tsx": "^4.19.1",
 		"typescript": "5.6.3"
 	},
