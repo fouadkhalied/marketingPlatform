@@ -53,7 +53,7 @@ export class GoogleAppService {
 
   async generateGoogleAuthUrl(): Promise<string> {
     const clientId = appConfig.GOOGLE_CLIENT_ID;
-    const redirectUri = ` http://localhost:3000/api/auth/google/login`;
+    const redirectUri = appConfig.GOOGLE_CALLBACK_URL;
     const scope = 'profile email';
     const responseType = 'code';
     const accessType = 'offline';
@@ -125,7 +125,7 @@ export class GoogleAppService {
   async authGoogleCallback() {
     return [
       passport.authenticate("google", {
-        failureRedirect: "/auth/google/failure",
+        failureRedirect: "/api/auth/google/failure",
         session: true,
       }),
       async (req: Request, res: Response) => {
@@ -142,7 +142,7 @@ export class GoogleAppService {
   
         res.cookie("auth_token", token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: true,
           maxAge: 7 * 24 * 60 * 60 * 1000,
         });
   
