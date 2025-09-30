@@ -47,19 +47,6 @@ app.use(helmet({
 
 app.use(passport.initialize());
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || 'fallbackSecret',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { 
-      httpOnly: true, 
-      secure: process.env.NODE_ENV === 'production', // true on host, false locally
-      maxAge: 24 * 60 * 60 * 1000
-    }
-  })
-);
-
 
 
 // ============================================

@@ -108,16 +108,17 @@ export class GoogleAppService {
     );
   
     // Serialize/deserialize for session (if you keep sessions enabled)
-    passport.serializeUser((user: any, done: (error: any, user?: User | false) => void) => done(null, user.id));
-    passport.deserializeUser(async (id: string, done: (error: any, user?: User | false) => void) => {
-      const user = await this.googleRepository.getUserByGoogleId(id);
-      done(null, user ?? false);
-    });
+    // passport.serializeUser((user: any, done: (error: any, user?: User | false) => void) => done(null, user.id));
+    // passport.deserializeUser(async (id: string, done: (error: any, user?: User | false) => void) => {
+    //   const user = await this.googleRepository.getUserByGoogleId(id);
+    //   done(null, user ?? false);
+    // });
   }
 
   async authGoogle() {
     return passport.authenticate("google", {
       scope: ["profile", "email"],
+      session: false
     });
   }
 
@@ -125,7 +126,8 @@ export class GoogleAppService {
   async authGoogleCallback() {
     return [
       passport.authenticate("google", {
-        failureRedirect: "/api/auth/google/failure"
+        failureRedirect: "/api/auth/google/failure",
+        session: false
       }),
       async (req: Request, res: Response) => {
         const user = req.user as User; // ✅ already DB user
