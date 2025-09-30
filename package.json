@@ -47,7 +47,8 @@
 		"uuid": "^13.0.0",
 		"ws": "^8.18.0",
 		"zod": "^3.24.2",
-		"zod-validation-error": "^3.4.0"
+		"zod-validation-error": "^3.4.0",
+		"esbuild": "^0.25.10"
 	},
 	"devDependencies": {
 		"@types/compression": "^1.8.1",
