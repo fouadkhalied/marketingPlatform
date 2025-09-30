@@ -16,7 +16,6 @@ import { CheckVerificationRequest } from "../src/modules/user/interfaces/control
 import { createAdvertisingController } from "../src/modules/advertising/interfaces/factories/advertising.factory";
 import { createAuthController } from "../src/modules/auth/interfaces/factories/auth.controller.factory";
 import passport from 'passport';
-import session from 'express-session';
 
 const app = express();
 
