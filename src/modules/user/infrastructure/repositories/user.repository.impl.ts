@@ -36,6 +36,7 @@ export class UserRepositoryImpl implements userInterface {
             adsCount: users.adsCount,
             totalSpend: users.totalSpend,
             balance:users.balance,
+            oauth:users.oauth,
             // Social media page fields
             pageId: socialMediaPages.pageId,
             pageName: socialMediaPages.pageName,
@@ -62,6 +63,7 @@ export class UserRepositoryImpl implements userInterface {
           adsCount: result[0].adsCount,
           balance: result[0].balance,
           totalSpend: result[0].totalSpend,
+          oauth: result[0].oauth,
           socialMediaPages: result
             .filter(row => row.pageId !== null) // Filter out null joins
             .map(row => ({
