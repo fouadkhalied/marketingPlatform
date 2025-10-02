@@ -229,9 +229,9 @@ export class UserAppService {
         return ErrorBuilder.build(ErrorCode.USER_NOT_FOUND, "User not found");
       }
 
-      if (user.verified) {
-        return ErrorBuilder.build(ErrorCode.USER_ALREADY_VERIFIED, "User is already verified");
-      }
+      // if (user.verified) {
+      //   return ErrorBuilder.build(ErrorCode.USER_ALREADY_VERIFIED, "User is already verified");
+      // }
 
       const passwordResetResult = await this.otpService.sendGeneratedPasswordResetToken(email);
 

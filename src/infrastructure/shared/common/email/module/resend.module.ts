@@ -1,17 +1,27 @@
-import { resend, senderEmail } from "../config/resend.config";
+import { transporter, senderEmail } from "../config/resend.config";
 
 export interface EmailResult {
   success: boolean;
   message?: string;
   errorCode?: string;
-  data?: any; // Add this to capture Resend response data
+  data?: any;
 }
 
 export class EmailService {
   constructor() {}
 
- 
-  async sendVerificationEmail(email: string, subject: string, htmlContent: string): Promise<EmailResult> {
+  /**
+   * Send verification email with custom content
+   * @param email - Recipient email address
+   * @param subject - Email subject
+   * @param htmlContent - HTML content of the email
+   * @returns Promise<EmailResult>
+   */
+  async sendVerificationEmail(
+    email: string,
+    subject: string,
+    htmlContent: string
+  ): Promise<EmailResult> {
     try {
       console.log("=== EMAIL SERVICE DEBUG ===");
       console.log("Attempting to send email:");
@@ -19,65 +29,79 @@ export class EmailService {
       console.log("- to:", email);
       console.log("- subject:", subject);
       console.log("- htmlContent length:", htmlContent.length);
-      console.log("- Resend instance exists:", !!resend);
+      console.log("- Transporter exists:", !!transporter);
 
-      // IMPORTANT: Capture the response from Resend
-      const response = await resend.emails.send({
-        from: senderEmail,
-        to: email,
-        subject: subject,
-        html: htmlContent,
+      // Send email using nodemailer
+      const info = await transporter.sendMail({
+        from: `"OctopusAd" <${senderEmail}>`, // sender address with name
+        to: email, // recipient
+        subject: subject, // Subject line
+        html: htmlContent, // HTML body
+        text: this.stripHtml(htmlContent), // Plain text body (fallback)
       });
 
-      console.log("Resend API response:", JSON.stringify(response, null, 2));
-
-      // Check if Resend returned an error
-      if (response.error) {
-        console.error("Resend API returned error:", response.error);
-        return {
-          success: false,
-          message: `Resend API error: ${response.error.message}`,
-          errorCode: response.error.name,
-          data: response
-        };
-      }
-
-      // Check if we have a valid response with data
-      if (!response.data || !response.data.id) {
-        console.error("Resend API returned invalid response:", response);
-        return {
-          success: false,
-          message: "Invalid response from email service",
-          data: response
-        };
-      }
-
-      console.log("Email sent successfully with ID:", response.data.id);
+      console.log("Email sent successfully!");
+      console.log("Message ID:", info.messageId);
+      console.log("Response:", info.response);
+      console.log("Accepted:", info.accepted);
+      console.log("Rejected:", info.rejected);
       console.log("=== EMAIL SERVICE SUCCESS ===");
-      
+
       return {
         success: true,
         message: "Email sent successfully",
-        data: response.data
+        data: {
+          messageId: info.messageId,
+          response: info.response,
+          accepted: info.accepted,
+          rejected: info.rejected,
+          envelope: info.envelope,
+        },
       };
-
     } catch (error: any) {
       console.error("=== EMAIL SERVICE ERROR ===");
       console.error("Failed to send verification email:", error);
       console.error("Error name:", error.name);
       console.error("Error message:", error.message);
+      console.error("Error code:", error.code);
       console.error("Error stack:", error.stack);
-      
-      // Check for specific Resend errors
-      if (error.name === 'ResendError') {
-        console.error("This is a Resend-specific error");
+
+      // Handle specific SMTP errors
+      let errorMessage = error.message || "Failed to send verification email";
+      let errorCode = error.code || error.name || "UNKNOWN_ERROR";
+
+      // Provide user-friendly error messages
+      if (error.code === "EAUTH") {
+        errorMessage = "SMTP Authentication failed. Please check your email credentials.";
+        errorCode = "AUTH_FAILED";
+      } else if (error.code === "ECONNECTION" || error.code === "ECONNREFUSED") {
+        errorMessage = "Cannot connect to email server. Please check SMTP host and port.";
+        errorCode = "CONNECTION_FAILED";
+      } else if (error.code === "ETIMEDOUT") {
+        errorMessage = "Connection to email server timed out. Please try again.";
+        errorCode = "TIMEOUT";
+      } else if (error.code === "EENVELOPE") {
+        errorMessage = "Invalid sender or recipient email address.";
+        errorCode = "INVALID_EMAIL";
+      } else if (error.responseCode === 550) {
+        errorMessage = "Recipient email address does not exist or is invalid.";
+        errorCode = "RECIPIENT_NOT_FOUND";
       }
 
       return {
         success: false,
-        message: error.message || "Failed to send verification email",
-        errorCode: error.name || "UNKNOWN_ERROR"
+        message: errorMessage,
+        errorCode: errorCode,
+        data: {
+          originalError: error.message,
+          code: error.code,
+          command: error.command,
+        },
       };
     }
+  }
+
+  private stripHtml(html: string): string {
+    return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
   }
 }

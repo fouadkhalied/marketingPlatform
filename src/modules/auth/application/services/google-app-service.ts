@@ -103,12 +103,6 @@ export class GoogleAppService {
         }
       )
     );
-
-    passport.serializeUser((user: any, done) => done(null, user.id));
-    passport.deserializeUser(async (id: string, done) => {
-      const user = await this.googleRepository.getUserByGoogleId(id);
-      done(null, user || false);
-    });
   }
 
   // Route handler for initiating Google OAuth
