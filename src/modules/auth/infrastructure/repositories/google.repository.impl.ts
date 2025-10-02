@@ -15,6 +15,14 @@ export class GoogleRepositoryImpl implements IGoogleRepository {
     return user || null;
   }
 
+  async getUserByEmail(email: string): Promise<User | null> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+    return user || null;
+  }
+
   // 2. Create user (generic so you can use it for Google, Facebook, or email-password signup)
   async createUser(data: CreateGoogleUser): Promise<User> {
     const [newUser] = await db.insert(users).values(data).returning();

@@ -9,7 +9,7 @@ import passport from "passport";
 import { NextFunction, Request, Response } from "express";
 import { JwtService } from "../../../../infrastructure/shared/common/auth/module/jwt.module";
 import { JwtPayload } from "../../../../infrastructure/shared/common/auth/interfaces/jwtPayload";
-import { Strategy as GoogleStrategy, Profile } from "passport-google-oauth20";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { appConfig } from "../../../../infrastructure/config/app.config";
 
 export class GoogleAppService {
@@ -21,13 +21,18 @@ export class GoogleAppService {
   // 1. Handle Google login (find or create user)
   async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
     try {
-      let user = await this.googleRepository.getUserByGoogleId(profile.id);
 
-      if (!user) {
-        user = await this.createUserFromGoogle(profile);
+      let googleUser = await this.googleRepository.getUserByGoogleId(profile.id);
+
+      if (googleUser?.email === profile.emails?.[0]?.value) {
+        return ErrorBuilder.build(ErrorCode.USER_ALREADY_EXISTS, "User already exists with this email");
       }
 
-      return ResponseBuilder.success(user);
+      if (!googleUser) {
+        googleUser = await this.createUserFromGoogle(profile);
+      }
+
+      return ResponseBuilder.success(googleUser);
     } catch (error) {
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
