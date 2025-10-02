@@ -24,10 +24,6 @@ export class GoogleAppService {
 
       let googleUser = await this.googleRepository.getUserByGoogleId(profile.id);
 
-      if (googleUser?.email === profile.emails?.[0]?.value) {
-        return ErrorBuilder.build(ErrorCode.USER_ALREADY_EXISTS, "User already exists with this email");
-      }
-
       if (!googleUser) {
         googleUser = await this.createUserFromGoogle(profile);
       }
