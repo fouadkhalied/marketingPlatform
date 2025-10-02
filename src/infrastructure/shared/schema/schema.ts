@@ -220,6 +220,16 @@ export const users = pgTable("users", {
     password: true,       
     facebookId: true,    
   })
+
+  export const insertFacebookUserSchema = createInsertSchema(users).omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    freeViewsCredits: true,
+    stripeCustomerId: true,
+    password: true,       
+    googleId: true,    
+  })
   
   export const insertAdSchema = createInsertSchema(ads).omit({
     id: true,
@@ -291,6 +301,7 @@ export const users = pgTable("users", {
   export type User = typeof users.$inferSelect;
   export type CreateUser = z.infer<typeof insertUserSchema>;
   export type CreateGoogleUser = z.infer<typeof insertGoogleUserSchema>;
+  export type CreateFacebookUser = z.infer<typeof insertFacebookUserSchema>
 
   export type Ad = typeof ads.$inferSelect;
   export type InsertAd = z.infer<typeof insertAdSchema>;

@@ -328,6 +328,24 @@ app.get(
   (req, res) => authController.me(req, res)
 );
 
+// facebook auth routes
+
+// facebook auth routes
+app.get(
+  '/api/auth/facebook',
+  (req, res) => authController.facebookAuth(req, res)
+);
+
+app.get(
+  '/api/auth/facebook/login',
+  (req, res) => authController.facebookAuthCallback(req, res)
+);
+
+app.get(
+  '/api/auth/facebook/generateUserAuthUrl',
+  (req, res) => authController.generateFacebookAuthUrl(req, res)
+);
+
 // Payment routes
 app.post('/webhook', (req, res) => paymentController.webhook(req, res));
 

@@ -17,6 +17,8 @@ export class AuthController {
     return 500;
   }
 
+  // ==================== GOOGLE AUTH ====================
+
   // Initiate Google OAuth authentication
   googleAuth(req: Request, res: Response, next: NextFunction): void {
     this.authService.initiateGoogleAuth(req, res, next);
@@ -69,5 +71,37 @@ export class AuthController {
         }
       });
     }
+  }
+
+  // ==================== FACEBOOK AUTH ====================
+
+  // Generate Facebook Auth URL
+  async generateFacebookAuthUrl(req: Request, res: Response): Promise<void> {
+    try {
+      const authUrl = await this.authService.generateFacebookAuthUrl();
+      const status_code = this.getStatusCode(authUrl);
+      res.status(status_code).send(authUrl);
+    } catch (err: any) {
+      console.error('Error generating Facebook auth URL:', err);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate Facebook authentication URL',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to generate Facebook authentication URL',
+          details: err.message
+        }
+      });
+    }
+  }
+
+  // Initiate Facebook OAuth authentication
+  async facebookAuth(req: Request, res: Response): Promise<void> {
+    await this.authService.initiateFacebookAuth(req, res);
+  }
+
+  // Handle Facebook OAuth callback
+  async facebookAuthCallback(req: Request, res: Response): Promise<void> {
+    await this.authService.handleFacebookAuthCallback(req, res);
   }
 }

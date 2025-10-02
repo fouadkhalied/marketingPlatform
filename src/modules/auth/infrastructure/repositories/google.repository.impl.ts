@@ -2,7 +2,7 @@ import { db } from "../../../../infrastructure/db/connection";
 import { CreateGoogleUser, users } from "../../../../infrastructure/shared/schema/schema";
 import { eq } from "drizzle-orm";
 import { User } from "../../../../infrastructure/shared/schema/schema";
-import { IGoogleRepository } from "../../../user/domain/repositories/google.interface";
+import { IGoogleRepository } from "../../domain/repositories/google.interface";
 
 export class GoogleRepositoryImpl implements IGoogleRepository {
   // 1. Get user by Google ID
@@ -27,5 +27,16 @@ export class GoogleRepositoryImpl implements IGoogleRepository {
   async createUser(data: CreateGoogleUser): Promise<User> {
     const [newUser] = await db.insert(users).values(data).returning();
     return newUser;
+  }
+
+
+  async linkGoogleAccount(userId: string, googleId: string): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ googleId })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return updatedUser;
   }
 }
