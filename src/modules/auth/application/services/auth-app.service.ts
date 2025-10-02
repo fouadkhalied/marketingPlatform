@@ -14,8 +14,7 @@ export class AuthService {
     private readonly facebookAppService: FacebookAppService
   ) {}
 
-  // ==================== GOOGLE AUTH ====================
-  
+  // ==================== GOOGLE AUTH ====================  
   async setupGoogleStrategy(): Promise<void> {
     this.googleAppService.setGoogleStrategy();
   }
@@ -99,9 +98,9 @@ export class AuthService {
       const userData = await this.facebookAppService.getUserData(accessToken);
       
       // Handle user login/creation
-      const loginResponse = await this.handleFacebookLogin(userData);
+      await this.handleFacebookLogin(userData);
 
-      res.json(loginResponse);
+      res.json(accessToken);
       
     } catch (error: any) {
       const errorResponse = ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, error.response?.data?.error?.message || error.message || "Facebook authentication failed")
