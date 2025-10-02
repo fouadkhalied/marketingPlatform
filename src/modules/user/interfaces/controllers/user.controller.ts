@@ -198,7 +198,8 @@ export class UserController {
   // Get user by ID
   async getUser(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.params.id) {
+      const userId = req.user?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           message: "User must be authenticated",
@@ -210,7 +211,7 @@ export class UserController {
         return;
       }
       
-      const result = await this.userService.getUser(req.params.id);
+      const result = await this.userService.getUser(userId);
       const statusCode = this.getStatusCode(result);
       
       res.status(statusCode).json(result);
