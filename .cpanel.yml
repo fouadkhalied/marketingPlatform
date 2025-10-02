@@ -1,24 +1,10 @@
 ---
 deployment:
   tasks:
-    # Set deployment path
     - export DEPLOYPATH=/home/octopusad/expressapp
-    
-    # Create directory if it doesn't exist
     - /bin/mkdir -p $DEPLOYPATH
-    
-    # Copy all files (excluding .git)
-    - /bin/rsync -av --exclude='.git' --exclude='node_modules' . $DEPLOYPATH/
-    
-    # Navigate to deployment path
+    - /bin/cp -R * $DEPLOYPATH/
     - cd $DEPLOYPATH
-    
-    # Install production dependencies
-    - npm install --production
-    
-    # Create logs directory if needed
-    - /bin/mkdir -p /home/octopusad/logs
-    
-    # Touch restart file for Passenger (if needed)
-    - /bin/mkdir -p $DEPLOYPATH/tmp
-    - /bin/touch $DEPLOYPATH/tmp/restart.txt
+    - npm install
+    - npm run build
+    - npm prune --production
