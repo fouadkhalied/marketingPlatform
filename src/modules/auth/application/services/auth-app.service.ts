@@ -76,7 +76,7 @@ export class AuthService {
       const response = await this.generateFacebookAuthUrl();
       res.json(response);
     } catch (error: any) {
-      res.status(500).json(ResponseBuilder.fail(ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, error.message)));
+      res.status(500).json(ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, error.message));
     }
   }
 
@@ -87,7 +87,7 @@ export class AuthService {
       
       if (!code) {
         return res.status(400).json(
-          ResponseBuilder.fail(ErrorBuilder.build(ErrorCode.BAD_REQUEST, "No authorization code provided"))
+          ErrorBuilder.build(ErrorCode.BAD_REQUEST, "No authorization code provided")
         );
       }
 
@@ -100,14 +100,12 @@ export class AuthService {
       // Handle user login/creation
       await this.handleFacebookLogin(userData);
 
-      res.json(accessToken);
+      res.json(ResponseBuilder.success({facebookUserId : userData.id}));
       
     } catch (error: any) {
       const errorResponse = ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, error.response?.data?.error?.message || error.message || "Facebook authentication failed")
       res.status(500).json(
-        ResponseBuilder.fail(
           errorResponse
-        )
       );
     }
   }
