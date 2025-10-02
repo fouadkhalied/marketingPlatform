@@ -134,7 +134,13 @@ export class GoogleAppService {
           maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
-        res.json({ token });
+        res.json({ 
+          "success": true,
+          "message": "Request successful",
+          "data": {
+            "token": token
+          }
+         });
       }
     )(req, res, next);
   }
