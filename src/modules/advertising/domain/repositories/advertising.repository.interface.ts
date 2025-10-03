@@ -4,7 +4,8 @@ import { autheticatedPage } from "../../application/dto/authenticatedPage.dto";
 import { AdStatus } from "../enums/ads.status.enum";
 
 export interface IAdvertisingRepository {
-    create(ad: InsertAd): Promise<string>;
+    create(ad: InsertAd,): Promise<string>;
+    addPhotoToAd(id:string, photo:string): Promise<boolean>;
     findById(id: string): Promise<Ad | null>;
     findAllAdsForAdmin(status: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
     findAllAdsForUser(status: string , userId: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;

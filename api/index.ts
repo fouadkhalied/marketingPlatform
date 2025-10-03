@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import slowDown from 'express-slow-down';
 import compression from 'compression';
 import hpp from 'hpp';
+import multer from "multer";
 
 
 import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
@@ -18,6 +19,7 @@ import { createAuthController } from "../src/modules/auth/interfaces/factories/a
 import passport from 'passport';
 
 const app = express();
+const upload = multer();
 
 // ============================================
 // 1. SECURITY HEADERS & HELMET
@@ -361,7 +363,9 @@ app.get('/api/payment/history',AuthMiddleware(UserRole.USER),
 
 app.get("/api/advertising/search", AuthMiddleware(UserRole.USER), (req,res) => advertisingController.getAdsByTitle(req,res))
 
-app.post('/api/advertising',AuthMiddleware(UserRole.USER) , (req,res) => advertisingController.createAd(req,res))
+app.post('/api/advertising',AuthMiddleware(UserRole.USER), (req,res) => advertisingController.createAd(req,res)) 
+
+app.post('/api/advertising/uploadPhoto/:id',AuthMiddleware(UserRole.USER), upload.single("photo"), (req,res) => advertisingController.uploadPhotoToAd(req,res))
 
 app.get(
   "/api/advertising/list",

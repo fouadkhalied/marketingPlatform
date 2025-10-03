@@ -3,7 +3,8 @@ import { ApiResponseInterface } from "../../../../infrastructure/shared/common/a
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
-import { Ad, createAdSchema } from "../../../../infrastructure/shared/schema/schema";
+import { UploadPhoto } from "../../../../infrastructure/shared/common/supabase/module/supabase.module";
+import { Ad, createAdSchema, InsertAd } from "../../../../infrastructure/shared/schema/schema";
 import { FacebookPostInsights } from "../../../user/application/dtos/facebookDto/facebookInsights.dto";
 import { FacebookPost } from "../../../user/application/dtos/facebookDto/facebookPost.dto";
 import { FacebookPageService } from "../../../user/application/services/facebook-app.service";
@@ -13,18 +14,23 @@ import { autheticatedPage } from "../dto/authenticatedPage.dto";
 export class AdvertisingAppService {
   constructor(
     private readonly advertisingRepository: IAdvertisingRepository,
-    private readonly facebookService: FacebookPageService
-  ) {}
+    private readonly facebookService: FacebookPageService,
+    private readonly photoUploader: UploadPhoto
+  ) {
 
-  async createAd(object: any, userId: string): Promise<ApiResponseInterface<{ AdId: string }>> {
+  }
+
+  async createAd(
+    object: any,
+    userId: string
+  ): Promise<ApiResponseInterface<{ AdId: string }>> {
     try {
       const adData = {
         ...object,
         userId: userId,
       };
-
+  
       const validation = createAdSchema.safeParse(adData);
-
       if (!validation.success) {
         return ErrorBuilder.build(
           ErrorCode.VALIDATION_ERROR,
@@ -32,14 +38,47 @@ export class AdvertisingAppService {
           validation.error.errors[0]
         );
       }
-
-      const adId: string = await this.advertisingRepository.create(adData);
-
+  
+      const adId = await this.advertisingRepository.create(adData);
+  
       return ResponseBuilder.success({ AdId: adId });
     } catch (error) {
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Unexpected error while creating ad",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+  
+  async uploadPhotoToAd(
+    photo: Express.Multer.File,
+    adId: string
+  ): Promise<ApiResponseInterface<{ photo: string }>> {
+    try {
+      // upload file 
+      const photoUploadResult = await this.photoUploader.execute(photo);
+
+      
+  
+      // save photo URL in DB for the ad
+      const updated = await this.advertisingRepository.addPhotoToAd(
+        adId,
+        photoUploadResult.url
+      );
+  
+      if (!updated) {
+        return ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          "Failed to attach photo to ad"
+        );
+      }
+  
+      return ResponseBuilder.success({ photo: photoUploadResult.url });
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while uploading photo",
         error instanceof Error ? error.message : error
       );
     }

@@ -32,7 +32,7 @@ export const users = pgTable("users", {
   export const ads = pgTable("ads", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull().references(() => users.id),
-    postIdOnPlatform: varchar("post_id_on_platform").notNull().unique(),
+    postIdOnPlatform: varchar("post_id_on_platform").unique(),
     pageId: varchar("page_id").references(() => socialMediaPages.pageId),
     titleEn: text("title_en").notNull(),
     titleAr: text("title_ar").notNull(),
@@ -49,6 +49,13 @@ export const users = pgTable("users", {
     rejectionReason: text("rejection_reason"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+
+    tiktokLink: text("tiktok_link"),
+    youtubeLink: text("youtube_link"),
+    googleAdsLink: text("google_ads_link"),
+    instagramLink: text("instagram_link"),
+    facebookLink: text("facebook_link"),
+    snapchatLink: text("snapchat_link"),
   });
 
   export const socialMediaPages = pgTable("social_media_pages", {
@@ -123,6 +130,20 @@ export const users = pgTable("users", {
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  });
+
+  export const adUserEngagement = pgTable("ad_user_engagement", {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    adId: varchar("ad_id").notNull().references(() => ads.id),
+    userId: varchar("user_id").notNull().references(() => users.id),
+  
+    liked: boolean("liked").notNull().default(false),
+    commented: boolean("commented").notNull().default(false),
+    shared: boolean("shared").notNull().default(false),
+    reactions: jsonb("reactions"), // e.g., store emojis {"love": true, "wow": true}
+  
+    createdAt: timestamp("created_at").notNull().default(sql`now()`),
+    updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
   });
 
 
@@ -235,6 +256,9 @@ export const users = pgTable("users", {
     id: true,
     //userId: true,
     //status: true,
+    // postIdOnPlatform: true,
+    // pageId: true,
+    imageUrl: true,
     publishToken: true,
     approvedBy: true,
     rejectionReason: true,
@@ -281,6 +305,8 @@ export const users = pgTable("users", {
   });
   
   export const createAdSchema = insertAdSchema.extend({
+    postIdOnPlatform: z.string().optional(),
+    pageId: z.string().optional(),
     targetAudience: z.string().min(1, "Target audience is required"),
     budgetType: z.enum(["impressions", "clicks"]),
   });
@@ -295,7 +321,6 @@ export const users = pgTable("users", {
     reason: z.string().optional(),
   });
 
-  
   
   // Type exports
   export type User = typeof users.$inferSelect;
@@ -313,6 +338,7 @@ export const users = pgTable("users", {
   export type AggregatedStats = typeof aggregatedStats.$inferSelect;
   export type AuditLog = typeof auditLogs.$inferSelect;
   export type Payment = typeof purchases.$inferSelect;
+  export type AdUserEngagement = typeof adUserEngagement.$inferSelect;
   
   export type LoginData = z.infer<typeof loginSchema>;
   export type SignupData = z.infer<typeof signupSchema>;

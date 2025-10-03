@@ -50,6 +50,51 @@ export class AdvertisingController {
     }
   }
 
+  
+  async uploadPhotoToAd(req: Request, res: Response): Promise<void> {
+    try {
+      const file = req.file as Express.Multer.File;
+  
+      if (!file) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          "No files uploaded"
+        );
+        res
+          .status(ERROR_STATUS_MAP[ErrorCode.MISSING_REQUIRED_FIELD])
+          .json(errorResponse);
+        return;
+      }
+  
+      const id = req.params.id; // make sure your route has :id
+      if (!id) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          "Ad ID is required"
+        );
+        res
+          .status(ERROR_STATUS_MAP[ErrorCode.MISSING_REQUIRED_FIELD])
+          .json(errorResponse);
+        return;
+      }
+  
+      // call service
+      const response = await this.advertisingService.uploadPhotoToAd(file, id);
+  
+      res.status(response.success ? 200 : 400).json(response);
+    } catch (error) {
+      const errorResponse = ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while uploading photo",
+        error instanceof Error ? error.message : error
+      );
+      res
+        .status(ERROR_STATUS_MAP[ErrorCode.INTERNAL_SERVER_ERROR])
+        .json(errorResponse);
+    }
+  }
+  
+
   // ✅ Get Ad by ID
   async getAd(req: Request, res: Response): Promise<void> {
     try {
