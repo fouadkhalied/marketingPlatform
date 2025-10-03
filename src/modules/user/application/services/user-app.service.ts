@@ -49,7 +49,8 @@ export class UserAppService {
       return ResponseBuilder.success({
         success : true,
         message : "user created and verfied",
-        id: user.id
+        username: user.username,
+        role: user.role,
       });
       
     } catch (error:any) {
