@@ -713,4 +713,39 @@ export class UserController {
       });
     }
   }
+
+  async createAdClick(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+  
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: 'Ad ID is required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Ad ID is required'
+          }
+        });
+        return;
+      }
+  
+      const result = await this.userService.createAdClick(id);
+      const statusCode = this.getStatusCode(result);
+  
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error('Error creating ad click:', err);
+  
+      res.status(500).json({
+        success: false,
+        message: 'Failed to record click',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to record click',
+          details: err.message
+        }
+      });
+    }
+  }
 }

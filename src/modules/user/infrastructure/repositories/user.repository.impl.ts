@@ -3,7 +3,7 @@ import { userInterface } from "../../domain/repositories/user.repository";
 
 import { eq, desc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { CreateUser, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
+import { ads, clicksEvents, CreateUser, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 
 export class UserRepositoryImpl implements userInterface {
@@ -230,5 +230,28 @@ export class UserRepositoryImpl implements userInterface {
           .where(eq(users.id, id))
           .returning();
         return user;
+      }
+
+      async createAdClick(adId : string):Promise<boolean> {
+        return await db.transaction(async (tx) => {
+          // 1. Create the click event
+          await tx
+            .insert(clicksEvents)
+            .values({
+              adId,
+            })
+      
+          // 2. Increment the click count on the ad
+          // Note: If you have a clicksCount field, replace likesCount with clicksCount
+          await tx
+            .update(ads)
+            .set({
+              likesCount: sql`${ads.likesCount} + 1`,
+              updatedAt: sql`now()`,
+            })
+            .where(eq(ads.id, adId))
+      
+          return true
+        });
       }
 }

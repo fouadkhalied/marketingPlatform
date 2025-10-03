@@ -383,4 +383,20 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
       return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to update user Stripe information");
     }
   }
+
+  async createAdClick(adId: string
+  ): Promise<ApiResponseInterface<string>> {
+    try {
+      await this.userRepository.createAdClick(adId);
+  
+      return ResponseBuilder.success("Click recorded successfully");
+    } catch (error: any) {
+      console.error("Error creating ad click:", error);
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Failed to record click",
+        error.message
+      );
+    }
+  }
 }

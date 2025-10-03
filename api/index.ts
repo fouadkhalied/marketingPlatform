@@ -452,6 +452,13 @@ app.delete('/api/users/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userCont
 // promote user to admin 
 app.put('/api/users/promote/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.makeUserAdmin(req,res));
 
+// click on ad
+app.put(
+  "/api/users/ad/:id/click",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => userController.createAdClick(req, res)
+);
+
 // ============================================
 // 10. ERROR HANDLING
 // ============================================

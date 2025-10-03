@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, decimal, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import { number, z } from "zod";
 
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 export const adStatusEnum = pgEnum("ad_status", ["pending", "approved", "rejected"]);
@@ -49,6 +49,7 @@ export const users = pgTable("users", {
     rejectionReason: text("rejection_reason"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+    likesCount:integer().notNull().default(0),
 
     tiktokLink: text("tiktok_link"),
     youtubeLink: text("youtube_link"),
@@ -99,13 +100,13 @@ export const users = pgTable("users", {
   
   export const clicksEvents = pgTable("clicks_events", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    eventId: varchar("event_id").notNull(),
+    //eventId: varchar("event_id").notNull(),
     adId: varchar("ad_id").notNull().references(() => ads.id),
-    impressionEventId: varchar("impression_event_id").references(() => impressionsEvents.id),
+    //impressionEventId: varchar("impression_event_id").references(() => impressionsEvents.id),
     source: text("source").notNull().default("web"),
-    ipHash: text("ip_hash"),
-    userAgent: text("user_agent"),
-    metadata: jsonb("metadata"),
+    // ipHash: text("ip_hash"),
+    // userAgent: text("user_agent"),
+    // metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
   });
   
@@ -211,16 +212,16 @@ export const users = pgTable("users", {
     clicksEvents: many(clicksEvents),
   }));
   
-  export const clicksEventsRelations = relations(clicksEvents, ({ one }) => ({
-    ad: one(ads, {
-      fields: [clicksEvents.adId],
-      references: [ads.id],
-    }),
-    impressionEvent: one(impressionsEvents, {
-      fields: [clicksEvents.impressionEventId],
-      references: [impressionsEvents.id],
-    }),
-  }));
+  // export const clicksEventsRelations = relations(clicksEvents, ({ one }) => ({
+  //   ad: one(ads, {
+  //     fields: [clicksEvents.adId],
+  //     references: [ads.id],
+  //   }),
+  //   impressionEvent: one(impressionsEvents, {
+  //     fields: [clicksEvents.impressionEventId],
+  //     references: [impressionsEvents.id],
+  //   }),
+  // }));
   
   // Zod schemas
   export const insertUserSchema = createInsertSchema(users).omit({
