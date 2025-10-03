@@ -21,7 +21,7 @@ export class UserAppService {
   }
 
   // Create a new user
-  async createUser(input: CreateUser): Promise<ApiResponseInterface<OTPResult>> {
+  async createUser(input: CreateUser): Promise<ApiResponseInterface<{token : string ;username: string | null; role : "user" | "admin"; }>> {
     try {
       // Perform application-level validation
       const existingUser = await this.userRepository.getUserByEmail(input.email);
@@ -46,9 +46,12 @@ export class UserAppService {
       // }
 
 
+      const payload = { userId: user.id, email: user.email, role: user.role , oauth: "normal"};
+      const token = this.jwtService.sign(payload);
+
+
       return ResponseBuilder.success({
-        success : true,
-        message : "user created and verfied",
+        token: token,
         username: user.username,
         role: user.role,
       });
