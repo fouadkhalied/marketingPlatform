@@ -98,4 +98,31 @@ export class PaymentController {
         });
     }
  }
+
+
+ async getPurchaseHistoryForAdmin(req: Request, res: Response): Promise<void> {
+    try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+
+        // Validate pagination params
+        if (page < 1 || limit < 1 || limit > 100) {
+            res.status(400).json({
+                success: false,
+                message: 'Invalid pagination parameters'
+            });
+            return;
+        }
+
+        const result = await this.paymentService.getPurchaseHistoryForAdmin(page, limit);
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error('❌ Controller error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch purchase history'
+        });
+    }
+ }
 }

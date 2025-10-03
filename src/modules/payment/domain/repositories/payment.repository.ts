@@ -1,4 +1,8 @@
 import { InsertPurchase, Purchase } from "../../../../infrastructure/shared/schema/schema";
+export type PurchaseWithUser = Partial<Purchase> & {
+    userName: string | null;
+    userBalance: number | null;
+  };
 
 export interface PaymentRepository {
     save(payment: InsertPurchase): Promise<Purchase>;
@@ -10,6 +14,7 @@ export interface PaymentRepository {
         filter: { userId: string },
         pagination: { page: number; limit: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }
     ): Promise<{
+        balance: number;
         items: Purchase[];
         total: number;
         page: number;
@@ -24,5 +29,8 @@ export interface PaymentRepository {
         page: number;
         limit: number;
         totalPages: number;
+        totalPaidLastMonth: number,
+        totalPaidLastYear: number,
+        totalUserBalance: number;
     }>;
 }

@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../../../infrastructure/db/connection";
 import { InsertPurchase, Purchase, purchases, users } from "../../../../infrastructure/shared/schema/schema";
-import { PaymentRepository } from "../../domain/repositories/payment.repository";
+import { PaymentRepository, PurchaseWithUser } from "../../domain/repositories/payment.repository";
 
 export class PaymentRepositoryImpl implements PaymentRepository {
     async save(payment: InsertPurchase): Promise<Purchase> {
@@ -212,70 +212,135 @@ export class PaymentRepositoryImpl implements PaymentRepository {
     async getPurchaseHistory(
         filter: { userId: string },
         pagination: { page: number; limit: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }
-    ) {
+      ) {
         try {
-            const offset = (pagination.page - 1) * pagination.limit;
-            //const sortOrder = pagination.sortOrder || 'desc';
-
-            const [items, totalCount] = await Promise.all([
-                db
-                    .select()
-                    .from(purchases)
-                    .where(eq(purchases.userId, filter.userId))
-                    //.orderBy(sortOrder === 'desc' ? sql`${purchases.createdAt} desc` : sql`${purchases.createdAt} asc`)
-                    .limit(pagination.limit)
-                    .offset(offset),
-                db
-                    .select({ count: sql<number>`count(*)` })
-                    .from(purchases)
-                    .where(eq(purchases.userId, filter.userId))
-                    .then(res => Number(res[0].count))
-            ]);
-
-            return {
-                items,
-                total: totalCount,
-                page: pagination.page,
-                limit: pagination.limit,
-                totalPages: Math.ceil(totalCount / pagination.limit)
-            };
+          const offset = (pagination.page - 1) * pagination.limit;
+          const sortOrder = pagination.sortOrder ?? 'desc';
+          const sortBy = pagination.sortBy ?? purchases.createdAt;
+      
+          const [items, totalCount, userBalance] = await Promise.all([
+            // purchases for user
+            db
+              .select()
+              .from(purchases)
+              .where(eq(purchases.userId, filter.userId))
+              .orderBy(
+                sortOrder === 'desc'
+                  ? sql`${sortBy} desc`
+                  : sql`${sortBy} asc`
+              )
+              .limit(pagination.limit)
+              .offset(offset),
+      
+            // total count
+            db
+              .select({ count: sql<number>`count(*)` })
+              .from(purchases)
+              .where(eq(purchases.userId, filter.userId))
+              .then(res => Number(res[0].count)),
+      
+            // get user balance
+            db
+              .select({ balance: users.balance })
+              .from(users)
+              .where(eq(users.id, filter.userId))
+              .then(res => Number(res[0]?.balance ?? 0))
+          ]);
+      
+          return {
+            balance: userBalance,
+            items,
+            total: totalCount,
+            page: pagination.page,
+            limit: pagination.limit,
+            totalPages: Math.ceil(totalCount / pagination.limit),
+          };
         } catch (error) {
-            console.error('❌ Error fetching purchase history:', error);
-            throw error;
+          console.error('❌ Error fetching purchase history:', error);
+          throw error;
         }
-    }
-
+      }
+      
 
     async getPurchaseHistoryForAdmin(
-        pagination: { page: number; limit: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }
-    ) {
+        pagination: { page: number; limit: number; sortBy?: string; sortOrder?: "asc" | "desc" }
+      ): Promise<{
+        totalPaidLastMonth: number;
+        totalPaidLastYear: number;
+        totalUserBalance: number;
+        items: Purchase[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }> {
         try {
-            const offset = (pagination.page - 1) * pagination.limit;
-            //const sortOrder = pagination.sortOrder || 'desc';
-
-            const [items, totalCount] = await Promise.all([
-                db
-                    .select()
-                    .from(purchases)
-                    //.orderBy(sortOrder === 'desc' ? sql`${purchases.createdAt} desc` : sql`${purchases.createdAt} asc`)
-                    .limit(pagination.limit)
-                    .offset(offset),
-                db
-                    .select({ count: sql<number>`count(*)` })
-                    .from(purchases)
-                    .then(res => Number(res[0].count))
-            ]);
-
-            return {
-                items,
-                total: totalCount,
-                page: pagination.page,
-                limit: pagination.limit,
-                totalPages: Math.ceil(totalCount / pagination.limit)
-            };
+          const offset = (pagination.page - 1) * pagination.limit;
+          const sortBy = pagination.sortBy ?? purchases.createdAt;
+          const sortOrder = pagination.sortOrder ?? "desc";
+      
+          const [rows, totalCount, totals, balanceSum] = await Promise.all([
+            // purchases + users but without balance/username
+            db
+              .select({
+                id: purchases.id,
+                createdAt: purchases.createdAt,
+                updatedAt: purchases.updatedAt,
+                userId: purchases.userId,
+                status: purchases.status,
+                amount: purchases.amount,
+                currency: purchases.currency,
+                method: purchases.method,
+                stripeSessionId: purchases.stripeSessionId,
+                stripePaymentIntentId: purchases.stripePaymentIntentId,
+              })
+              .from(purchases)
+              .innerJoin(users, eq(users.id, purchases.userId))
+              .orderBy(
+                sortOrder === "desc" ? sql`${sortBy} desc` : sql`${sortBy} asc`
+              )
+              .limit(pagination.limit)
+              .offset(offset),
+      
+            // count
+            db
+              .select({ count: sql<number>`count(*)` })
+              .from(purchases)
+              .then((res) => Number(res[0].count)),
+      
+            // totals: last month & last year
+            db.execute<{
+              last_month: string;
+              last_year: string;
+            }>(sql`
+              SELECT
+                COALESCE(SUM(CASE WHEN "created_at" >= now() - interval '1 month' THEN amount END), 0) AS last_month,
+                COALESCE(SUM(CASE WHEN "created_at" >= now() - interval '1 year' THEN amount END), 0) AS last_year
+              FROM purchases
+              WHERE status = 'completed'
+            `),
+      
+            // sum of user balances
+            db.execute<{ total_balance: string }>(sql`
+              SELECT COALESCE(SUM(balance), 0) AS total_balance
+              FROM users
+            `),
+          ]);
+      
+          return {
+            totalPaidLastMonth: Number(totals.rows?.[0]?.last_month ?? 0),
+            totalPaidLastYear: Number(totals.rows?.[0]?.last_year ?? 0),
+            totalUserBalance: Number(balanceSum.rows?.[0]?.total_balance ?? 0),
+            items: rows,
+            total: totalCount,
+            page: pagination.page,
+            limit: pagination.limit,
+            totalPages: Math.ceil(totalCount / pagination.limit),
+          };
         } catch (error) {
-            console.error('❌ Error fetching purchase history:', error);
-            throw error;
+          console.error("❌ Error fetching purchase history:", error);
+          throw error;
         }
-    }
+      }
+      
 }

@@ -360,7 +360,7 @@ app.get('/api/payment/history',AuthMiddleware(UserRole.USER),
 (req, res) => paymentController.getPurchaseHistory(req, res))
 
 app.get('/api/payment/getPurchaseHistoryForAdmin',AuthMiddleware(UserRole.ADMIN),
-(req, res) => paymentController.getPurchaseHistory(req, res))
+(req, res) => paymentController.getPurchaseHistoryForAdmin(req, res))
 
 
 // Adverstising routes
