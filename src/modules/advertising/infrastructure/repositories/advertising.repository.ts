@@ -122,9 +122,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
       }
     }
     
-    
-
-    
+  
     async findAllAdsForAdmin(
       status: string, // still string from request
       pagination: PaginationParams
@@ -168,6 +166,8 @@ export class AdvertisingRepository implements IAdvertisingRepository {
     
         const totalCount = Number(count);
         const totalPages = Math.ceil(totalCount / limit);
+
+        console.log(whereCondition, status);
     
         return {
           data: results as Ad[],
@@ -188,7 +188,6 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
-    
     
     async findAllAdsForUser(
       status: string | undefined, // 👈 request input is plain string

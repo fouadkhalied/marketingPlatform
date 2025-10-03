@@ -163,6 +163,33 @@ export class AdvertisingController {
       res.status(500).json({ error: "Failed to list ads", message: error.message });
     }
   }
+
+
+  async listApprovedAdsForUser(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({ error: "User not authenticated" });
+        return;
+      }
+    
+      const { limit, page} = req.query;
+  
+      // ✅ Pagination handling (default: page=1, limit=10)
+      const pagination: PaginationParams = {
+        page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
+        limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+      };
+  
+      const result =  await this.advertisingService.listAdsForAdmin("approved",
+          pagination
+      )
+  
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to list ads", message: error.message });
+    }
+  }
   
 
   // ✅ Get Ads by Title (En or Ar)

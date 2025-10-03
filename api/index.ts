@@ -368,6 +368,12 @@ app.post('/api/advertising',AuthMiddleware(UserRole.USER), (req,res) => advertis
 app.post('/api/advertising/uploadPhoto/:id',AuthMiddleware(UserRole.USER), upload.single("photo"), (req,res) => advertisingController.uploadPhotoToAd(req,res))
 
 app.get(
+  "/api/advertising/listApprovedAdsForUser",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => advertisingController.listApprovedAdsForUser(req, res)
+);
+
+app.get(
   "/api/advertising/list",
   AuthMiddleware(UserRole.USER),
   (req, res) => advertisingController.listAds(req, res)

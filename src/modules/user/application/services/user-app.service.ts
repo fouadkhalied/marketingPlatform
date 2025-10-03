@@ -83,7 +83,7 @@ export class UserAppService {
     }
   }
 
-  async login(email: string, password: string): Promise<ApiResponseInterface<{token: string}>> {
+  async login(email: string, password: string): Promise<ApiResponseInterface<{role : "admin" | "user"; username : string | null; token: string}>> {
     try {
       // 1. Find the user by email
       const user = await this.userRepository.getUserByEmail(email);
@@ -106,7 +106,12 @@ export class UserAppService {
       const payload = { userId: user.id, email: user.email, role: user.role , oauth: "normal"};
       const token = this.jwtService.sign(payload);
     
-      return ResponseBuilder.success({token : token});
+      return ResponseBuilder.success({
+        token : token,
+        role : payload.role,
+        username : user.username
+      });
+      
     } catch (error) {
       console.error("Error during login:", error);
       return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Login failed");
