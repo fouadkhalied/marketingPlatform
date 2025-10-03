@@ -7,6 +7,7 @@ import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/er
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { AdStatus } from "../../domain/enums/ads.status.enum";
+import { ApproveAdData } from "../../application/dto/approveAdData";
 
 export class AdvertisingController {
   constructor(private readonly advertisingService: AdvertisingAppService) {}
@@ -251,25 +252,51 @@ async getAdsByTitle(req: Request, res: Response): Promise<void> {
   }
 
   // Approve Ad (Admin only)
-  async approveAd(req: Request, res: Response): Promise<void> {
-    try {
-      if (!req.user?.id || req.user.role !== UserRole.ADMIN) {
-        const errorResponse = ErrorBuilder.build(
-          ErrorCode.FORBIDDEN,
-          "Invalid or missing status field"
-        );
-        res.status(403).json(errorResponse);
-        return;
-      }
-
-      const result = await this.advertisingService.approveAd(req.params.id);
-
-      const statusCode = this.getStatusCode(result);
-      res.status(statusCode).json(result);
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to approve ad", message: error.message });
+  
+async approveAd(req: Request, res: Response): Promise<void> {
+  try {
+    if (!req.user?.id || req.user.role !== UserRole.ADMIN) {
+      const errorResponse = ErrorBuilder.build(
+        ErrorCode.FORBIDDEN,
+        "Only admins can approve ads"
+      );
+      res.status(403).json(errorResponse);
+      return;
     }
+
+    const { id } = req.params;
+    const socialMediaLinks = req.body;
+
+    // Filter out undefined/null values and only pass valid links
+    const validLinks: ApproveAdData = {};
+    if (socialMediaLinks?.tiktokLink) validLinks.tiktokLink = socialMediaLinks.tiktokLink;
+    if (socialMediaLinks?.youtubeLink) validLinks.youtubeLink = socialMediaLinks.youtubeLink;
+    if (socialMediaLinks?.googleAdsLink) validLinks.googleAdsLink = socialMediaLinks.googleAdsLink;
+    if (socialMediaLinks?.instagramLink) validLinks.instagramLink = socialMediaLinks.instagramLink;
+    if (socialMediaLinks?.facebookLink) validLinks.facebookLink = socialMediaLinks.facebookLink;
+    if (socialMediaLinks?.snapchatLink) validLinks.snapchatLink = socialMediaLinks.snapchatLink;
+
+    const result = await this.advertisingService.approveAd(
+      id,
+      Object.keys(validLinks).length > 0 ? validLinks : undefined
+    );
+
+    const statusCode = this.getStatusCode(result);
+    res.status(statusCode).json(result);
+  } catch (error: any) {
+    console.error("Error approving ad:", error);
+    
+    res.status(500).json({
+      success: false,
+      message: "Failed to approve ad",
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to approve ad",
+        details: error.message
+      }
+    });
   }
+}
 
   // Reject Ad (Admin only)
   async rejectAd(req: Request, res: Response): Promise<void> {

@@ -7,6 +7,7 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { AdStatus } from "../../domain/enums/ads.status.enum";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { autheticatedPage } from "../../application/dto/authenticatedPage.dto";
+import { ApproveAdData } from "../../application/dto/approveAdData";
 
 export class AdvertisingRepository implements IAdvertisingRepository {
     async create(ad: InsertAd): Promise<string> {
@@ -277,33 +278,45 @@ export class AdvertisingRepository implements IAdvertisingRepository {
       }
     }
 
-    async approveAd(id: string): Promise<Ad> {
-      try {
-        const [result] = await db
-          .update(ads)
-          .set({ 
-            status: "approved",
-            updatedAt: new Date()
-          })
-          .where(eq(ads.id, id))
-          .returning();
-        
-        if (!result) {
-          throw ErrorBuilder.build(
-            ErrorCode.DATABASE_ERROR,
-            "Ad not found or failed to approve"
-          );
-        }
-        
-        return result as Ad;
-      } catch (error) {
-        throw ErrorBuilder.build(
-          ErrorCode.DATABASE_ERROR,
-          "Failed to approve ad",
-          error instanceof Error ? error.message : error
-        );
-      }
+    
+async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
+  try {
+    // Build the update object dynamically
+    const updateData: any = {
+      status: "approved" as const,
+      updatedAt: sql`now()`,
+    };
+
+    // Add social media links only if they are provided
+    if (data?.tiktokLink) updateData.tiktokLink = data.tiktokLink;
+    if (data?.youtubeLink) updateData.youtubeLink = data.youtubeLink;
+    if (data?.googleAdsLink) updateData.googleAdsLink = data.googleAdsLink;
+    if (data?.instagramLink) updateData.instagramLink = data.instagramLink;
+    if (data?.facebookLink) updateData.facebookLink = data.facebookLink;
+    if (data?.snapchatLink) updateData.snapchatLink = data.snapchatLink;
+
+    const [result] = await db
+      .update(ads)
+      .set(updateData)
+      .where(eq(ads.id, id))
+      .returning();
+    
+    if (!result) {
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Ad not found or failed to approve"
+      );
     }
+    
+    return result as Ad;
+  } catch (error) {
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to approve ad",
+      error instanceof Error ? error.message : error
+    );
+  }
+}
 
     async rejectAd(id: string, reason?: string): Promise<Ad> {
       try {

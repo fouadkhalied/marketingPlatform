@@ -9,6 +9,7 @@ import { FacebookPostInsights } from "../../../user/application/dtos/facebookDto
 import { FacebookPost } from "../../../user/application/dtos/facebookDto/facebookPost.dto";
 import { FacebookPageService } from "../../../user/application/services/facebook-app.service";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
+import { ApproveAdData } from "../dto/approveAdData";
 import { autheticatedPage } from "../dto/authenticatedPage.dto";
 
 export class AdvertisingAppService {
@@ -203,19 +204,26 @@ export class AdvertisingAppService {
   }
 
   
-  async approveAd(id: string): Promise<ApiResponseInterface<Ad>> {
-    try {
-      const approvedAd = await this.advertisingRepository.approveAd(id);
+  
+async approveAd(
+  id: string, 
+  socialMediaLinks?: ApproveAdData
+): Promise<ApiResponseInterface<Ad>> {
+  try {
+    const approvedAd = await this.advertisingRepository.approveAd(
+      id, 
+      socialMediaLinks
+    );
 
-      return ResponseBuilder.success(approvedAd);
-    } catch (error) {
-      return ErrorBuilder.build(
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        "Unexpected error while approving ad",
-        error instanceof Error ? error.message : error
-      );
-    }
+    return ResponseBuilder.success(approvedAd, "Ad approved successfully");
+  } catch (error) {
+    return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      "Unexpected error while approving ad",
+      error instanceof Error ? error.message : error
+    );
   }
+}
 
   async rejectAd(id: string, reason?: string): Promise<ApiResponseInterface<Ad>> {
     try {
