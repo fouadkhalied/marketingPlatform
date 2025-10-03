@@ -102,6 +102,7 @@ export const users = pgTable("users", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     //eventId: varchar("event_id").notNull(),
     adId: varchar("ad_id").notNull().references(() => ads.id),
+    userId: varchar("user_id").notNull().references(() => users.id),
     //impressionEventId: varchar("impression_event_id").references(() => impressionsEvents.id),
     source: text("source").notNull().default("web"),
     // ipHash: text("ip_hash"),

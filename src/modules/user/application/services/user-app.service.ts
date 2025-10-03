@@ -383,19 +383,28 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
       return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to update user Stripe information");
     }
   }
-
-  async createAdClick(adId: string
+  async createAdClick(
+    adId: string, 
+    userId: string
   ): Promise<ApiResponseInterface<string>> {
     try {
-      await this.userRepository.createAdClick(adId);
+      await this.userRepository.createAdClick(adId, userId);
   
       return ResponseBuilder.success("Click recorded successfully");
     } catch (error: any) {
-      console.error("Error creating ad click:", error);
+  
+      // Handle specific error for duplicate click
+      if (error.message === "USER_ALREADY_CLICKED") {
+        return ErrorBuilder.build(
+          ErrorCode.DUPLICATE_ENTRY,
+          "User already clicked this ad"
+        );
+      }
+  
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Failed to record click",
-        error.message
+        error.message || "Unknown error"
       );
     }
   }

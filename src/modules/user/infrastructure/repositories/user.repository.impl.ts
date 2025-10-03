@@ -1,7 +1,7 @@
 import { db } from "../../../../infrastructure/db/connection";
 import { userInterface } from "../../domain/repositories/user.repository";
 
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { ads, clicksEvents, CreateUser, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
@@ -232,26 +232,42 @@ export class UserRepositoryImpl implements userInterface {
         return user;
       }
 
-      async createAdClick(adId : string):Promise<boolean> {
+      async createAdClick(adId: string, userId: string): Promise<boolean> {
         return await db.transaction(async (tx) => {
+          // Check if user already clicked this ad
+          const existingClick = await tx
+            .select()
+            .from(clicksEvents)
+            .where(
+              and(
+                eq(clicksEvents.adId, adId),
+                eq(clicksEvents.userId, userId)
+              )
+            )
+            .limit(1);
+      
+          if (existingClick.length > 0) {
+            throw new Error("USER_ALREADY_CLICKED");
+          }
+      
           // 1. Create the click event
           await tx
             .insert(clicksEvents)
             .values({
               adId,
-            })
+              userId
+            });
       
           // 2. Increment the click count on the ad
-          // Note: If you have a clicksCount field, replace likesCount with clicksCount
           await tx
             .update(ads)
             .set({
               likesCount: sql`${ads.likesCount} + 1`,
               updatedAt: sql`now()`,
             })
-            .where(eq(ads.id, adId))
+            .where(eq(ads.id, adId));
       
-          return true
+          return true;
         });
       }
 }
