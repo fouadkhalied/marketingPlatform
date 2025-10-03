@@ -244,4 +244,38 @@ export class PaymentRepositoryImpl implements PaymentRepository {
             throw error;
         }
     }
+
+
+    async getPurchaseHistoryForAdmin(
+        pagination: { page: number; limit: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }
+    ) {
+        try {
+            const offset = (pagination.page - 1) * pagination.limit;
+            //const sortOrder = pagination.sortOrder || 'desc';
+
+            const [items, totalCount] = await Promise.all([
+                db
+                    .select()
+                    .from(purchases)
+                    //.orderBy(sortOrder === 'desc' ? sql`${purchases.createdAt} desc` : sql`${purchases.createdAt} asc`)
+                    .limit(pagination.limit)
+                    .offset(offset),
+                db
+                    .select({ count: sql<number>`count(*)` })
+                    .from(purchases)
+                    .then(res => Number(res[0].count))
+            ]);
+
+            return {
+                items,
+                total: totalCount,
+                page: pagination.page,
+                limit: pagination.limit,
+                totalPages: Math.ceil(totalCount / pagination.limit)
+            };
+        } catch (error) {
+            console.error('❌ Error fetching purchase history:', error);
+            throw error;
+        }
+    }
 }

@@ -359,6 +359,10 @@ app.post('/api/payment/createSessionUrl',
 app.get('/api/payment/history',AuthMiddleware(UserRole.USER),
 (req, res) => paymentController.getPurchaseHistory(req, res))
 
+app.get('/api/payment/getPurchaseHistoryForAdmin',AuthMiddleware(UserRole.ADMIN),
+(req, res) => paymentController.getPurchaseHistory(req, res))
+
+
 // Adverstising routes
 
 app.get("/api/advertising/search", AuthMiddleware(UserRole.USER), (req,res) => advertisingController.getAdsByTitle(req,res))

@@ -209,4 +209,20 @@ export class PaymentService {
             );
         }
     }
+
+    async getPurchaseHistoryForAdmin(page: number = 1, limit: number = 10) {
+        try {
+            const result = await this.paymentRepo.getPurchaseHistoryForAdmin(
+                { page, limit, sortBy: 'createdAt', sortOrder: 'desc' }
+            );
+
+            return ResponseBuilder.success(result);
+        } catch (error) {
+            console.error('❌ Error getting purchase history:', error);
+            return ErrorBuilder.build(
+                ErrorCode.INTERNAL_SERVER_ERROR,
+                'Failed to fetch purchase history'
+            );
+        }
+    }
 }

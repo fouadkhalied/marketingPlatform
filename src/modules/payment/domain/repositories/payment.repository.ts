@@ -16,4 +16,13 @@ export interface PaymentRepository {
         limit: number;
         totalPages: number;
     }>;
+    getPurchaseHistoryForAdmin(
+        pagination: { page: number; limit: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }
+    ): Promise<{
+        items: Purchase[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
 }

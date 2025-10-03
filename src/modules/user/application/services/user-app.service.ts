@@ -29,24 +29,29 @@ export class UserAppService {
         return ErrorBuilder.build(ErrorCode.USER_ALREADY_EXISTS, "Email already exists");
       }
 
-      await this.userRepository.createUser(input);
+      const user = await this.userRepository.createUser(input);
+
+      await this.userRepository.verifyUser(user.id)
       
       // Generate and send OTP for verification
-      const otp = this.otpService.generateOTP();
-      const otpResult = await this.otpService.sendOTP({
-        email: input.email,
-        otp,
-        subject: "Verify your account"
-      });
+      // const otp = this.otpService.generateOTP();
+      // const otpResult = await this.otpService.sendOTP({
+      //   email: input.email,
+      //   otp,
+      //   subject: "Verify your account"
+      // });
 
-      if (!otpResult.success) {
-        return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, otpResult.message || "failed to send otp");
-      }
+      // if (!otpResult.success) {
+      //   return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, otpResult.message || "failed to send otp");
+      // }
+
 
       return ResponseBuilder.success({
         success : true,
-        message : "otp sent to verify email"
+        message : "user created and verfied",
+        id: user.id
       });
+      
     } catch (error:any) {
       console.error("Error creating user:", error);
       return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, error.message);
