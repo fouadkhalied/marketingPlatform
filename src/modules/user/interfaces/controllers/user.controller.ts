@@ -198,7 +198,9 @@ export class UserController {
   // Get user by ID
   async getUser(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = req.params.id;
+      console.log(userId);
+      
       if (!userId) {
         res.status(401).json({
           success: false,
