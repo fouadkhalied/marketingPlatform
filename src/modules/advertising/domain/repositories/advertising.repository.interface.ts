@@ -20,4 +20,5 @@ export interface IAdvertisingRepository {
     getPageAccessTokenById(userId: string,pageId: string): Promise<string | null>
     assignCreditToAd(userId: string, adId: string, credit: number): Promise<Ad | null>
     hasSufficientBalance(userId: string, credit: number): Promise<boolean>
+    deactivateUserAd(userId: string, adId: string): Promise<Ad>
 }  

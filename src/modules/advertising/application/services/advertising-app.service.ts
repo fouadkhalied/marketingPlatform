@@ -392,4 +392,25 @@ async activateAd(
       );
     }
   }
+
+  // Add to UserAppService class
+async deactivateUserAd(
+  userId: string,
+  adId: string
+): Promise<ApiResponseInterface<Ad>> {
+  try {
+    const deactivatedAd = await this.advertisingRepository.deactivateUserAd(userId, adId);
+    
+    return ResponseBuilder.success(deactivatedAd, "Ad deactivated successfully");
+  } catch (error: any) {
+    if (error.code && error.message) {
+      return error;
+    }
+    
+    return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      error.message || "Failed to deactivate ad"
+    );
+  }
+}
 }
