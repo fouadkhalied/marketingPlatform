@@ -318,6 +318,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
   try {
     // Build the update object dynamically
     const updateData: any = {
+      active : true,
       status: "approved" as const,
       updatedAt: sql`now()`,
     };
