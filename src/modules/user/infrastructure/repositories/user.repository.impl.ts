@@ -3,8 +3,10 @@ import { userInterface } from "../../domain/repositories/user.repository";
 
 import { eq, desc, sql, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { ads, clicksEvents, CreateUser, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
+import { adminImpressionRatio, AdminImpressionRatio, ads, clicksEvents, CreateUser, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
+import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
+import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 
 export class UserRepositoryImpl implements userInterface {
     async hashPassword(password: string): Promise<string> {
@@ -269,4 +271,59 @@ export class UserRepositoryImpl implements userInterface {
           return true;
         });
       }
+
+
+  // ✅ Get all available ratios
+  async getAvaialbeImpressionRatios(): Promise<AdminImpressionRatio[]> {
+    try {
+      const ratios = await db
+        .select()
+        .from(adminImpressionRatio)
+        .orderBy(adminImpressionRatio.currency);
+
+      return ratios;
+    } catch (error) {
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Failed to fetch available impression ratios",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  // ✅ Update an existing impression ratio
+  async updateImpressionRatio(
+    adminId: string,
+    id: string,
+    impressionsPerUnit: number,
+    currency: "usd" | "sar"
+  ): Promise<AdminImpressionRatio> {
+    try {
+      const [updated] = await db
+        .update(adminImpressionRatio)
+        .set({
+          impressionsPerUnit,
+          currency,
+          updatedBy: adminId,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(adminImpressionRatio.id, id))
+        .returning();
+
+      if (!updated) {
+        throw ErrorBuilder.build(
+          ErrorCode.AD_NOT_FOUND,
+          `Impression ratio with id ${id} not found`
+        );
+      }
+
+      return updated;
+    } catch (error) {
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Failed to update impression ratio",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
 }

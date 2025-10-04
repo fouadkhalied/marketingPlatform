@@ -762,4 +762,106 @@ export class UserController {
       });
     }
   }
+
+  // Get all available impression ratios
+  async getAvailableImpressionRatios(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await this.userService.getAvailableImpressionRatios();
+      const statusCode = this.getStatusCode(result);
+      
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error('Error fetching impression ratios:', err);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch impression ratios',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch impression ratios',
+          details: err.message
+        }
+      });
+    }
+  }
+
+  // Update impression ratio (admin only)
+  async updateImpressionRatio(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { impressionsPerUnit, currency } = req.body;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: 'Impression ratio ID is required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Impression ratio ID is required'
+          }
+        });
+        return;
+      }
+
+      if (!impressionsPerUnit || typeof impressionsPerUnit !== 'number') {
+        res.status(400).json({
+          success: false,
+          message: 'Valid impressions per unit is required',
+          error: {
+            code: 'MISSING_REQUIRED_FIELD',
+            message: 'Valid impressions per unit is required'
+          }
+        });
+        return;
+      }
+
+      if (!currency || !['usd', 'sar'].includes(currency)) {
+        res.status(400).json({
+          success: false,
+          message: 'Valid currency (usd or sar) is required',
+          error: {
+            code: 'INVALID_INPUT',
+            message: 'Currency must be either "usd" or "sar"'
+          }
+        });
+        return;
+      }
+
+      if (!req.user?.id) {
+        res.status(401).json({
+          success: false,
+          message: "User must be authenticated",
+          error: {
+            code: "UNAUTHORIZED",
+            message: "User must be authenticated"
+          }
+        });
+        return;
+      }
+
+      const adminId = req.user.id;
+
+      const result = await this.userService.updateImpressionRatio(
+        adminId,
+        id,
+        impressionsPerUnit,
+        currency
+      );
+      
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (err: any) {
+      console.error('Error updating impression ratio:', err);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update impression ratio',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update impression ratio',
+          details: err.message
+        }
+      });
+    }
+  }
 }

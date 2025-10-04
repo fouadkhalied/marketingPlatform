@@ -5,7 +5,7 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { OTPResult } from "../../../../infrastructure/shared/common/otp/interfaces/optResult";
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
-import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
+import { AdminImpressionRatio, CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { FacebookPageService } from "./facebook-app.service";
@@ -405,6 +405,48 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Failed to record click",
         error.message || "Unknown error"
+      );
+    }
+  }
+
+  // Get all available impression ratios
+  async getAvailableImpressionRatios(): Promise<ApiResponseInterface<AdminImpressionRatio[]>> {
+    try {
+      const ratios = await this.userRepository.getAvaialbeImpressionRatios();
+      return ResponseBuilder.success(ratios, "Impression ratios retrieved successfully");
+    } catch (error: any) {
+      if (error.code && error.message) {
+        return error;
+      }
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        error.message || "Failed to fetch impression ratios"
+      );
+    }
+  }
+
+  // Update impression ratio (admin only)
+  async updateImpressionRatio(
+    adminId: string,
+    id: string,
+    impressionsPerUnit: number,
+    currency: "usd" | "sar"
+  ): Promise<ApiResponseInterface<AdminImpressionRatio>> {
+    try {
+      const updatedRatio = await this.userRepository.updateImpressionRatio(
+        adminId,
+        id,
+        impressionsPerUnit,
+        currency
+      );
+      return ResponseBuilder.success(updatedRatio, "Impression ratio updated successfully");
+    } catch (error: any) {
+      if (error.code && error.message) {
+        return error;
+      }
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        error.message || "Failed to update impression ratio"
       );
     }
   }

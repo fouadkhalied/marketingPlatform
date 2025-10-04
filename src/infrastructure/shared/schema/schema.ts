@@ -362,6 +362,7 @@ export const users = pgTable("users", {
   export type AuditLog = typeof auditLogs.$inferSelect;
   export type Payment = typeof purchases.$inferSelect;
   export type AdUserEngagement = typeof adUserEngagement.$inferSelect;
+  export type AdminImpressionRatio = typeof adminImpressionRatio.$inferSelect;
   
   export type LoginData = z.infer<typeof loginSchema>;
   export type SignupData = z.infer<typeof signupSchema>;

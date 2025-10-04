@@ -1,4 +1,4 @@
-import { CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
+import { AdminImpressionRatio, CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 
 export interface userInterface {
     getUser(id: string): Promise<Partial<User & { socialMediaPages: Array<{ pageId: string; pageName: string; pageType: string; isActive: boolean }> }> | undefined>;
@@ -8,5 +8,7 @@ export interface userInterface {
     updateUser(id: string, updates: Partial<User>): Promise<User>;
     verifyUser(id: string): Promise<User | undefined>
     updateUserStripeInfo(id: string, customerId: string, subscriptionId?: string): Promise<User>;
-    deleteUser(id: string): Promise<boolean>
+    deleteUser(id: string): Promise<boolean>;
+    getAvaialbeImpressionRatios(): Promise<AdminImpressionRatio[]>;
+    updateImpressionRatio(adminId: string , id:string, impressionsPerUnit: number, currency: "usd" | "sar"): Promise<AdminImpressionRatio>
 }
