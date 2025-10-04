@@ -2,7 +2,6 @@
 import { Ad, InsertAd } from "../../../../infrastructure/shared/schema/schema";
 import { ApproveAdData } from "../../application/dto/approveAdData";
 import { autheticatedPage } from "../../application/dto/authenticatedPage.dto";
-import { AdStatus } from "../enums/ads.status.enum";
 
 export interface IAdvertisingRepository {
     create(ad: InsertAd,): Promise<string>;
@@ -10,11 +9,13 @@ export interface IAdvertisingRepository {
     findById(id: string): Promise<Ad | null>;
     findAllAdsForAdmin(status: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
     findAllAdsForUser(status: string , userId: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
+    listApprovedAdsForUser(pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
     update(id: string, ad: Partial<InsertAd>): Promise<Ad | null>;
     delete(id: string): Promise<boolean>;
-    findByTitle(title: string, params:PaginationParams) : Promise<PaginatedResponse<Ad>>
+    findByTitle(title: string, params:PaginationParams) : Promise<PaginatedResponse<Ad>>;
     approveAd(id: string,data?: ApproveAdData): Promise<Ad>;
     rejectAd(id: string, reason?: string): Promise<Ad>;
+    activateAd(id: string):Promise<Ad>;
     getAllPagesForUser(isActive: boolean, userId: string, params: PaginationParams) : Promise<PaginatedResponse<autheticatedPage>>
     getPageAccessTokenById(userId: string,pageId: string): Promise<string | null>
     assignCreditToAd(userId: string, adId: string, credit: number): Promise<Ad | null>

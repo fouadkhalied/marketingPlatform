@@ -174,16 +174,16 @@ export class AdvertisingController {
     
       const { limit, page} = req.query;
   
-      // ✅ Pagination handling (default: page=1, limit=10)
+      // ✅ Pagination handling (default: page=1, limit=6)
       const pagination: PaginationParams = {
         page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
-        limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+        limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 6,
       };
   
-      const result =  await this.advertisingService.listAdsForAdmin("approved",
+      const result =  await this.advertisingService.listApprovedAdsForUser(
           pagination
       )
-  
+                                  
       const statusCode = this.getStatusCode(result);
       res.status(statusCode).json(result);
     } catch (error: any) {
@@ -307,6 +307,28 @@ async approveAd(req: Request, res: Response): Promise<void> {
 
       const { reason } = req.body;
       const result = await this.advertisingService.rejectAd(req.params.id, reason);
+
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to reject ad", message: error.message });
+    }
+  }
+
+  // activate ad
+  async avctivateAd(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user?.id || req.user.role !== UserRole.ADMIN) {
+        res.status(403).json({ error: "Forbidden: Admin access required" });
+        return;
+      }
+
+      if (!req.params.id) {
+        res.status(404).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "ad id must be provided"));
+        return;
+      }
+
+      const result = await this.advertisingService.activateAd(req.params.id);
 
       const statusCode = this.getStatusCode(result);
       res.status(statusCode).json(result);

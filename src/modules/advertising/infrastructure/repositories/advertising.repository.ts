@@ -1,33 +1,44 @@
-﻿import { and, eq, like, or, sql } from "drizzle-orm";
+﻿import { and, eq, gt, inArray, like, or, sql } from "drizzle-orm";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
 import { db } from "../../../../infrastructure/db/connection";
-import { Ad, ads , InsertAd, socialMediaPages, users } from "../../../../infrastructure/shared/schema/schema";
+import { Ad, adminImpressionRatio, ads , InsertAd, socialMediaPages, users } from "../../../../infrastructure/shared/schema/schema";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
-import { AdStatus } from "../../domain/enums/ads.status.enum";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { autheticatedPage } from "../../application/dto/authenticatedPage.dto";
 import { ApproveAdData } from "../../application/dto/approveAdData";
 
 export class AdvertisingRepository implements IAdvertisingRepository {
-    async create(ad: InsertAd): Promise<string> {
-      try {
-        const [result] = await db.insert(ads).values(ad).returning({ id: ads.id });
-        if (!result) {
-          throw ErrorBuilder.build(
-            ErrorCode.DATABASE_ERROR,
-            "Failed to insert ad"
-          );
+  async create(ad: InsertAd): Promise<string> {
+    try {
+      const result = await db.transaction(async (tx) => {
+        // 1️⃣ Insert the ad
+        const [insertedAd] = await tx.insert(ads).values(ad).returning({ id: ads.id });
+  
+        if (!insertedAd) {
+          throw ErrorBuilder.build(ErrorCode.DATABASE_ERROR, "Failed to insert ad");
         }
-        return result.id;
-      } catch (error) {
-        throw ErrorBuilder.build(
-          ErrorCode.DATABASE_ERROR,
-          "Failed to insert ad",
-          error instanceof Error ? error.message : error
-        );
-      }
+  
+        // 2️⃣ Increment user's adsCount
+        await tx
+          .update(users)
+          .set({ adsCount: sql`${users.adsCount} + 1` })
+          .where(eq(users.id, ad.userId));
+  
+        // ✅ Return the new ad ID
+        return insertedAd.id;
+      });
+  
+      return result;
+    } catch (error) {
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Failed to insert ad or update user ads count",
+        error instanceof Error ? error.message : error
+      );
     }
+  }
+  
 
     async addPhotoToAd(id: string, photo: string): Promise<boolean> {
       try {
@@ -353,6 +364,58 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
       }
     }
 
+    async activateAd(id: string): Promise<Ad> {
+      // First, fetch the ad to check its status
+      const [existingAd] = await db
+        .select()
+        .from(ads)
+        .where(eq(ads.id, id))
+        .limit(1);
+    
+      // Check if ad exists
+      if (!existingAd) {
+        throw ErrorBuilder.build(
+          ErrorCode.AD_NOT_FOUND,
+          "Ad not found"
+        );
+      }
+    
+      // Check if ad is approved
+      if (existingAd.status !== "approved") {
+        throw ErrorBuilder.build(
+          ErrorCode.VALIDATION_ERROR,
+          `Cannot activate ad. Ad must be approved first. Current status: ${existingAd.status}`
+        );
+      }
+    
+      // Check if ad has sufficient credits
+      if (existingAd.budgetType === "impressions" && existingAd.impressionsCredit <= 0) {
+        throw ErrorBuilder.build(
+          ErrorCode.VALIDATION_ERROR,
+          "Cannot activate ad: insufficient impression credits"
+        );
+      }
+    
+      // Update to active
+      const [result] = await db
+        .update(ads)
+        .set({
+          active: true,
+          updatedAt: new Date()
+        })
+        .where(eq(ads.id, id))
+        .returning();
+    
+      if (!result) {
+        throw ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          "Failed to activate ad"
+        );
+      }
+    
+      return result as Ad;
+    }
+
 
     async getAllPagesForUser(
       isActive: boolean,
@@ -452,16 +515,27 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
           .update(users)
           .set({ balance: sql`${users.balance} - ${credit}` })
           .where(eq(users.id, userId));
+
+
+        const [ratio] = await tx
+        .select({ impressionsPerUnit: adminImpressionRatio.impressionsPerUnit })
+        .from(adminImpressionRatio)
+        .where(eq(adminImpressionRatio.currency, 'sar'));  
+        // Calculate total impressions
+        const totalImpressions = credit * Number(ratio.impressionsPerUnit);
     
         // 2. Add to ad balance
         const [updatedAd] = await tx
           .update(ads)
           .set({
-            budgetCredit: sql`${ads.budgetCredit} + ${credit}`,
+            impressionsCredit: sql`${ads.impressionsCredit} + ${totalImpressions}`,
+            spended: sql`${ads.spended} + ${credit}`,
             updatedAt: new Date(),
           })
           .where(eq(ads.id, adId))
           .returning();
+
+        // 3. Add impressions to add
     
         return updatedAd ?? null;
       });
@@ -481,5 +555,89 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
       const balance = user.balance ?? 0; // treat null as 0
 
       return balance >= credit;
+    }
+
+    async listApprovedAdsForUser(
+      pagination: PaginationParams
+    ): Promise<PaginatedResponse<Ad>> {
+      try {
+        const { page } = pagination;
+        const limit: number = 6;
+        const offset = (page - 1) * limit;
+    
+        // Count total records
+        const countQuery = db
+          .select({ count: sql<number>`count(*)` })
+          .from(ads)
+          .where(
+            and(
+              eq(ads.status, "approved"),
+              eq(ads.active, true),
+              gt(ads.impressionsCredit, 0) 
+            )
+          );
+    
+        const [{ count }] = await countQuery;
+    
+        // Select paginated ads
+        const resultsQuery = db
+          .select({
+            id: ads.id,
+            imageUrl: ads.imageUrl,
+            titleEn: ads.titleEn,
+            titleAr: ads.titleAr,
+            descriptionEn: ads.descriptionEn,
+            descriptionAr: ads.descriptionAr,
+            likesCount: ads.likesCount
+          })
+          .from(ads)
+          .where(
+            and(
+              eq(ads.status, "approved"),
+              eq(ads.active, true),
+              gt(ads.impressionsCredit, 0)
+            )
+          )
+          .limit(limit)
+          .offset(offset);
+    
+        const results = await resultsQuery;
+    
+        // ✅ Decrement impression credits for fetched ads
+        if (results.length > 0) {
+          await db
+            .update(ads)
+            .set({
+              impressionsCredit: sql`${ads.impressionsCredit} - 1`, // ✅ Use sql template
+            })
+            .where(
+              inArray(
+                ads.id,
+                results.map((ad) => ad.id)
+              ) 
+            );
+        }
+    
+        const totalCount = Number(count);
+        const totalPages = Math.ceil(totalCount / limit);
+    
+        return {
+          data: results as Ad[],
+          pagination: {
+            currentPage: page,
+            limit,
+            totalCount,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrevious: page > 1,
+          },
+        };
+      } catch (error) {
+        throw ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          "Failed to fetch ads for admin",
+          error instanceof Error ? error.message : error
+        );
+      }
     }
 }

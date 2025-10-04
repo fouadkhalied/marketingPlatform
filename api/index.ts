@@ -417,6 +417,12 @@ app.put(
   (req, res) => advertisingController.rejectAd(req, res)
 );
 
+app.put(
+  "/api/advertising/:id/avctivate",
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => advertisingController.avctivateAd(req, res)
+);
+
 app.get(
   "/api/advertising/:id",
   AuthMiddleware(UserRole.USER),

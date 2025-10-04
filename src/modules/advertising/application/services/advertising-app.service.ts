@@ -139,6 +139,21 @@ export class AdvertisingAppService {
     }
   }
 
+  async listApprovedAdsForUser(
+    pagination: PaginationParams
+  ): Promise<ApiResponseInterface<Ad[]>> {
+    try {
+      const ads = await this.advertisingRepository.listApprovedAdsForUser(pagination);
+      return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while listing ads for admin",
+        error instanceof Error ? error.message : error
+    );
+    }
+  }
+
 
   async getAdsByTitle(title: string, params: PaginationParams): Promise<ApiResponseInterface<Ad[]>> {
     try {
@@ -221,6 +236,27 @@ async approveAd(
       ErrorCode.INTERNAL_SERVER_ERROR,
       "Unexpected error while approving ad",
       error instanceof Error ? error.message : error
+    );
+  }
+}
+
+async activateAd(
+  id: string,
+): Promise<ApiResponseInterface<Ad>> {
+  try {
+    const activatedAd = await this.advertisingRepository.activateAd(id);
+    
+    return ResponseBuilder.success(activatedAd, "Ad activated successfully");
+  } catch (error: any) {
+    // If it's already an ErrorBuilder error, return it as-is
+    if (error.code && error.message) {
+      return error;
+    }
+    
+    // Otherwise, wrap it in a generic error
+    return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      error.message || "Failed to activate ad"
     );
   }
 }
@@ -356,5 +392,4 @@ async approveAd(
       );
     }
   }
-  
 }

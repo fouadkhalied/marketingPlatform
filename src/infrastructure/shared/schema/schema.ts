@@ -9,6 +9,7 @@ export const adStatusEnum = pgEnum("ad_status", ["pending", "approved", "rejecte
 export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "completed", "failed", "refunded"]);
 export const pagesTypeEnum = pgEnum("page_type", ["facebook", "instagram", "snapchat"]);
 export const oauthEnum = pgEnum("oauth_provider", ["normal", "google", "facebook"]);
+export const currencyEnum = pgEnum("currency_enum", ["usd", "sar"]);
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -43,14 +44,15 @@ export const users = pgTable("users", {
     status: adStatusEnum("status").notNull().default("pending"),
     targetAudience: text("target_audience"),
     budgetType: text("budget_type").notNull(), // "impressions" or "clicks"
-    budgetCredit: integer("budget_credit").notNull().default(0),
+    impressionsCredit: integer().notNull().default(0), 
+    spended: integer("budget_credit").notNull().default(0),
     publishToken: text("publish_token"),
     approvedBy: varchar("approved_by").references(() => users.id),
     rejectionReason: text("rejection_reason"),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
     likesCount:integer().notNull().default(0),
-    online:boolean().notNull().default(false),
+    active:boolean().notNull().default(false),
 
     tiktokLink: text("tiktok_link"),
     youtubeLink: text("youtube_link"),
@@ -58,6 +60,23 @@ export const users = pgTable("users", {
     instagramLink: text("instagram_link"),
     facebookLink: text("facebook_link"),
     snapchatLink: text("snapchat_link"),
+  });
+
+  export const adminImpressionRatio = pgTable("admin_impression_ratio", {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Currency code (USD, EUR, EGP, etc.)
+  currency: currencyEnum("currency")
+    .notNull(),
+
+  impressionsPerUnit: integer("impressions_per_unit")
+    .notNull(),
+  
+    // Track who made the change
+  updatedBy: varchar("updated_by").references(() => users.id),
+  
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
   });
 
   export const socialMediaPages = pgTable("social_media_pages", {
@@ -170,6 +189,7 @@ export const users = pgTable("users", {
     ads: many(ads),
     purchases: many(purchases),
     auditLogs: many(auditLogs),
+    adminImpressionRatio: many(adminImpressionRatio)
   }));
   
   export const adsRelations = relations(ads, ({ one, many }) => ({
