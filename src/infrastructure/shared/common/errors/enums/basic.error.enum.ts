@@ -18,7 +18,7 @@ export enum ErrorCode {
      
   // Resource Not Found Errors
   RESOURCE_NOT_FOUND = "RESOURCE_NOT_FOUND",
-  AD_NOT_FOUND = "POST_NOT_FOUND",
+  AD_NOT_FOUND = "AD_NOT_FOUND",
   USER_NOT_FOUND = "USER_NOT_FOUND",
   BAD_REQUEST = "BAD_REQUEST",
      

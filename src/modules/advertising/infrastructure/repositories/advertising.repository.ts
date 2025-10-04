@@ -265,7 +265,29 @@ export class AdvertisingRepository implements IAdvertisingRepository {
     
     async update(id: string, ad: Partial<InsertAd>): Promise<Ad | null> {
       try {
-        const [result] = await db.update(ads).set(ad).where(eq(ads.id, id)).returning();
+        // Clone and sanitize the update data
+        const updateData: any = { ...ad };
+        
+        // Convert date fields from strings to Date objects
+        const dateFields = ['createdAt', 'updatedAt'] as const;
+        
+        dateFields.forEach(field => {
+          if (updateData[field]) {
+            // If it's a string, convert to Date
+            if (typeof updateData[field] === 'string') {
+              updateData[field] = new Date(updateData[field]);
+            }
+            // If it's already a Date, leave it as is
+            // Drizzle will handle the conversion to ISO string
+          }
+        });
+    
+        const [result] = await db
+          .update(ads)
+          .set(updateData)
+          .where(eq(ads.id, id))
+          .returning();
+          
         return result ? (result as Ad) : null;
       } catch (error) {
         throw ErrorBuilder.build(
@@ -275,6 +297,8 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
+
+
   
     async delete(id: string): Promise<boolean> {
       try {

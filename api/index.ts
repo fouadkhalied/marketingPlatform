@@ -437,6 +437,7 @@ app.get(
 app.put(
   "/api/advertising/:id",
   AuthMiddleware(UserRole.USER),
+  sanitizeInput,
   (req, res) => advertisingController.updateAd(req, res)
 );
 
