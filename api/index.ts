@@ -373,7 +373,6 @@ app.post('/api/advertising/uploadPhoto/:id',AuthMiddleware(UserRole.USER), uploa
 
 app.get(
   "/api/advertising/listApprovedAdsForUser",
-  AuthMiddleware(UserRole.USER),
   (req, res) => advertisingController.listApprovedAdsForUser(req, res)
 );
 
@@ -439,10 +438,10 @@ app.delete(
 // facebook Outh
 app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(req,res));
 
-app.get('/api/auth/facebook/generateAuthUrl', AuthMiddleware(UserRole.USER), (req,res) => userController.generateFacebookAuthUrl(req,res))
+app.get('/api/auth/facebook/generateAuthUrl', AuthMiddleware(UserRole.USER), (req,res) => userController.generateFacebookAuthUrl(req,res));
 
 // get users 
-app.get('/api/users',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.getUsers(req,res));
+app.get('/api/users', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.getUsers(req,res));
 
 app.get('/api/user/userDetails/:id',AuthMiddleware(UserRole.USER),(req,res) => userController.getUser(req,res));
 
@@ -455,7 +454,6 @@ app.put('/api/users/promote/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => use
 // click on ad
 app.put(
   "/api/users/ad/:id/click",
-  AuthMiddleware(UserRole.USER),
   (req, res) => userController.createAdClick(req, res)
 );
 

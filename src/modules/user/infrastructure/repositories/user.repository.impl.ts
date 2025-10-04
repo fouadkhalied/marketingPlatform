@@ -235,28 +235,27 @@ export class UserRepositoryImpl implements userInterface {
       async createAdClick(adId: string, userId: string): Promise<boolean> {
         return await db.transaction(async (tx) => {
           // Check if user already clicked this ad
-          const existingClick = await tx
-            .select()
-            .from(clicksEvents)
-            .where(
-              and(
-                eq(clicksEvents.adId, adId),
-                eq(clicksEvents.userId, userId)
-              )
-            )
-            .limit(1);
+          // const existingClick = await tx
+          //   .select()
+          //   .from(clicksEvents)
+          //   .where(
+          //     and(
+          //       eq(clicksEvents.adId, adId)
+          //     )
+          //   )
+          //   .limit(1);
       
-          if (existingClick.length > 0) {
-            throw new Error("USER_ALREADY_CLICKED");
-          }
+          // if (existingClick.length > 0) {
+          //   throw new Error("USER_ALREADY_CLICKED");
+          // }
       
           // 1. Create the click event
-          await tx
-            .insert(clicksEvents)
-            .values({
-              adId,
-              userId
-            });
+          // await tx
+          //   .insert(clicksEvents)
+          //   .values({
+          //     adId
+             
+          //   });
       
           // 2. Increment the click count on the ad
           await tx

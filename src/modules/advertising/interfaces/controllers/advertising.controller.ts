@@ -94,7 +94,6 @@ export class AdvertisingController {
         .json(errorResponse);
     }
   }
-  
 
   // ✅ Get Ad by ID
   async getAd(req: Request, res: Response): Promise<void> {
@@ -168,10 +167,10 @@ export class AdvertisingController {
 
   async listApprovedAdsForUser(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.user?.id) {
-        res.status(401).json({ error: "User not authenticated" });
-        return;
-      }
+      // if (!req.user?.id) {
+      //   res.status(401).json({ error: "User not authenticated" });
+      //   return;
+      // } 
     
       const { limit, page} = req.query;
   

@@ -730,21 +730,21 @@ export class UserController {
         return;
       }
 
-      if (!req.user?.id) {
-        res.status(401).json({
-          success: false,
-          message: "User must be authenticated",
-          error: {
-            code: "UNAUTHORIZED",
-            message: "User must be authenticated"
-          }
-        });
-        return;
-      }
+      // if (!req.user?.id) {
+      //   res.status(401).json({
+      //     success: false,
+      //     message: "User must be authenticated",
+      //     error: {
+      //       code: "UNAUTHORIZED",
+      //       message: "User must be authenticated"
+      //     }
+      //   });
+      //   return;
+      // }
 
-      const userId = req.user.id
+      //const userId = req.user.id
   
-      const result = await this.userService.createAdClick(id, userId);
+      const result = await this.userService.createAdClick(id,"123");
       const statusCode = this.getStatusCode(result);
   
       res.status(statusCode).json(result);
