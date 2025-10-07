@@ -76,7 +76,7 @@ export const users = pgTable("users", {
     titleAr: text("title_ar").notNull(),
     descriptionEn: text("description_en").notNull(),
     descriptionAr: text("description_ar").notNull(),
-    targetUrl: text("target_url").notNull(),
+    websiteUrl: text("target_url").notNull(),
     imageUrl: text("image_url"),
     status: adStatusEnum("status").notNull().default("pending"),
     targetAudience: text("target_audience"),

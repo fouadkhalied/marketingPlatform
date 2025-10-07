@@ -624,7 +624,8 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             descriptionEn: ads.descriptionEn,
             descriptionAr: ads.descriptionAr,
             likesCount: ads.likesCount,
-            targetCities: ads.targetCities 
+            targetCities: ads.targetCities,
+            websiteUrl : ads.websiteUrl 
           })
           .from(ads)
           .where(whereConditions)
