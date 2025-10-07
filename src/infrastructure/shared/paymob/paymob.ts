@@ -312,7 +312,7 @@ async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobChec
     /**
      * Process webhook event (Stripe-compatible)
      */
-    async processWebhook(body: string | Buffer | any, signature: string): Promise<void> {
+    async processWebhook(body: string | Buffer | any): Promise<void> {
       if (!this.hmacSecret) {
         console.warn('⚠️ HMAC secret not configured, skipping signature verification');
       }

@@ -156,9 +156,9 @@ export class PaymentService {
         }
     }
 
-    async processWebhook(payload: any, signature: string): Promise<void> {
+    async processWebhook(payload: any): Promise<void> {
         try {
-            await this.paymobHandler.processWebhook(payload, signature);
+            await this.paymobHandler.processWebhook(payload);
         } catch (error) {
             console.error("❌ Paymob webhook error:", error);
             throw error;

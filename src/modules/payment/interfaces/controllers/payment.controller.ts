@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { PaymentService } from "../../application/services/payment.service";
-
+import * as crypto from "crypto";
 export class PaymentController {
     constructor(
         private readonly paymentService: PaymentService
@@ -46,30 +46,51 @@ export class PaymentController {
       }
   }
 
-  // Webhook endpoint
+  
   async webhook(req: Request, res: Response) {
     try {
-        console.log('🎣 Webhook received');
-        console.log('Event type check...');
-        
-        const signature = req.headers['stripe-signature'] as string;
-        
-        if (!signature) {
-            console.error('❌ Missing Stripe signature');
-            return res.status(400).json({ error: 'Missing signature' });
-        }
+      console.log("🎣 Paymob webhook received");
 
-        // This MUST use the same paymentService instance
-        await this.paymentService.processWebhook(req.body, signature);
-        
-        console.log('✅ Webhook processed successfully');
-        res.status(200).json({ received: true });
-        
+      // Paymob sends POST requests with x-www-form-urlencoded payload
+      const payload = req.body;
+
+      console.log("Webhook payload:", payload);
+
+      // Extract HMAC from payload
+      const receivedHmac = payload.hmac;
+      if (!receivedHmac) {
+        console.error("❌ Missing HMAC in webhook");
+        return res.status(400).json({ error: "Missing HMAC" });
+      }
+
+      // Verify HMAC
+      const secret = process.env.PAYMOB_HMAC;
+      if (!secret) throw new Error("PAYMOB_HMAC not set in env");
+
+      // Clone payload and remove hmac before hashing
+      const dataForHmac = { ...payload };
+      delete dataForHmac.hmac;
+
+      const hash = crypto
+        .createHmac("sha512", secret)
+        .update(JSON.stringify(dataForHmac))
+        .digest("hex");
+
+      if (hash !== receivedHmac) {
+        console.error("❌ HMAC verification failed");
+        return res.status(400).json({ error: "HMAC verification failed" });
+      }
+
+      // Pass payload to your payment service
+      await this.paymentService.processWebhook(payload);
+
+      console.log("✅ Webhook processed successfully");
+      return res.status(200).json({ status: "received" });
     } catch (error: any) {
-        console.error('❌ Webhook error:', error);
-        res.status(400).json({ error: `Webhook Error: ${error.message}` });
+      console.error("❌ Webhook error:", error);
+      return res.status(400).json({ error: `Webhook Error: ${error.message}` });
     }
-}
+  }
   
 
   async getPurchaseHistory(req: Request, res: Response): Promise<void> {
