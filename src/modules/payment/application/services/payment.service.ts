@@ -1,76 +1,65 @@
-import { Request, Response } from 'express';
+import { Request, Response } from "express";
 import { newPaymentDto, CreatePaymentDto } from "../dtos/create-payment.dto";
 import { PaymentRepository } from "../../domain/repositories/payment.repository";
 import { InsertPurchase } from "../../../../infrastructure/shared/schema/schema";
-import { stripe } from "../../../../infrastructure/config/stripe.config";
-import { StripePaymentHandler } from "../../../../infrastructure/shared/stripe/stripe";
-import { ApiResponseInterface } from '../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface';
-import { ResponseBuilder } from '../../../../infrastructure/shared/common/apiResponse/apiResponseBuilder';
-import { ErrorCode } from '../../../../infrastructure/shared/common/errors/enums/basic.error.enum';
-import { ErrorBuilder } from '../../../../infrastructure/shared/common/errors/errorBuilder';
+import { paymobConfig } from "../../../../infrastructure/config/paymob.config";
+import { PaymobPaymentHandler } from "../../../../infrastructure/shared/paymob/paymob";
+import { ApiResponseInterface } from "../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface";
+import { ResponseBuilder } from "../../../../infrastructure/shared/common/apiResponse/apiResponseBuilder";
+import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
+import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 
 export class PaymentService {
-    private readonly stripeHandler: StripePaymentHandler;
+    private readonly paymobHandler: PaymobPaymentHandler;
 
-    constructor(
-        private readonly paymentRepo: PaymentRepository,
-        stripeHandler?: StripePaymentHandler
-    ) {
-        this.stripeHandler = stripeHandler || stripe;
+    constructor(private readonly paymentRepo: PaymentRepository) {
+        this.paymobHandler = new PaymobPaymentHandler(paymobConfig);
         this.setupWebhookHandlers();
     }
 
-    async createCheckoutSession(req: Request, res: Response): Promise<ApiResponseInterface<{url: string, sessionId: string}>> {
+    async createCheckoutSession(
+        req: Request,
+        res: Response
+    ): Promise<ApiResponseInterface<{ url: string; sessionId: string }>> {
         try {
             const paymentDto: newPaymentDto = req.body;
             const userId = req.user!.id.toString();
 
-            const session = await this.stripeHandler.createCheckoutSession({
-                customPricing: {
-                    name: 'Ad Campaign Credits',
-                    currency: paymentDto.currency,
-                    unitAmount: Math.round(paymentDto.amount * 100), // Convert dollars to cents
-                },
-                quantity: 1,
-                mode: 'payment',
-                successUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/success?session_id={CHECKOUT_SESSION_ID}`,
-                cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/cancel`,
-                metadata: {
-                    userId,
-                    amount: paymentDto.amount.toString(),
-                }
+            const session = await this.paymobHandler.createCheckoutSession({
+                amount: paymentDto.amount,
+                currency: paymentDto.currency,
+                customerEmail: req.user!.email,
+                metadata: { userId },
             });
 
             if (!session.url) {
                 return ErrorBuilder.build(
                     ErrorCode.EXTERNAL_SERVICE_ERROR,
-                    'Failed to create payment session. Please try again.'
+                    "Failed to create Paymob session."
                 );
             }
 
-            // Create pending payment record
+            // Save pending payment
             const pendingPaymentData: InsertPurchase = {
                 userId,
                 amount: paymentDto.amount.toString(),
                 currency: paymentDto.currency,
-                method: 'stripe',
-                status: 'pending',
-                stripeSessionId: session.id,
+                method: "paymob",
+                status: "pending",
+                stripeSessionId: session.id, // reused column name
             };
 
-            // Save pending payment (without credits allocation yet)
             await this.paymentRepo.save(pendingPaymentData);
 
             return ResponseBuilder.success({
                 url: session.url,
-                sessionId: session.id
+                sessionId: session.id,
             });
-
         } catch (error) {
-            console.error('❌ Error creating checkout session:', error);
+            console.error("❌ Paymob createCheckoutSession error:", error);
             return ErrorBuilder.build(
                 ErrorCode.INTERNAL_SERVER_ERROR,
-                'Failed to create checkout session'
+                "Failed to create Paymob checkout session"
             );
         }
     }
@@ -81,105 +70,97 @@ export class PaymentService {
                 userId: dto.userId,
                 amount: dto.amount.toString(),
                 currency: dto.currency,
-                method: dto.method,
-                status: 'completed',
+                method: "paymob",
+                status: "completed",
                 stripeSessionId: dto.stripeSessionId,
-                stripePaymentIntentId: dto.stripePaymentIntentId,
             };
-            
-            // This will trigger the transaction in repository (save payment + add credits)
-            await this.paymentRepo.save(paymentData);
-            
-            console.log('✅ Payment completed and credits added:', {
-                userId: dto.userId,
-                amount: dto.amount
-            });
 
+            await this.paymentRepo.save(paymentData);
+
+            console.log("✅ Paymob payment completed:", {
+                userId: dto.userId,
+                amount: dto.amount,
+            });
         } catch (error) {
-            console.error('❌ Error creating completed payment:', error);
-            throw new Error(`Failed to process payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            console.error("❌ Error creating completed payment:", error);
+            throw new Error(
+                `Failed to process payment: ${
+                    error instanceof Error ? error.message : "Unknown error"
+                }`
+            );
         }
     }
 
     private setupWebhookHandlers(): void {
-        console.log('🔧 Setting up webhook handlers...');
-        
-        this.stripeHandler.onWebhookEvent('checkout.session.completed', async (event) => {
-            console.log('🎯 checkout.session.completed event received!');
-            await this.handleCheckoutCompleted(event.data.object);
-        });
+        console.log("🔧 Setting up Paymob webhook handlers...");
 
-        this.stripeHandler.onWebhookEvent('payment_intent.payment_failed', async (event) => {
-            console.log('🎯 payment_intent.payment_failed event received!');
-            await this.handlePaymentFailed(event.data.object);
-        });
+        this.paymobHandler.onWebhookEvent(
+            "checkout.session.completed",
+            async (event) => {
+                console.log("🎯 Paymob payment completed!");
+                await this.handleCheckoutCompleted(event.data.object);
+            }
+        );
 
-        console.log('✅ Webhook handlers registered:', Array.from(this.stripeHandler['webhookHandlers'].keys()));
+        this.paymobHandler.onWebhookEvent(
+            "payment_intent.payment_failed",
+            async (event) => {
+                console.log("❌ Paymob payment failed!");
+                await this.handlePaymentFailed(event.data.object);
+            }
+        );
+
+        console.log(
+            "✅ Paymob Webhook handlers registered:",
+            Array.from(this.paymobHandler["webhookHandlers"].keys())
+        );
     }
 
     async handleCheckoutCompleted(sessionData: any): Promise<void> {
         try {
-            // Validate required data from Stripe webhook
-            if (!sessionData.metadata?.userId) {
-                throw new Error('Missing userId in session metadata');
-            }
+            const userId = sessionData.metadata?.userId;
+            if (!userId) throw new Error("Missing userId in metadata");
 
-            if (!sessionData.amount_total) {
-                throw new Error('Missing amount_total in session data');
-            }
-
-            // Check if payment already processed (idempotency check)
-            const existingPayment = await this.paymentRepo.findBySessionId(sessionData.id);
-            if (existingPayment && existingPayment.status === 'completed') {
-                console.log('⚠️ Payment already processed, skipping:', sessionData.id);
+            const existing = await this.paymentRepo.findBySessionId(
+                sessionData.id
+            );
+            if (existing && existing.status === "completed") {
+                console.log("⚠️ Already processed, skipping:", sessionData.id);
                 return;
             }
 
-            const paymentDto: CreatePaymentDto = {
-                userId: sessionData.metadata.userId,
-                amount: sessionData.amount_total / 100, // Convert cents to dollars
+            const dto: CreatePaymentDto = {
+                userId,
+                amount: sessionData.amount_total / 100,
                 currency: sessionData.currency,
-                method: 'stripe',
+                method: "paymob",
                 stripeSessionId: sessionData.id,
-                stripePaymentIntentId: sessionData.payment_intent || undefined,
             };
 
-            await this.createCompletedPayment(paymentDto);
-            
+            await this.createCompletedPayment(dto);
         } catch (error) {
-            console.error('❌ Error handling checkout completed:', error);
+            console.error("❌ Error in Paymob handleCheckoutCompleted:", error);
             throw error;
         }
     }
 
-    async handleSubscriptionCreated(subscriptionData: any): Promise<void> {
-        // Handle subscription-based payments if needed
-        console.log('🔄 Subscription created:', subscriptionData.id);
-    }
-
-    async handleInvoicePaymentSucceeded(invoiceData: any): Promise<void> {
-        // Handle recurring subscription payments
-        console.log('💰 Invoice payment succeeded:', invoiceData.id);
-    }
-
-    async handlePaymentFailed(paymentIntentData: any): Promise<void> {
+    async handlePaymentFailed(sessionData: any): Promise<void> {
         try {
-            // Mark payment as failed if it exists
-            const sessionId = paymentIntentData.metadata?.sessionId;
+            const sessionId = sessionData.id;
             if (sessionId) {
-                await this.paymentRepo.updateStatus(sessionId, 'failed');
-                console.log('❌ Payment marked as failed:', paymentIntentData.id);
+                await this.paymentRepo.updateStatus(sessionId, "failed");
+                console.log("❌ Payment marked as failed:", sessionId);
             }
         } catch (error) {
-            console.error('❌ Error handling payment failure:', error);
+            console.error("❌ Error handling Paymob failure:", error);
         }
     }
 
     async processWebhook(payload: any, signature: string): Promise<void> {
         try {
-            await this.stripeHandler.processWebhook(payload, signature);
+            await this.paymobHandler.processWebhook(payload, signature);
         } catch (error) {
-            console.error('❌ Webhook processing error:', error);
+            console.error("❌ Paymob webhook error:", error);
             throw error;
         }
     }
@@ -188,40 +169,41 @@ export class PaymentService {
         try {
             return await this.paymentRepo.findBySessionId(sessionId);
         } catch (error) {
-            console.error('❌ Error getting payment status:', error);
+            console.error("❌ Error getting Paymob payment status:", error);
             return null;
         }
     }
 
-    async getPurchaseHistory(userId: string, page: number = 1, limit: number = 10) {
+    async getPurchaseHistory(userId: string, page = 1, limit = 10) {
         try {
             const result = await this.paymentRepo.getPurchaseHistory(
                 { userId },
-                { page, limit, sortBy: 'createdAt', sortOrder: 'desc' }
+                { page, limit, sortBy: "createdAt", sortOrder: "desc" }
             );
-
             return ResponseBuilder.success(result);
         } catch (error) {
-            console.error('❌ Error getting purchase history:', error);
+            console.error("❌ Error getting purchase history:", error);
             return ErrorBuilder.build(
                 ErrorCode.INTERNAL_SERVER_ERROR,
-                'Failed to fetch purchase history'
+                "Failed to fetch purchase history"
             );
         }
     }
 
-    async getPurchaseHistoryForAdmin(page: number = 1, limit: number = 10) {
+    async getPurchaseHistoryForAdmin(page = 1, limit = 10) {
         try {
-            const result = await this.paymentRepo.getPurchaseHistoryForAdmin(
-                { page, limit, sortBy: 'createdAt', sortOrder: 'desc' }
-            );
-
+            const result = await this.paymentRepo.getPurchaseHistoryForAdmin({
+                page,
+                limit,
+                sortBy: "createdAt",
+                sortOrder: "desc",
+            });
             return ResponseBuilder.success(result);
         } catch (error) {
-            console.error('❌ Error getting purchase history:', error);
+            console.error("❌ Error getting admin purchase history:", error);
             return ErrorBuilder.build(
                 ErrorCode.INTERNAL_SERVER_ERROR,
-                'Failed to fetch purchase history'
+                "Failed to fetch admin purchase history"
             );
         }
     }
