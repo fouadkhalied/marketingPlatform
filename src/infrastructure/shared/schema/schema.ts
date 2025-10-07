@@ -11,6 +11,43 @@ export const pagesTypeEnum = pgEnum("page_type", ["facebook", "instagram", "snap
 export const oauthEnum = pgEnum("oauth_provider", ["normal", "google", "facebook"]);
 export const currencyEnum = pgEnum("currency_enum", ["usd", "sar"]);
 
+
+export const ksaCitiesEnum = pgEnum("ksa_cities", [
+  // Major Cities (Top 5)
+  "riyadh",
+  "jeddah",
+  "mecca",
+  "medina",
+  "dammam",
+  
+  // Other Major Cities
+  "khobar",
+  "dhahran",
+  "taif",
+  "tabuk",
+  "buraidah",
+  "khamis_mushait",
+  "hail",
+  "najran",
+  "hofuf",
+  "jubail",
+  "abha",
+  "yanbu",
+  "qatif",
+  "al_kharj",
+  "al_hasa",
+  "jizan",
+  "arar",
+  "sakaka",
+  "al_bahah",
+  "bisha",
+  "qurayyat",
+  "ar_rass",
+  "unaizah",
+  "al_majmaah",
+  "al_qunfudhah",
+]);
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").unique(),
@@ -53,6 +90,8 @@ export const users = pgTable("users", {
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
     likesCount:integer().notNull().default(0),
     active:boolean().notNull().default(false),
+
+    targetCities: ksaCitiesEnum("target_cities").array().notNull(), 
 
     tiktokLink: text("tiktok_link"),
     youtubeLink: text("youtube_link"),

@@ -9,7 +9,7 @@ export interface IAdvertisingRepository {
     findById(id: string): Promise<Ad | null>;
     findAllAdsForAdmin(status: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
     findAllAdsForUser(status: string , userId: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
-    listApprovedAdsForUser(pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
+    listApprovedAdsForUser(pagination: PaginationParams, locations: string[]): Promise<PaginatedResponse<Ad>>;
     update(id: string, ad: Partial<InsertAd>): Promise<Ad | null>;
     delete(id: string): Promise<boolean>;
     findByTitle(title: string, params:PaginationParams) : Promise<PaginatedResponse<Ad>>;

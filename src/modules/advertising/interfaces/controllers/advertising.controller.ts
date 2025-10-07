@@ -8,6 +8,7 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { AdStatus } from "../../domain/enums/ads.status.enum";
 import { ApproveAdData } from "../../application/dto/approveAdData";
+import { KSA_CITIES } from "../../domain/enums/ksa.enum";
 
 export class AdvertisingController {
   constructor(private readonly advertisingService: AdvertisingAppService) {}
@@ -164,15 +165,9 @@ export class AdvertisingController {
     }
   }
 
-
   async listApprovedAdsForUser(req: Request, res: Response): Promise<void> {
     try {
-      // if (!req.user?.id) {
-      //   res.status(401).json({ error: "User not authenticated" });
-      //   return;
-      // } 
-    
-      const { limit, page} = req.query;
+      const { limit, page, targetCities } = req.query;
   
       // ✅ Pagination handling (default: page=1, limit=6)
       const pagination: PaginationParams = {
@@ -180,14 +175,57 @@ export class AdvertisingController {
         limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 6,
       };
   
-      const result =  await this.advertisingService.listApprovedAdsForUser(
-          pagination
-      )
+      // ✅ Parse targetCities from query string
+      let citiesArray: string[] = [];
+
+if (targetCities) {
+  if (Array.isArray(targetCities)) {
+    citiesArray = targetCities.filter((c): c is string => typeof c === 'string');
+  } else if (typeof targetCities === 'string') {
+    try {
+      // Try to parse JSON array string: ["mecca","riyadh"]
+      const parsed = JSON.parse(targetCities);
+      if (Array.isArray(parsed)) {
+        citiesArray = parsed.filter((c): c is string => typeof c === 'string');
+      } else {
+        citiesArray = targetCities.split(',').map(c => c.trim()).filter(Boolean);
+      }
+    } catch {
+      // fallback if not JSON
+      citiesArray = targetCities.split(',').map(c => c.trim()).filter(Boolean);
+    }
+  }
+}
+
+  
+      // ✅ Validate cities against KSA_CITIES
+      if (citiesArray.length > 0) {
+        const isValid = citiesArray.every((city: string) => 
+          KSA_CITIES.includes(city as any)
+        );
+        
+        if (!isValid) {
+          res.status(400).json({ 
+            error: "Invalid cities provided",
+            validCities: KSA_CITIES 
+          });
+          return;
+        }
+      }
+  
+      // ✅ Pass validated cities array to service
+      const result = await this.advertisingService.listApprovedAdsForUser(
+        pagination,
+        citiesArray
+      );
                                   
       const statusCode = this.getStatusCode(result);
       res.status(statusCode).json(result);
     } catch (error: any) {
-      res.status(500).json({ error: "Failed to list ads", message: error.message });
+      res.status(500).json({ 
+        error: "Failed to list ads", 
+        message: error.message 
+      });
     }
   }
   

@@ -583,24 +583,34 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
     }
 
     async listApprovedAdsForUser(
-      pagination: PaginationParams
+      pagination: PaginationParams,
+      targetCities: string[] = [] 
     ): Promise<PaginatedResponse<Ad>> {
       try {
         const { page } = pagination;
         const limit: number = 6;
         const offset = (page - 1) * limit;
     
+        // ✅ Build the where conditions
+        const whereConditions = and(
+          eq(ads.status, "approved"),
+          eq(ads.active, true),
+          gt(ads.impressionsCredit, 0),
+          // ✅ Add city filter if cities are provided
+          targetCities.length > 0
+  ? sql`${ads.targetCities} && ARRAY[${sql.join(
+      targetCities.map(city => sql`${city}`),
+      sql`, `
+    )}]::ksa_cities[]`
+  : undefined
+
+        );
+    
         // Count total records
         const countQuery = db
           .select({ count: sql<number>`count(*)` })
           .from(ads)
-          .where(
-            and(
-              eq(ads.status, "approved"),
-              eq(ads.active, true),
-              gt(ads.impressionsCredit, 0) 
-            )
-          );
+          .where(whereConditions);
     
         const [{ count }] = await countQuery;
     
@@ -613,16 +623,11 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             titleAr: ads.titleAr,
             descriptionEn: ads.descriptionEn,
             descriptionAr: ads.descriptionAr,
-            likesCount: ads.likesCount
+            likesCount: ads.likesCount,
+            targetCities: ads.targetCities 
           })
           .from(ads)
-          .where(
-            and(
-              eq(ads.status, "approved"),
-              eq(ads.active, true),
-              gt(ads.impressionsCredit, 0)
-            )
-          )
+          .where(whereConditions)
           .limit(limit)
           .offset(offset);
     
@@ -633,7 +638,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
           await db
             .update(ads)
             .set({
-              impressionsCredit: sql`${ads.impressionsCredit} - 1`, // ✅ Use sql template
+              impressionsCredit: sql`${ads.impressionsCredit} - 1`,
             })
             .where(
               inArray(
@@ -665,7 +670,6 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
         );
       }
     }
-
     // Add to your repository
 async deactivateUserAd(userId: string, adId: string): Promise<Ad> {
   // Verify the ad belongs to the user

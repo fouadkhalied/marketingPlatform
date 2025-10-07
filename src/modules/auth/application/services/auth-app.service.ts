@@ -98,9 +98,13 @@ export class AuthService {
       const userData = await this.facebookAppService.getUserData(accessToken);
       
       // Handle user login/creation
-      await this.handleFacebookLogin(userData);
+      const user = await this.handleFacebookLogin(userData);
 
-      res.json(ResponseBuilder.success({token : accessToken}));
+      res.json(ResponseBuilder.success({
+        token : accessToken,
+        username : user.data?.username || userData.name,
+        role : user.data?.role
+      }));
       
     } catch (error: any) {
       const errorResponse = ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, error.response?.data?.error?.message || error.message || "Facebook authentication failed")

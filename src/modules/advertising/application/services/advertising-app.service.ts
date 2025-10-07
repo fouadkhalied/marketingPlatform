@@ -140,10 +140,11 @@ export class AdvertisingAppService {
   }
 
   async listApprovedAdsForUser(
-    pagination: PaginationParams
+    pagination: PaginationParams,
+    locations: string[]
   ): Promise<ApiResponseInterface<Ad[]>> {
     try {
-      const ads = await this.advertisingRepository.listApprovedAdsForUser(pagination);
+      const ads = await this.advertisingRepository.listApprovedAdsForUser(pagination, locations);
       return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
     } catch (error) {
       return ErrorBuilder.build(
@@ -153,7 +154,6 @@ export class AdvertisingAppService {
     );
     }
   }
-
 
   async getAdsByTitle(title: string, params: PaginationParams): Promise<ApiResponseInterface<Ad[]>> {
     try {
@@ -352,7 +352,6 @@ async activateAd(
       );
     }
   }
-
 
   async assignCreditToAd(
     userId: string,
