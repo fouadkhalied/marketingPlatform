@@ -91,6 +91,31 @@ export class PaymentController {
       return res.status(400).json({ error: `Webhook Error: ${error.message}` });
     }
   }
+
+  async handleRedirect(req: Request, res: Response) {
+    try {
+      const query = req.query;
+
+      // Extract order/session ID from query
+      const orderId = query.order as string;
+      if (!orderId) {
+        return res.status(400).json({ error: "Missing order ID in query params" });
+      }
+
+      // Verify payment via service (server-to-server call)
+      const paymentStatus = await this.paymentService.verifyPayment(orderId);
+
+      // Respond or redirect frontend accordingly
+      if (paymentStatus.success) {
+        res.redirect(`/payment/success?order=${orderId}`);
+      } else {
+        res.redirect(`/payment/fail?order=${orderId}`);
+      }
+    } catch (error: any) {
+      console.error("GET /webhook error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
   
 
   async getPurchaseHistory(req: Request, res: Response): Promise<void> {

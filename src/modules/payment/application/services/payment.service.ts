@@ -165,6 +165,16 @@ export class PaymentService {
         }
     }
 
+    async verifyPayment(orderId: string) {
+        try {
+          const result = await this.paymobHandler.verifyPayment(orderId);
+          return result; // { success: boolean, paymentStatus: 'paid' | 'unpaid', ... }
+        } catch (error: any) {
+          console.error("Payment verification failed:", error);
+          return { success: false, paymentStatus: 'unpaid' };
+        }
+      }
+
     async getPaymentStatus(sessionId: string) {
         try {
             return await this.paymentRepo.findBySessionId(sessionId);
