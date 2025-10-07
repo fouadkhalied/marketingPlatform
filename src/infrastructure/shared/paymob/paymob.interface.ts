@@ -1,5 +1,6 @@
 export interface PaymobConfig {
     apiKey: string;
+    secretKey: string;
     integrationId: number;
     iframeId?: number;
     hmacSecret?: string;

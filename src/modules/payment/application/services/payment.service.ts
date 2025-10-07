@@ -55,11 +55,11 @@ export class PaymentService {
                 url: session.url,
                 sessionId: session.id,
             });
-        } catch (error) {
+        } catch (error:any) {
             console.error("❌ Paymob createCheckoutSession error:", error);
             return ErrorBuilder.build(
                 ErrorCode.INTERNAL_SERVER_ERROR,
-                "Failed to create Paymob checkout session"
+                error.message
             );
         }
     }

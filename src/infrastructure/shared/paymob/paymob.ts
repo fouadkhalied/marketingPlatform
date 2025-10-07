@@ -15,9 +15,10 @@ export class PaymobPaymentHandler {
     private readonly cancelUrl: string;
     private authToken?: string;
     private tokenExpiry?: number;
+    private readonly secretkey:string;
     private webhookHandlers: Map<string, WebhookHandler> = new Map();
   
-    private readonly BASE_URL = 'https://accept.paymob.com/api';
+    private readonly BASE_URL = 'https://ksa.paymob.com/api';
   
     // Store sessions in memory (in production, use Redis or DB)
     private sessions: Map<string, PaymobCheckoutSession> = new Map();
@@ -31,6 +32,7 @@ export class PaymobPaymentHandler {
       this.defaultCurrency = config.defaultCurrency || 'EGP';
       this.successUrl = config.successUrl || 'https://yoursite.com/success';
       this.cancelUrl = config.cancelUrl || 'https://yoursite.com/cancel';
+      this.secretkey = config.secretKey;
   
       this.apiClient = axios.create({
         baseURL: this.BASE_URL,
@@ -45,23 +47,58 @@ export class PaymobPaymentHandler {
     // ============================================
   
     private async authenticate(): Promise<string> {
-      if (this.authToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
-        return this.authToken;
+        if (this.authToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
+          return this.authToken;
+        }
+      
+        try {
+          
+          const response = await this.apiClient.post<{ token: string }>('/auth/tokens', {
+            api_key: this.apiKey,
+          });
+      
+          this.authToken = response.data.token;
+          // Token expires in 1 hour, we cache for 50 minutes to be safe
+          this.tokenExpiry = Date.now() + 50 * 60 * 1000;
+          
+          console.log('✅ Paymob authentication successful');
+          return this.authToken;
+          
+        } catch (error: any) {
+          // Enhanced error logging
+          if (axios.isAxiosError(error)) {
+            const status = error.response?.status;
+            const message = error.response?.data?.message || error.message;
+            const details = error.response?.data;
+            const responseBody = error.response?.data;
+            
+            console.error('❌ Paymob Authentication Failed - FULL DETAILS:', {
+              status,
+              statusText: error.response?.statusText,
+              message,
+              details,
+              fullResponseBody: JSON.stringify(responseBody, null, 2),
+              requestUrl: error.config?.url,
+              requestMethod: error.config?.method,
+              requestHeaders: error.config?.headers,
+              requestBody: error.config?.data ? JSON.parse(error.config.data) : null,
+              apiKeyPrefix: this.apiKey?.substring(0, 20) + '...',
+              apiKeyLength: this.apiKey?.length || 0,
+              hasSecretKey: !!this.secretkey,
+              secretKeyPrefix: this.secretkey?.substring(0, 10) + '...',
+              secretKeyLength: this.secretkey?.length || 0
+            });
+            
+            throw new Error(
+              `Failed to authenticate with Paymob (${status}): ${JSON.stringify(responseBody)} - Check console for full details`
+            );
+          }
+          throw new Error(
+            `Failed to authenticate with Paymob: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        }
       }
-  
-      try {
-        const response = await this.apiClient.post<{ token: string }>('/auth/tokens', {
-          api_key: this.apiKey,
-        });
-  
-        this.authToken = response.data.token;
-        this.tokenExpiry = Date.now() + 50 * 60 * 1000;
-  
-        return this.authToken;
-      } catch (error:any) {
-        throw new Error(`Failed to authenticate with Paymob: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    }
+      
   
     // ============================================
     // CHECKOUT SESSIONS (Stripe-compatible)
@@ -69,72 +106,94 @@ export class PaymobPaymentHandler {
   
     /**
      * Create a checkout session (Stripe-compatible interface)
-     */async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobCheckoutSession> {
-  try {
-    const token = await this.authenticate();
-
-    // 1️⃣ Extract amount and currency (no order object anymore)
-    const amountInCents = Math.round(options.amount * 100);
-    const currency = options.currency || this.defaultCurrency;
-
-    // 2️⃣ Prepare billing data (Paymob requires it)
-    const billingData: PaymobBillingData = {
-      email: options.customerEmail || 'customer@example.com',
-      first_name: 'Customer',
-      last_name: 'Name',
-      phone_number: '+201000000000',
-      apartment: 'NA',
-      floor: 'NA',
-      street: 'NA',
-      building: 'NA',
-      shipping_method: 'NA',
-      postal_code: 'NA',
-      city: 'NA',
-      country: 'EG',
-      state: 'NA',
-    };
-
-    // 3️⃣ Create Payment Key directly (no order)
-    const paymentKeyResponse = await this.apiClient.post<{ token: string }>('/acceptance/payment_keys', {
-      auth_token: token,
-      amount_cents: amountInCents,
-      currency: currency,
-      billing_data: billingData,
-      integration_id: this.integrationId,
-      lock_order_when_paid: 'true',
-    });
-
-    const paymentToken = paymentKeyResponse.data.token;
-
-    // 4️⃣ Build iframe payment URL
-    const paymentUrl = this.iframeId
-      ? `https://accept.paymob.com/api/acceptance/iframes/${this.iframeId}?payment_token=${paymentToken}`
-      : `https://accept.paymob.com/api/acceptance/payments/pay?payment_token=${paymentToken}`;
-
-    // 5️⃣ Generate session metadata
-    const session: PaymobCheckoutSession = {
-      id: crypto.randomUUID(),
-      url: paymentUrl,
-      payment_status: 'unpaid',
-      amount_total: amountInCents,
-      currency: currency,
-      customer_details: options.customerEmail ? { email: options.customerEmail } : undefined,
-      metadata: options.metadata,
-    };
-
-    // Store session in memory
-    this.sessions.set(session.id, session);
-
-    return session;
-
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(`Failed to create checkout session: ${error.response?.data?.message || error.message}`);
+     */
+async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobCheckoutSession> {
+    try {
+      const token = await this.authenticate();
+      
+  
+      const amountInCents = Math.round(options.amount * 100);
+      const currency = options.currency || this.defaultCurrency;
+  
+      // STEP 1: Create an Order first (this was missing!)
+      console.log('📦 Creating Paymob order...');
+      const orderResponse = await this.apiClient.post('/ecommerce/orders', {
+        auth_token: token,
+        delivery_needed: 'true',
+        amount_cents: amountInCents,
+        currency: currency,
+        items: []
+      });
+  
+      const orderId = orderResponse.data.id;
+      console.log('✅ Order created:', orderId);
+  
+      // STEP 2: Prepare billing data
+      const billingData: PaymobBillingData = {
+        email: options.customerEmail || 'customer@example.com',
+        first_name: options.customerEmail?.split('@')[0] || 'Customer',
+        last_name: 'Name',
+        phone_number: '+201000000000',
+        apartment: 'NA',
+        floor: 'NA',
+        street: 'NA',
+        building: 'NA',
+        shipping_method: 'NA',
+        postal_code: 'NA',
+        city: 'NA',
+        country: 'EG',
+        state: 'NA',
+      };
+  
+      // STEP 3: Create Payment Key (now with order_id)
+      console.log('🔑 Creating payment key...');
+      const paymentKeyResponse = await this.apiClient.post<{ token: string }>('/acceptance/payment_keys', {
+        auth_token: token,
+        amount_cents: amountInCents,
+        expiration: 3600,
+        order_id: orderId, // This is what was missing!
+        billing_data: billingData,
+        currency: currency,
+        integration_id: this.integrationId,
+      });
+  
+      const paymentToken = paymentKeyResponse.data.token;
+      console.log('✅ Payment key created');
+  
+      // STEP 4: Build iframe payment URL
+      const paymentUrl = this.iframeId
+        ? `https://ksa.paymob.com/api/acceptance/iframes/${this.iframeId}?payment_token=${paymentToken}`
+        : `https://ksa.paymob.com/api/acceptance/payments/pay?payment_token=${paymentToken}`;
+  
+      // STEP 5: Generate session metadata
+      const session: PaymobCheckoutSession = {
+        id: orderId.toString(), // Use Paymob order ID
+        url: paymentUrl,
+        payment_status: 'unpaid',
+        amount_total: amountInCents,
+        currency: currency,
+        customer_details: options.customerEmail ? { email: options.customerEmail } : undefined,
+        metadata: options.metadata,
+      };
+  
+      // Store session in memory
+      this.sessions.set(session.id, session);
+      console.log('✅ Checkout session created:', session.id);
+  
+      return session;
+  
+    } catch (error: any) {
+      console.error('❌ Paymob createCheckoutSession error:', error.response?.data || error.message);
+      
+      if (axios.isAxiosError(error)) {
+        const errorMsg = error.response?.data?.detail || 
+                         error.response?.data?.message || 
+                         error.message;
+        throw new Error(`Failed to create checkout session: ${errorMsg}`);
+      }
+      throw new Error(`Failed to create checkout session: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    throw new Error(`Failed to create checkout session: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
-
   
     /**
      * Get checkout session details (Stripe-compatible)
