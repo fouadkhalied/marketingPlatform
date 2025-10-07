@@ -119,7 +119,7 @@ async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobChec
       console.log('📦 Creating Paymob order...');
       const orderResponse = await this.apiClient.post('/ecommerce/orders', {
         auth_token: token,
-        delivery_needed: 'true',
+        delivery_needed: 'false',
         amount_cents: amountInCents,
         currency: currency,
         items: []
@@ -143,7 +143,7 @@ async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobChec
         city: 'NA',
         country: 'EG',
         state: 'NA',
-      };
+      };  
   
       // STEP 3: Create Payment Key (now with order_id)
       console.log('🔑 Creating payment key...');
