@@ -173,7 +173,19 @@ export class PaymentService {
           console.error("Payment verification failed:", error);
           return { success: false, paymentStatus: 'unpaid' };
         }
-      }
+    }
+
+    async markPaymentAsRejected(sessionId: string) {
+        try {
+            await this.paymentRepo.updateStatus(sessionId, 'failed')
+        } catch (error) {
+            console.error("❌ Error getting purchase history:", error);
+            return ErrorBuilder.build(
+                ErrorCode.INTERNAL_SERVER_ERROR,
+                "Failed to fetch purchase history"
+            );
+        }
+    }
 
     async getPaymentStatus(sessionId: string) {
         try {

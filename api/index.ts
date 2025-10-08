@@ -351,6 +351,8 @@ app.get(
 // Payment routes
 app.post('/webhook', (req, res) => paymentController.webhook(req, res));
 
+app.get('/webhook', (req,res) => paymentController.handleRedirect(req,res))
+
 app.post('/api/payment/createSessionUrl', 
   AuthMiddleware(UserRole.USER),
   (req, res) => paymentController.createSession(req, res)
