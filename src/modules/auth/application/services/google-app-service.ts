@@ -19,24 +19,38 @@ export class GoogleAppService {
   ) {}
 
   // 1. Handle Google login (find or create user)
-  async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
-    try {
 
-      let googleUser = await this.googleRepository.getUserByGoogleId(profile.id);
+async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
+  try {
+    // First, try to find user by Google ID
+    let googleUser = await this.googleRepository.getUserByGoogleId(profile.id);
 
-      if (!googleUser) {
+    if (!googleUser) {
+      // Check if user exists with this email (created via email/password)
+      const email = profile.emails?.[0]?.value || "";
+      const existingUser = await this.googleRepository.getUserByEmail(email);
+
+      if (existingUser) {
+        // Link the Google account to existing user
+        googleUser = await this.googleRepository.linkGoogleAccount(
+          existingUser.id,
+          profile.id
+        );
+      } else {
+        // Create new user
         googleUser = await this.createUserFromGoogle(profile);
       }
-
-      return ResponseBuilder.success(googleUser);
-    } catch (error) {
-      return ErrorBuilder.build(
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        "Google login failed",
-        error instanceof Error ? error.message : error
-      );
     }
+
+    return ResponseBuilder.success(googleUser);
+  } catch (error) {
+    return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      "Google login failed",
+      error instanceof Error ? error.message : error
+    );
   }
+}
 
   // 2. Create user with OAuth flag
   async createUserFromGoogle(profile: any): Promise<User> {
@@ -85,18 +99,31 @@ export class GoogleAppService {
         async (accessToken, refreshToken, profile, done) => {
           try {
             let user = await this.googleRepository.getUserByGoogleId(profile.id);
-
+  
             if (!user) {
-              user = await this.googleRepository.createUser({
-                googleId: profile.id,
-                email: profile.emails?.[0]?.value || "",
-                username: profile.displayName || "Google User",
-                role: "user",
-                oauth: "google",
-                verified: true,
-              });
+              // Check for existing user by email
+              const email = profile.emails?.[0]?.value || "";
+              const existingUser = await this.googleRepository.getUserByEmail(email);
+  
+              if (existingUser) {
+                // Link Google account to existing user
+                user = await this.googleRepository.linkGoogleAccount(
+                  existingUser.id,
+                  profile.id
+                );
+              } else {
+                // Create new user
+                user = await this.googleRepository.createUser({
+                  googleId: profile.id,
+                  email: email,
+                  username: profile.displayName || "Google User",
+                  role: "user",
+                  oauth: "google",
+                  verified: true,
+                });
+              }
             }
-
+  
             return done(null, user);
           } catch (err) {
             return done(err, false);
