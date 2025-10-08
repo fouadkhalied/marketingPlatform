@@ -165,7 +165,9 @@ async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
           "success": true,
           "message": "Request successful",
           "data": {
-            "token": token
+            "token": token,
+            "role": user.role,
+            "username":user.username
           }
          });
       }
