@@ -10,6 +10,23 @@ export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "complet
 export const pagesTypeEnum = pgEnum("page_type", ["facebook", "instagram", "snapchat"]);
 export const oauthEnum = pgEnum("oauth_provider", ["normal", "google", "facebook"]);
 export const currencyEnum = pgEnum("currency_enum", ["usd", "sar"]);
+export const middleEastCountries = pgEnum("middleEastCountries", [
+  "Bahrain",
+  "Egypt",
+  "Iran",
+  "Iraq",
+  "Israel",
+  "Jordan",
+  "Kuwait",
+  "Lebanon",
+  "Oman",
+  "Palestine",
+  "Qatar",
+  "SaudiArabia",
+  "Syria",
+  "UnitedArabEmirates",
+  "Yemen"
+]);
 
 
 export const ksaCitiesEnum = pgEnum("ksa_cities", [
@@ -63,6 +80,7 @@ export const users = pgTable("users", {
   totalSpend: integer("totalSpend").default(0),
   balance: integer("balance").default(0),
   stripeCustomerId: text("stripe_customer_id"),
+  country: middleEastCountries("country"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
