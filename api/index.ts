@@ -466,7 +466,7 @@ app.delete('/api/users/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userCont
 app.put('/api/users/promote/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.makeUserAdmin(req,res));
 
 // Get all available impression ratios 
-app.get('/api/users/impression-ratios', AuthMiddleware(UserRole.USER), (req, res) => userController.getAvailableImpressionRatios(req, res));
+app.get('/api/users/impression-ratios', (req, res) => userController.getAvailableImpressionRatios(req, res));
 
 // Update impression ratio (admin only)
 app.put('/api/users/impression-ratios/:id', AuthMiddleware(UserRole.ADMIN), (req, res) => userController.updateImpressionRatio(req, res));
