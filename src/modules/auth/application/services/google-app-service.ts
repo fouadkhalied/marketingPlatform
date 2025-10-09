@@ -155,21 +155,13 @@ async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
 
         const token = this.jwtService.sign(jwtPayload);
 
-        res.cookie("auth_token", token, {
-          httpOnly: true,
-          secure: true,
-          maxAge: 7 * 24 * 60 * 60 * 1000,
+        const params = new URLSearchParams({
+          token: token,
+          username: user.username || 'User',
+          role: user.role
         });
-
-        res.json({ 
-          "success": true,
-          "message": "Request successful",
-          "data": {
-            "token": token,
-            "role": user.role,
-            "username":user.username
-          }
-         });
+  
+        res.redirect(`http://localhost:3000/dashboard?${params.toString()}`);
       }
     )(req, res, next);
   }

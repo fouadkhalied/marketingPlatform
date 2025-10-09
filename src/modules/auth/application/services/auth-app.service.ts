@@ -100,17 +100,12 @@ export class AuthService {
       // Handle user login/creation
       const user = await this.handleFacebookLogin(userData);
 
-     // Safely encode parameters for URL
-     const params = new URLSearchParams({
-      token: accessToken,
-      username: user.data?.username || userData.name || 'unknown',
-      role: user.data?.role || 'user'
-    });
-
-    const redirectUrl = `http://localhost:3000/dashboard?${params.toString()}`;
-    //console.log('9. Redirecting to:', redirectUrl);
-    
-    res.redirect(redirectUrl);
+      res.json(ResponseBuilder.success({
+        token : accessToken,
+        username : user.data?.username || userData.name,
+        role : user.data?.role
+      }));
+      
     } catch (error: any) {
       const errorResponse = ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, error.response?.data?.error?.message || error.message || "Facebook authentication failed")
       res.status(500).json(
