@@ -100,11 +100,13 @@ export class AuthService {
       // Handle user login/creation
       const user = await this.handleFacebookLogin(userData);
 
-      res.json(ResponseBuilder.success({
-        token : accessToken,
-        username : user.data?.username || userData.name,
-        role : user.data?.role
-      }));
+      // res.json(ResponseBuilder.success({
+      //   token : accessToken,
+      //   username : user.data?.username || userData.name,
+      //   role : user.data?.role
+      // }));
+
+      res.redirect(`http://localhost:3000/dashboard?token=${accessToken}&username=${user.data?.username}&role=${user.data?.role}`);
       
     } catch (error: any) {
       const errorResponse = ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, error.response?.data?.error?.message || error.message || "Facebook authentication failed")
