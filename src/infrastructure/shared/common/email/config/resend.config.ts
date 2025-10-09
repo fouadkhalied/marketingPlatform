@@ -33,9 +33,7 @@ export const transporter = nodemailer.createTransport({
   tls: {
     // Do not fail on invalid certs (useful for self-signed certificates)
     rejectUnauthorized: false
-  },
-  logger: true,   // <-- enable logging to console
-  debug: true,    // <-- show SMTP conversation
+  }
 });
 
 export const senderEmail = process.env.SENDER_EMAIL;

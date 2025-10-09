@@ -1,7 +1,7 @@
 ﻿import { and, eq, gt, inArray, like, or, sql } from "drizzle-orm";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
 import { db } from "../../../../infrastructure/db/connection";
-import { Ad, adminImpressionRatio, ads , InsertAd, socialMediaPages, users } from "../../../../infrastructure/shared/schema/schema";
+import { Ad, adminImpressionRatio, ads , impressionsEvents, InsertAd, socialMediaPages, users } from "../../../../infrastructure/shared/schema/schema";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
@@ -115,7 +115,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         const totalPages = Math.ceil(totalCount / limit);
     
         return {
-          data: results as Ad[],
+          data: results,
           pagination: {
             currentPage: page,
             limit,
@@ -182,7 +182,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         console.log(whereCondition, status);
     
         return {
-          data: results as Ad[],
+          data: results,
           pagination: {
             currentPage: page,
             limit,
@@ -243,7 +243,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         const totalPages = Math.ceil(totalCount / limit);
     
         return {
-          data: results as Ad[],
+          data: results,
           pagination: {
             currentPage: page,
             limit,
@@ -582,41 +582,36 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
 
       return balance >= credit;
     }
-
     async listApprovedAdsForUser(
       pagination: PaginationParams,
-      targetCities: string[] = [] 
-    ): Promise<PaginatedResponse<Ad>> {
+      targetCities: string[] = []
+    ): Promise<PaginatedResponse<any>> {
       try {
         const { page } = pagination;
-        const limit: number = 6;
+        const limit = 6;
         const offset = (page - 1) * limit;
     
-        // ✅ Build the where conditions
+        // ✅ Build WHERE conditions dynamically
         const whereConditions = and(
           eq(ads.status, "approved"),
           eq(ads.active, true),
           gt(ads.impressionsCredit, 0),
-          // ✅ Add city filter if cities are provided
           targetCities.length > 0
-  ? sql`${ads.targetCities} && ARRAY[${sql.join(
-      targetCities.map(city => sql`${city}`),
-      sql`, `
-    )}]::ksa_cities[]`
-  : undefined
-
+            ? sql`${ads.targetCities} && ARRAY[${sql.join(
+                targetCities.map((city) => sql`${city}`),
+                sql`, `
+              )}]::ksa_cities[]`
+            : undefined
         );
     
-        // Count total records
-        const countQuery = db
+        // ✅ Count total
+        const [{ count }] = await db
           .select({ count: sql<number>`count(*)` })
           .from(ads)
           .where(whereConditions);
     
-        const [{ count }] = await countQuery;
-    
-        // Select paginated ads
-        const resultsQuery = db
+        // ✅ Fetch paginated ads
+        const results = await db
           .select({
             id: ads.id,
             imageUrl: ads.imageUrl,
@@ -625,37 +620,41 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             descriptionEn: ads.descriptionEn,
             descriptionAr: ads.descriptionAr,
             likesCount: ads.likesCount,
+            impressions:ads.totalImpressionsOnAdd,
             targetCities: ads.targetCities,
-            websiteUrl : ads.websiteUrl 
+            websiteUrl: ads.websiteUrl,
           })
           .from(ads)
           .where(whereConditions)
           .limit(limit)
           .offset(offset);
     
-        const results = await resultsQuery;
-    
-        // ✅ Decrement impression credits for fetched ads
+        // ✅ Decrement impression credits and increment total impressions
         if (results.length > 0) {
+          const adIds = results.map((ad) => ad.id);
+    
           await db
             .update(ads)
             .set({
               impressionsCredit: sql`${ads.impressionsCredit} - 1`,
-              totalImpressionsOnAdd: sql`${ads.totalImpressionsOnAdd} + 1`
+              totalImpressionsOnAdd: sql`${ads.totalImpressionsOnAdd} + 1`,
             })
-            .where(
-              inArray(
-                ads.id,
-                results.map((ad) => ad.id)
-              ) 
-            );
+            .where(inArray(ads.id, adIds));
+    
+          // ✅ Insert an impression event per ad
+          const impressionEventsData = adIds.map((adId) => ({
+            eventId: `impression_${adId}_${Date.now()}_${Math.random()}`,
+            adId,
+          }));
+    
+          await db.insert(impressionsEvents).values(impressionEventsData);
         }
     
         const totalCount = Number(count);
         const totalPages = Math.ceil(totalCount / limit);
     
         return {
-          data: results as Ad[],
+          data: results,
           pagination: {
             currentPage: page,
             limit,
@@ -668,11 +667,12 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
       } catch (error) {
         throw ErrorBuilder.build(
           ErrorCode.DATABASE_ERROR,
-          "Failed to fetch ads for admin",
+          "Failed to fetch ads for user",
           error instanceof Error ? error.message : error
         );
       }
     }
+    
     // Add to your repository
 async deactivateUserAd(userId: string, adId: string): Promise<Ad> {
   // Verify the ad belongs to the user
