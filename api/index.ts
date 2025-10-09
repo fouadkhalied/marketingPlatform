@@ -480,6 +480,8 @@ app.put(
   (req, res) => userController.createAdClick(req, res)
 );
 
+//
+app.get('/api/dashboard/user', AuthMiddleware(UserRole.USER), (req,res)=>userController.getDashoardMetricsForUser(req,res))
 // ============================================
 // 10. ERROR HANDLING
 // ============================================

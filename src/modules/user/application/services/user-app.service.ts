@@ -503,4 +503,20 @@ async updateProfile(
     );
   }
 }
+
+
+
+async getUserDashboard(userId: string) : Promise<ApiResponseInterface<any>> {
+  const stats = await this.userRepository.getDashboardStats(userId, 7);
+  const chartData = await this.userRepository.getChartData(userId, 7);
+  const topAds = await this.userRepository.getTopPerformingAds(userId, 3);
+  const activity = await this.userRepository.getRecentActivity(userId, 10);
+
+  return ResponseBuilder.success({
+    stats,
+    chartData,
+    topAds,
+    activity
+  });
+}
 }
