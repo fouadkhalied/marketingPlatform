@@ -567,7 +567,6 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
       });
     }
     
-
     async hasSufficientBalance(userId: string, credit: number): Promise<boolean> {
       const [user] = await db
         .select({ balance: users.balance })
@@ -582,13 +581,13 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
 
       return balance >= credit;
     }
+
     async listApprovedAdsForUser(
       pagination: PaginationParams,
       targetCities: string[] = []
     ): Promise<PaginatedResponse<any>> {
       try {
-        const { page } = pagination;
-        const limit = 6;
+        const { page , limit } = pagination;
         const offset = (page - 1) * limit;
     
         // ✅ Build WHERE conditions dynamically
