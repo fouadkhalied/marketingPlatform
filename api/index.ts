@@ -126,7 +126,10 @@ app.use(cors({
       "http://localhost:3002",
       "http://localhost:3003",
       "http://localhost:5000",
-      "https://marketing-platform-six.vercel.app"
+      "https://marketing-platform-six.vercel.app",
+      "http://octopusadmarketing.vercel.app",
+      "https://octopusadmarketing.vercel.app",
+      "octopusadmarketing.vercel.app"
     ];
     
     // Allow requests with no origin (mobile apps, curl, etc.)
