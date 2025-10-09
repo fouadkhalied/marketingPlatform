@@ -641,6 +641,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             .update(ads)
             .set({
               impressionsCredit: sql`${ads.impressionsCredit} - 1`,
+              totalImpressionsOnAdd: sql`${ads.totalImpressionsOnAdd} + 1`
             })
             .where(
               inArray(

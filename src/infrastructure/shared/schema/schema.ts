@@ -108,6 +108,8 @@ export const users = pgTable("users", {
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
     likesCount:integer().notNull().default(0),
     active:boolean().notNull().default(false),
+    
+    totalImpressionsOnAdd:integer().notNull().default(0),
 
     targetCities: ksaCitiesEnum("target_cities").array().notNull(), 
 

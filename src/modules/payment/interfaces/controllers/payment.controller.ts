@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { PaymentService } from "../../application/services/payment.service";
+import { appConfig } from "../../../../infrastructure/config/app.config";
 
 export class PaymentController {
     constructor(
@@ -104,10 +105,10 @@ export class PaymentController {
                         metadata: paymentStatus.metadata
                     });
                 }
-                res.redirect(`/payment/success?order=${orderId}`);
+                res.redirect(`${appConfig.PAYMOB_SUCCESS_URL}/?order=${orderId}`);
             } else {
                 await this.paymentService.markPaymentAsRejected(orderId);
-                res.redirect(`/payment/fail?order=${orderId}`);
+                res.redirect(`${appConfig.PAYMOB_CANCEL_URL}?order=${orderId}`);
             }
         } catch (error: any) {
             console.error("❌ GET /webhook error:", error);

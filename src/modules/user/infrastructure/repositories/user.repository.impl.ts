@@ -626,27 +626,47 @@ async getChartData(userId: string, days: number = 7): Promise<ChartData[]> {
 
 /**
  * Get top performing ads for the user
- */
-async getTopPerformingAds(userId: string, limit: number = 5): Promise<TopPerformingAd[]> {
+ */async getTopPerformingAds(userId: string, limit: number = 5): Promise<TopPerformingAd[]> {
   try {
-    // Get user's ads with their impression and click counts
+    // Subquery for impressions count per ad
+    const impressionsSub = db
+      .select({
+        adId: impressionsEvents.adId,
+        impressions: sql<number>`COUNT(*)`.as('impressions'),
+      })
+      .from(impressionsEvents)
+      .groupBy(impressionsEvents.adId)
+      .as('impr_sub');
+
+    // Subquery for clicks count per ad
+    const clicksSub = db
+      .select({
+        adId: clicksEvents.adId,
+        clicks: sql<number>`COUNT(*)`.as('clicks'),
+      })
+      .from(clicksEvents)
+      .groupBy(clicksEvents.adId)
+      .as('click_sub');
+
+    // Join ads with aggregated subqueries
     const topAds = await db
       .select({
         id: ads.id,
         titleEn: ads.titleEn,
         titleAr: ads.titleAr,
         imageUrl: ads.imageUrl,
-        impressions: sql<number>`COUNT(DISTINCT ${impressionsEvents.id})`,
-        clicks: sql<number>`COUNT(DISTINCT ${clicksEvents.id})`,
+        impressions: sql<number>`COALESCE("impr_sub"."impressions", 0)`.as('impressions'),
+        clicks: sql<number>`COALESCE("click_sub"."clicks", 0)`.as('clicks'),
       })
       .from(ads)
-      .leftJoin(impressionsEvents, eq(ads.id, impressionsEvents.adId))
-      .leftJoin(clicksEvents, eq(ads.id, clicksEvents.adId))
+      .leftJoin(impressionsSub, eq(impressionsSub.adId, ads.id))
+      .leftJoin(clicksSub, eq(clicksSub.adId, ads.id))
       .where(eq(ads.userId, userId))
-      .groupBy(ads.id, ads.titleEn, ads.titleAr, ads.imageUrl)
-      .orderBy(desc(sql`COUNT(DISTINCT ${impressionsEvents.id})`))
+      // ✅ order by clicks DESC (replace with impressions or CTR if desired)
+      .orderBy(desc(sql`COALESCE("click_sub"."clicks", 0)`))
       .limit(limit);
 
+    // Compute CTR
     return topAds.map(ad => {
       const impressions = Number(ad.impressions) || 0;
       const clicks = Number(ad.clicks) || 0;
@@ -665,11 +685,13 @@ async getTopPerformingAds(userId: string, limit: number = 5): Promise<TopPerform
   } catch (error) {
     throw ErrorBuilder.build(
       ErrorCode.DATABASE_ERROR,
-      "Failed to fetch top performing ads",
+      'Failed to fetch top performing ads',
       error instanceof Error ? error.message : error
     );
   }
 }
+
+
 
 /**
  * Get recent activity for the user
@@ -891,52 +913,52 @@ async getAdminDashboardStats(days: number = 7): Promise<AdminDashboardStats> {
 /**
  * Get system-wide chart data for impressions and clicks
  */
-async getAdminChartData(days: number = 7): Promise<AdminChartData[]> {
+async getAdminChartData(months: number = 6): Promise<AdminChartData[]> {
   try {
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    startDate.setMonth(startDate.getMonth() - months);
 
-    // Get daily impressions for all ads
-    const dailyImpressions = await db
+    // Get monthly impressions for all ads
+    const monthlyImpressions = await db
       .select({
-        date: sql<string>`DATE(${impressionsEvents.createdAt})`,
-        count: sql<number>`count(*)`,
+        month: sql<string>`TO_CHAR(${impressionsEvents.createdAt}, 'YYYY-MM')`,
+        count: sql<number>`COUNT(*)`,
       })
       .from(impressionsEvents)
       .where(gte(impressionsEvents.createdAt, startDate))
-      .groupBy(sql`DATE(${impressionsEvents.createdAt})`)
-      .orderBy(sql`DATE(${impressionsEvents.createdAt})`);
+      .groupBy(sql`TO_CHAR(${impressionsEvents.createdAt}, 'YYYY-MM')`)
+      .orderBy(sql`TO_CHAR(${impressionsEvents.createdAt}, 'YYYY-MM')`);
 
-    // Get daily clicks for all ads
-    const dailyClicks = await db
+    // Get monthly clicks for all ads
+    const monthlyClicks = await db
       .select({
-        date: sql<string>`DATE(${clicksEvents.createdAt})`,
-        count: sql<number>`count(*)`,
+        month: sql<string>`TO_CHAR(${clicksEvents.createdAt}, 'YYYY-MM')`,
+        count: sql<number>`COUNT(*)`,
       })
       .from(clicksEvents)
       .where(gte(clicksEvents.createdAt, startDate))
-      .groupBy(sql`DATE(${clicksEvents.createdAt})`)
-      .orderBy(sql`DATE(${clicksEvents.createdAt})`);
+      .groupBy(sql`TO_CHAR(${clicksEvents.createdAt}, 'YYYY-MM')`)
+      .orderBy(sql`TO_CHAR(${clicksEvents.createdAt}, 'YYYY-MM')`);
 
     // Merge data
     const impressionMap = new Map(
-      dailyImpressions.map(d => [d.date, Number(d.count)])
+      monthlyImpressions.map(d => [d.month, Number(d.count)])
     );
     const clickMap = new Map(
-      dailyClicks.map(d => [d.date, Number(d.count)])
+      monthlyClicks.map(d => [d.month, Number(d.count)])
     );
 
-    // Create array of all dates in range
+    // Create array for all months in range
     const chartData: AdminChartData[] = [];
-    for (let i = 0; i < days; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - (days - 1 - i));
-      const dateStr = date.toISOString().split('T')[0];
+    const now = new Date();
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStr = date.toISOString().slice(0, 7); // YYYY-MM
 
       chartData.push({
-        date: dateStr,
-        impressions: impressionMap.get(dateStr) || 0,
-        clicks: clickMap.get(dateStr) || 0,
+        date: monthStr,
+        impressions: impressionMap.get(monthStr) || 0,
+        clicks: clickMap.get(monthStr) || 0,
       });
     }
 
@@ -949,6 +971,7 @@ async getAdminChartData(days: number = 7): Promise<AdminChartData[]> {
     );
   }
 }
+
 
 /**
  * Get recent system activity for admin
