@@ -178,6 +178,12 @@ export class AdvertisingAppService {
   
   async updateAd(id: string, ad: Partial<Ad>): Promise<ApiResponseInterface<Ad | null>> {
     try {
+
+      if (ad.targetCities && !Array.isArray(ad.targetCities)) {
+        console.log('❌ Wrong type received:', typeof ad.targetCities, ad.targetCities);
+        throw new Error(`Expected targetCities to be an array but got ${typeof ad.targetCities}`);
+      }
+      
       const updated = await this.advertisingRepository.update(id, ad);
 
       if (!updated) {

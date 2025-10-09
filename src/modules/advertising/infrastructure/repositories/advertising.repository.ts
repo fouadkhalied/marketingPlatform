@@ -281,6 +281,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
             // Drizzle will handle the conversion to ISO string
           }
         });
+        
     
         const [result] = await db
           .update(ads)

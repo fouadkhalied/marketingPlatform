@@ -264,6 +264,24 @@ async getAdsByTitle(req: Request, res: Response): Promise<void> {
   // ✅ Update Ad
   async updateAd(req: Request, res: Response): Promise<void> {
     try {
+      
+      if (req.body.targetCities) {
+        if (Array.isArray(req.body.targetCities)) {
+          // already fine
+        } else if (typeof req.body.targetCities === "object") {
+          // converts { "0": "riyadh" } → ["riyadh"]
+          req.body.targetCities = Object.values(req.body.targetCities);
+        } else if (typeof req.body.targetCities === "string") {
+          // converts '["riyadh"]' → ["riyadh"]
+          try {
+            req.body.targetCities = JSON.parse(req.body.targetCities);
+          } catch {
+            req.body.targetCities = [req.body.targetCities];
+          }
+        } else {
+          throw new Error(`Unexpected type for targetCities: ${typeof req.body.targetCities}`);
+        }
+      }
       const result = await this.advertisingService.updateAd(
         req.params.id,
         req.body
