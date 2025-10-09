@@ -15,7 +15,7 @@ export const middleEastCountries = pgEnum("middleEastCountries", [
   "Egypt",
   "Iran",
   "Iraq",
-  "Israel",
+  "Palastine",
   "Jordan",
   "Kuwait",
   "Lebanon",

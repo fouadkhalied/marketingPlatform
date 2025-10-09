@@ -450,4 +450,57 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
       );
     }
   }
+
+  
+async getProfile(id: string): Promise<ApiResponseInterface<Partial<User>>> {
+  try {
+    const profile = await this.userRepository.getProfile(id);
+    return ResponseBuilder.success(profile, "Profile retrieved successfully");
+  } catch (error: any) {
+    if (error.code && error.message) {
+      return error;
+    }
+    return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      error.message || "Failed to retrieve profile"
+    );
+  }
+}
+
+// Update user profile
+async updateProfile(
+  id: string,
+  updates:Pick<User, 'username' | 'password' | 'country'>
+): Promise<ApiResponseInterface<Partial<User>>> {
+  try {
+    const profile = await this.userRepository.updateProfile(id, updates);
+    if (!updates.username && !updates.country && !updates.password) {
+      return ErrorBuilder.build(ErrorCode.VALIDATION_ERROR, "at least one input should be provided username | password | country");
+    }
+    
+    const allowedKeys = ["username", "password", "country"];
+
+    const providedKeys = Object.keys(updates);
+    const invalidKeys = providedKeys.filter(
+      (key) => !allowedKeys.includes(key)
+    );
+
+    if (invalidKeys.length > 0) {
+      return ErrorBuilder.build(
+        ErrorCode.VALIDATION_ERROR,
+        `Invalid field(s): ${invalidKeys.join(", ")}. Only username, password, and country are allowed.`
+      );
+    }
+
+    return ResponseBuilder.success(profile, "Profile updated successfully");
+  } catch (error: any) {
+    if (error.code && error.message) {
+      return error;
+    }
+    return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      error.message || "Failed to update profile"
+    );
+  }
+}
 }

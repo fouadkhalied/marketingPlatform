@@ -10,5 +10,7 @@ export interface userInterface {
     updateUserStripeInfo(id: string, customerId: string, subscriptionId?: string): Promise<User>;
     deleteUser(id: string): Promise<boolean>;
     getAvaialbeImpressionRatios(): Promise<AdminImpressionRatio[]>;
-    updateImpressionRatio(adminId: string , id:string, impressionsPerUnit: number, currency: "usd" | "sar"): Promise<AdminImpressionRatio>
+    updateImpressionRatio(adminId: string , id:string, impressionsPerUnit: number, currency: "usd" | "sar"): Promise<AdminImpressionRatio>;
+    getProfile(id:string) :Promise<Partial<User>>;
+    updateProfile(id:string,user : Partial<Pick<User, 'username' | 'password' | 'country'>>) :Promise<Partial<User>>
 }

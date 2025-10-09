@@ -471,6 +471,9 @@ app.get('/api/users/impression-ratios', AuthMiddleware(UserRole.ADMIN), (req, re
 // Update impression ratio (admin only)
 app.put('/api/users/impression-ratios/:id', AuthMiddleware(UserRole.ADMIN), (req, res) => userController.updateImpressionRatio(req, res));
 
+// profile 
+app.get('/api/users/profile', AuthMiddleware(UserRole.USER), (req,res) => userController.getProfile(req,res));
+app.put('/api/users/profile', AuthMiddleware(UserRole.USER), (req,res) => userController.updateProfile(req,res));
 // click on ad
 app.put(
   "/api/users/ad/:id/click",
