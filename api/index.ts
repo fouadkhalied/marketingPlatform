@@ -482,6 +482,8 @@ app.put(
 
 //
 app.get('/api/dashboard/user', AuthMiddleware(UserRole.USER), (req,res)=>userController.getDashoardMetricsForUser(req,res))
+
+app.get('/api/dashboard/admin', AuthMiddleware(UserRole.ADMIN), (req,res)=>userController.getDashoardMetricsForAdmin(req,res))
 // ============================================
 // 10. ERROR HANDLING
 // ============================================

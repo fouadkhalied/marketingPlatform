@@ -519,4 +519,20 @@ async getUserDashboard(userId: string) : Promise<ApiResponseInterface<any>> {
     activity
   });
 }
+
+// In your admin service layer
+async getAdminDashboard(days: number = 7):Promise<ApiResponseInterface<any>> {
+  const stats = await this.userRepository.getAdminDashboardStats(days);
+  const chartData = await this.userRepository.getAdminChartData(days);
+  const recentActivity = await this.userRepository.getAdminRecentActivity(10);
+  const systemOverview = await this.userRepository.getSystemOverview();
+
+  return ResponseBuilder.success( {
+    stats,
+    chartData,
+    recentActivity,
+    systemOverview
+  });
+}
+
 }

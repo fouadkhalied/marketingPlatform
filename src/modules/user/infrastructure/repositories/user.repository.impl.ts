@@ -3,11 +3,11 @@ import { userInterface } from "../../domain/repositories/user.repository";
 
 import { eq, desc, sql, and, gte, lte, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { adminImpressionRatio, AdminImpressionRatio, ads, clicksEvents, CreateUser, impressionsEvents, middleEastCountries, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
+import { adminImpressionRatio, AdminImpressionRatio, ads, clicksEvents, CreateUser, impressionsEvents, middleEastCountries, purchases, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
-import { ChartData, DashboardStats, TopPerformingAd } from "../../application/dtos/dashboard/dashboard.interfaces";
+import { AdminChartData, AdminDashboardStats, ChartData, DashboardStats, RecentActivity, TopPerformingAd } from "../../application/dtos/dashboard/dashboard.interfaces";
 
 export class UserRepositoryImpl implements userInterface {
     async hashPassword(password: string): Promise<string> {
@@ -729,6 +729,384 @@ async getRecentActivity(userId: string, limit: number = 10) {
     throw ErrorBuilder.build(
       ErrorCode.DATABASE_ERROR,
       "Failed to fetch recent activity",
+      error instanceof Error ? error.message : error
+    );
+  }
+}
+
+
+
+async getAdminDashboardStats(days: number = 7): Promise<AdminDashboardStats> {
+  try {
+    const currentPeriodStart = new Date();
+    currentPeriodStart.setDate(currentPeriodStart.getDate() - days);
+    
+    const previousPeriodStart = new Date();
+    previousPeriodStart.setDate(previousPeriodStart.getDate() - (days * 2));
+    
+    const previousPeriodEnd = new Date(currentPeriodStart);
+
+    // ===== TOTAL USERS =====
+    const [totalUsersResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users);
+
+    const [currentPeriodUsers] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(gte(users.createdAt, currentPeriodStart));
+
+    const [previousPeriodUsers] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(
+        and(
+          gte(users.createdAt, previousPeriodStart),
+          lte(users.createdAt, previousPeriodEnd)
+        )
+      );
+
+    // ===== TOTAL REVENUE =====
+    const [totalRevenueResult] = await db
+      .select({ 
+        total: sql<number>`COALESCE(SUM(CAST(${purchases.amount} AS DECIMAL)), 0)` 
+      })
+      .from(purchases)
+      .where(eq(purchases.status, "completed"));
+
+    const [currentPeriodRevenue] = await db
+      .select({ 
+        total: sql<number>`COALESCE(SUM(CAST(${purchases.amount} AS DECIMAL)), 0)` 
+      })
+      .from(purchases)
+      .where(
+        and(
+          eq(purchases.status, "completed"),
+          gte(purchases.createdAt, currentPeriodStart)
+        )
+      );
+
+    const [previousPeriodRevenue] = await db
+      .select({ 
+        total: sql<number>`COALESCE(SUM(CAST(${purchases.amount} AS DECIMAL)), 0)` 
+      })
+      .from(purchases)
+      .where(
+        and(
+          eq(purchases.status, "completed"),
+          gte(purchases.createdAt, previousPeriodStart),
+          lte(purchases.createdAt, previousPeriodEnd)
+        )
+      );
+
+    // ===== ACTIVE ADS =====
+    const [activeAdsResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ads)
+      .where(eq(ads.active, true));
+
+    const [currentPeriodAds] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ads)
+      .where(
+        and(
+          eq(ads.active, true),
+          gte(ads.createdAt, currentPeriodStart)
+        )
+      );
+
+    const [previousPeriodAds] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ads)
+      .where(
+        and(
+          eq(ads.active, true),
+          gte(ads.createdAt, previousPeriodStart),
+          lte(ads.createdAt, previousPeriodEnd)
+        )
+      );
+
+    // ===== TOTAL IMPRESSIONS =====
+    const [totalImpressionsResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(impressionsEvents);
+
+    const [currentPeriodImpressions] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(impressionsEvents)
+      .where(gte(impressionsEvents.createdAt, currentPeriodStart));
+
+    const [previousPeriodImpressions] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(impressionsEvents)
+      .where(
+        and(
+          gte(impressionsEvents.createdAt, previousPeriodStart),
+          lte(impressionsEvents.createdAt, previousPeriodEnd)
+        )
+      );
+
+    // Calculate totals and growth
+    const totalUsers = Number(totalUsersResult.count || 0);
+    const currentUsers = Number(currentPeriodUsers.count || 0);
+    const prevUsers = Number(previousPeriodUsers.count || 0);
+    const userGrowth = prevUsers > 0 ? ((currentUsers - prevUsers) / prevUsers) * 100 : 0;
+
+    const totalRevenue = Number(totalRevenueResult.total || 0);
+    const currentRevenue = Number(currentPeriodRevenue.total || 0);
+    const prevRevenue = Number(previousPeriodRevenue.total || 0);
+    const revenueGrowth = prevRevenue > 0 ? ((currentRevenue - prevRevenue) / prevRevenue) * 100 : 0;
+
+    const activeAds = Number(activeAdsResult.count || 0);
+    const currentAds = Number(currentPeriodAds.count || 0);
+    const prevAds = Number(previousPeriodAds.count || 0);
+    const adsGrowth = prevAds > 0 ? ((currentAds - prevAds) / prevAds) * 100 : 0;
+
+    const totalImpressions = Number(totalImpressionsResult.count || 0);
+    const currentImpressions = Number(currentPeriodImpressions.count || 0);
+    const prevImpressions = Number(previousPeriodImpressions.count || 0);
+    const impressionGrowth = prevImpressions > 0 
+      ? ((currentImpressions - prevImpressions) / prevImpressions) * 100 
+      : 0;
+
+    return {
+      totalUsers,
+      userGrowth: Math.round(userGrowth * 10) / 10,
+      totalRevenue,
+      revenueGrowth: Math.round(revenueGrowth * 10) / 10,
+      activeAds,
+      adsGrowth: Math.round(adsGrowth * 10) / 10,
+      totalImpressions,
+      impressionGrowth: Math.round(impressionGrowth * 10) / 10,
+    };
+  } catch (error) {
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to fetch admin dashboard stats",
+      error instanceof Error ? error.message : error
+    );
+  }
+}
+
+/**
+ * Get system-wide chart data for impressions and clicks
+ */
+async getAdminChartData(days: number = 7): Promise<AdminChartData[]> {
+  try {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Get daily impressions for all ads
+    const dailyImpressions = await db
+      .select({
+        date: sql<string>`DATE(${impressionsEvents.createdAt})`,
+        count: sql<number>`count(*)`,
+      })
+      .from(impressionsEvents)
+      .where(gte(impressionsEvents.createdAt, startDate))
+      .groupBy(sql`DATE(${impressionsEvents.createdAt})`)
+      .orderBy(sql`DATE(${impressionsEvents.createdAt})`);
+
+    // Get daily clicks for all ads
+    const dailyClicks = await db
+      .select({
+        date: sql<string>`DATE(${clicksEvents.createdAt})`,
+        count: sql<number>`count(*)`,
+      })
+      .from(clicksEvents)
+      .where(gte(clicksEvents.createdAt, startDate))
+      .groupBy(sql`DATE(${clicksEvents.createdAt})`)
+      .orderBy(sql`DATE(${clicksEvents.createdAt})`);
+
+    // Merge data
+    const impressionMap = new Map(
+      dailyImpressions.map(d => [d.date, Number(d.count)])
+    );
+    const clickMap = new Map(
+      dailyClicks.map(d => [d.date, Number(d.count)])
+    );
+
+    // Create array of all dates in range
+    const chartData: AdminChartData[] = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (days - 1 - i));
+      const dateStr = date.toISOString().split('T')[0];
+
+      chartData.push({
+        date: dateStr,
+        impressions: impressionMap.get(dateStr) || 0,
+        clicks: clickMap.get(dateStr) || 0,
+      });
+    }
+
+    return chartData;
+  } catch (error) {
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to fetch admin chart data",
+      error instanceof Error ? error.message : error
+    );
+  }
+}
+
+/**
+ * Get recent system activity for admin
+ */
+async getAdminRecentActivity(limit: number = 10): Promise<RecentActivity[]> {
+  try {
+    const activities: RecentActivity[] = [];
+
+    // Get recent user signups
+    const recentUsers = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(limit);
+
+    recentUsers.forEach(user => {
+      activities.push({
+        id: user.id,
+        type: 'user_signup',
+        description: `New user registered: ${user.username}`,
+        userId: user.id,
+        username: user.username,
+        createdAt: user.createdAt,
+      });
+    });
+
+    // Get recent ads
+    const recentAds = await db
+      .select({
+        id: ads.id,
+        titleEn: ads.titleEn,
+        status: ads.status,
+        userId: ads.userId,
+        createdAt: ads.createdAt,
+      })
+      .from(ads)
+      .leftJoin(users, eq(ads.userId, users.id))
+      .orderBy(desc(ads.createdAt))
+      .limit(limit);
+
+    recentAds.forEach(ad => {
+      const typeMap = {
+        'approved': 'ad_approved' as const,
+        'rejected': 'ad_rejected' as const,
+        'pending': 'ad_created' as const,
+      };
+
+      activities.push({
+        id: ad.id,
+        type: typeMap[ad.status] || 'ad_created',
+        description: `Ad "${ad.titleEn}" ${ad.status}`,
+        userId: ad.userId,
+        createdAt: ad.createdAt,
+      });
+    });
+
+    // Get recent purchases
+    const recentPurchases = await db
+      .select({
+        id: purchases.id,
+        amount: purchases.amount,
+        userId: purchases.userId,
+        createdAt: purchases.createdAt,
+      })
+      .from(purchases)
+      .leftJoin(users, eq(purchases.userId, users.id))
+      .where(eq(purchases.status, "completed"))
+      .orderBy(desc(purchases.createdAt))
+      .limit(limit);
+
+    recentPurchases.forEach(purchase => {
+      activities.push({
+        id: purchase.id,
+        type: 'purchase',
+        description: `Purchase completed: $${purchase.amount}`,
+        userId: purchase.userId,
+        createdAt: purchase.createdAt,
+      });
+    });
+
+    // Sort all activities by date and limit
+    return activities
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  } catch (error) {
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to fetch admin recent activity",
+      error instanceof Error ? error.message : error
+    );
+  }
+}
+
+/**
+ * Get system statistics overview
+ */
+async getSystemOverview() {
+  try {
+    // Total users count
+    const [totalUsers] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users);
+
+    // Total ads count
+    const [totalAds] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ads);
+
+    // Pending ads count
+    const [pendingAds] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ads)
+      .where(eq(ads.status, "pending"));
+
+    // Active ads count
+    const [activeAds] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ads)
+      .where(eq(ads.active, true));
+
+    // Total impressions
+    const [totalImpressions] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(impressionsEvents);
+
+    // Total clicks
+    const [totalClicks] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clicksEvents);
+
+    // Total revenue
+    const [totalRevenue] = await db
+      .select({ 
+        total: sql<number>`COALESCE(SUM(CAST(${purchases.amount} AS DECIMAL)), 0)` 
+      })
+      .from(purchases)
+      .where(eq(purchases.status, "completed"));
+
+    return {
+      totalUsers: Number(totalUsers.count || 0),
+      totalAds: Number(totalAds.count || 0),
+      pendingAds: Number(pendingAds.count || 0),
+      activeAds: Number(activeAds.count || 0),
+      totalImpressions: Number(totalImpressions.count || 0),
+      totalClicks: Number(totalClicks.count || 0),
+      totalRevenue: Number(totalRevenue.total || 0),
+      ctr: Number(totalImpressions.count) > 0 
+        ? (Number(totalClicks.count) / Number(totalImpressions.count)) * 100 
+        : 0,
+    };
+  } catch (error) {
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to fetch system overview",
       error instanceof Error ? error.message : error
     );
   }
