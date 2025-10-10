@@ -20,37 +20,39 @@ export class GoogleAppService {
 
   // 1. Handle Google login (find or create user)
 
-async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
-  try {
-    // First, try to find user by Google ID
-    let googleUser = await this.googleRepository.getUserByGoogleId(profile.id);
+  async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
+    try {
+      // First, try to find user by Google ID
+      let googleUser = await this.googleRepository.getUserByGoogleId(
+        profile.id
+      );
 
-    if (!googleUser) {
-      // Check if user exists with this email (created via email/password)
-      const email = profile.emails?.[0]?.value || "";
-      const existingUser = await this.googleRepository.getUserByEmail(email);
+      if (!googleUser) {
+        // Check if user exists with this email (created via email/password)
+        const email = profile.emails?.[0]?.value || "";
+        const existingUser = await this.googleRepository.getUserByEmail(email);
 
-      if (existingUser) {
-        // Link the Google account to existing user
-        googleUser = await this.googleRepository.linkGoogleAccount(
-          existingUser.id,
-          profile.id
-        );
-      } else {
-        // Create new user
-        googleUser = await this.createUserFromGoogle(profile);
+        if (existingUser) {
+          // Link the Google account to existing user
+          googleUser = await this.googleRepository.linkGoogleAccount(
+            existingUser.id,
+            profile.id
+          );
+        } else {
+          // Create new user
+          googleUser = await this.createUserFromGoogle(profile);
+        }
       }
-    }
 
-    return ResponseBuilder.success(googleUser);
-  } catch (error) {
-    return ErrorBuilder.build(
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      "Google login failed",
-      error instanceof Error ? error.message : error
-    );
+      return ResponseBuilder.success(googleUser);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Google login failed",
+        error instanceof Error ? error.message : error
+      );
+    }
   }
-}
 
   // 2. Create user with OAuth flag
   async createUserFromGoogle(profile: any): Promise<User> {
@@ -62,17 +64,17 @@ async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
       oauth: "google",
       verified: true,
     });
-  
+
     return newUser;
   }
 
   async generateGoogleAuthUrl(): Promise<string> {
     const clientId = appConfig.GOOGLE_CLIENT_ID;
     const redirectUri = appConfig.GOOGLE_CALLBACK_URL;
-    const scope = 'profile email';
-    const responseType = 'code';
-    const accessType = 'offline';
-    const prompt = 'consent';
+    const scope = "profile email";
+    const responseType = "code";
+    const accessType = "offline";
+    const prompt = "consent";
 
     const params = new URLSearchParams({
       client_id: clientId!,
@@ -80,13 +82,11 @@ async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
       scope: scope,
       response_type: responseType,
       access_type: accessType,
-      prompt: prompt
+      prompt: prompt,
     });
 
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
-
-
 
   setGoogleStrategy() {
     passport.use(
@@ -98,13 +98,17 @@ async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
         },
         async (accessToken, refreshToken, profile, done) => {
           try {
-            let user = await this.googleRepository.getUserByGoogleId(profile.id);
-  
+            let user = await this.googleRepository.getUserByGoogleId(
+              profile.id
+            );
+
             if (!user) {
               // Check for existing user by email
               const email = profile.emails?.[0]?.value || "";
-              const existingUser = await this.googleRepository.getUserByEmail(email);
-  
+              const existingUser = await this.googleRepository.getUserByEmail(
+                email
+              );
+
               if (existingUser) {
                 // Link Google account to existing user
                 user = await this.googleRepository.linkGoogleAccount(
@@ -123,7 +127,7 @@ async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
                 });
               }
             }
-  
+
             return done(null, user);
           } catch (err) {
             return done(err, false);
@@ -135,7 +139,10 @@ async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
 
   // Route handler for initiating Google OAuth
   googleAuth(req: Request, res: Response, next: NextFunction) {
-    passport.authenticate("google", { scope: ["profile", "email"], session: false })(req, res, next);
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      session: false,
+    })(req, res, next);
   }
 
   // Route handler for Google OAuth callback
@@ -157,11 +164,13 @@ async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
 
         const params = new URLSearchParams({
           token: token,
-          username: user.username || 'User',
-          role: user.role
+          username: user.username || "User",
+          role: user.role,
         });
-  
-        res.redirect(`http://localhost:3000/dashboard?${params.toString()}`);
+
+        res.redirect(
+          `https://octopusadmarketing.vercel.app/dashboard?${params.toString()}`
+        );
       }
     )(req, res, next);
   }
@@ -180,5 +189,4 @@ async handleGoogleLogin(profile: any): Promise<ApiResponseInterface<User>> {
   me(req: Request, res: Response) {
     res.json({ user: req.user });
   }
-  
 }

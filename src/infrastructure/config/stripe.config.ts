@@ -5,8 +5,8 @@ const stripeConfig = {
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY!,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     defaultCurrency: 'usd',
-    successUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/success`,
-    cancelUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/cancel`
+    successUrl: `https://octopusadmarketing.vercel.app/success`,
+    cancelUrl: `https://octopusadmarketing.vercel.app/cancel`
 };
 
 // CREATE the stripe instance FIRST
