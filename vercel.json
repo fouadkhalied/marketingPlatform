@@ -1,0 +1,19 @@
+{
+    "version": 2,
+	"installCommand": "npm install",
+	"buildCommand": "npm run build",
+	"devCommand": "npm run dev",
+	"rewrites": [
+	  {
+		"source": "/(.*)",
+		"destination": "/api"
+	  }
+	],
+	"functions": {
+	  "api/index.ts": {
+		"runtime": "@vercel/node@4.0.0"
+	  }
+	},
+    "outputDirectory": "." 
+  }
+  
