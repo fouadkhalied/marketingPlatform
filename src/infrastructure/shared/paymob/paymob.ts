@@ -107,93 +107,116 @@ export class PaymobPaymentHandler {
     /**
      * Create a checkout session (Stripe-compatible interface)
      */
-async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobCheckoutSession> {
-    try {
-      const token = await this.authenticate();
-      
-  
-      const amountInCents = Math.round(options.amount * 100);
-      const currency = options.currency || this.defaultCurrency;
-  
-      // STEP 1: Create an Order first (this was missing!)
-      console.log('📦 Creating Paymob order...');
-      const orderResponse = await this.apiClient.post('/ecommerce/orders', {
-        auth_token: token,
-        delivery_needed: 'false',
-        amount_cents: amountInCents,
-        currency: currency,
-        items: []
-      });
-  
-      const orderId = orderResponse.data.id;
-      console.log('✅ Order created:', orderId);
-  
-      // STEP 2: Prepare billing data
-      const billingData: PaymobBillingData = {
-        email: options.customerEmail || 'customer@example.com',
-        first_name: options.customerEmail?.split('@')[0] || 'Customer',
-        last_name: 'Name',
-        phone_number: '+966500000000',
-        apartment: 'NA',
-        floor: 'NA',
-        street: 'NA',
-        building: 'NA',
-        shipping_method: 'NA',
-        postal_code: 'NA',
-        city: 'NA',
-        country: 'KSA',
-        state: 'NA',
-      };  
-  
-      // STEP 3: Create Payment Key (now with order_id)
-      console.log('🔑 Creating payment key...');
-      const paymentKeyResponse = await this.apiClient.post<{ token: string }>('/acceptance/payment_keys', {
-        auth_token: token,
-        amount_cents: amountInCents,
-        expiration: 3600,
-        order_id: orderId, // This is what was missing!
-        billing_data: billingData,
-        currency: currency,
-        integration_id: this.integrationId,
-      });
-  
-      const paymentToken = paymentKeyResponse.data.token;
-      console.log('✅ Payment key created');
-  
-      // STEP 4: Build iframe payment URL
-      const paymentUrl = this.iframeId
-        ? `https://ksa.paymob.com/api/acceptance/iframes/${this.iframeId}?payment_token=${paymentToken}`
-        : `https://ksa.paymob.com/api/acceptance/payments/pay?payment_token=${paymentToken}`;
-  
-      // STEP 5: Generate session metadata
-      const session: PaymobCheckoutSession = {
-        id: orderId.toString(), // Use Paymob order ID
-        url: paymentUrl,
-        payment_status: 'unpaid',
-        amount_total: amountInCents,
-        currency: currency,
-        customer_details: options.customerEmail ? { email: options.customerEmail } : undefined,
-        metadata: options.metadata,
-      };
-  
-      // Store session in memory
-      this.sessions.set(session.id, session);
-      console.log('✅ Checkout session created:', session.id);
-  
-      return session;
-  
-    } catch (error: any) {
-      console.error('❌ Paymob createCheckoutSession error:', error.response?.data || error.message);
-      
-      if (axios.isAxiosError(error)) {
-        const errorMsg = error.response?.data?.detail || 
-                         error.response?.data?.message || 
-                         error.message;
-        throw new Error(`Failed to create checkout session: ${errorMsg}`);
+
+    async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobCheckoutSession> {
+      try {
+        const token = await this.authenticate();
+    
+        const amountInCents = Math.round(options.amount * 100);
+        const currency = options.currency || this.defaultCurrency;
+    
+        // STEP 1: Create an Order with metadata
+        console.log('📦 Creating Paymob order with metadata:', options.metadata);
+        const orderResponse = await this.apiClient.post('/ecommerce/orders', {
+          auth_token: token,
+          delivery_needed: 'false',
+          amount_cents: amountInCents,
+          currency: currency,
+          items: [],
+          // ✅ ADD METADATA HERE - This is the critical fix!
+          shipping_data: {
+            email: options.customerEmail || 'customer@example.com',
+            first_name: options.customerEmail?.split('@')[0] || 'Customer',
+            last_name: 'Name',
+            phone_number: '+966500000000',
+            apartment: 'NA',
+            floor: 'NA',
+            street: 'NA',
+            building: 'NA',
+            shipping_method: 'NA',
+            postal_code: 'NA',
+            city: 'NA',
+            country: 'KSA',
+            state: 'NA',
+          },
+          // ✅ Store metadata in shipping_data or use merchant_order_id
+          merchant_order_id: options.metadata?.userId || `order_${Date.now()}`,
+          // Some Paymob implementations support a 'data' field for custom metadata
+          ...(options.metadata && { data: options.metadata })
+        });
+    
+        const orderId = orderResponse.data.id;
+        console.log('✅ Order created:', orderId, 'with metadata:', options.metadata);
+    
+        // STEP 2: Prepare billing data
+        const billingData: PaymobBillingData = {
+          email: options.customerEmail || 'customer@example.com',
+          first_name: options.customerEmail?.split('@')[0] || 'Customer',
+          last_name: 'Name',
+          phone_number: '+966500000000',
+          apartment: 'NA',
+          floor: 'NA',
+          street: 'NA',
+          building: 'NA',
+          shipping_method: 'NA',
+          postal_code: 'NA',
+          city: 'NA',
+          country: 'KSA',
+          state: 'NA',
+        };  
+    
+        // STEP 3: Create Payment Key with metadata
+        console.log('🔑 Creating payment key...');
+        const paymentKeyResponse = await this.apiClient.post<{ token: string }>('/acceptance/payment_keys', {
+          auth_token: token,
+          amount_cents: amountInCents,
+          expiration: 3600,
+          order_id: orderId,
+          billing_data: billingData,
+          currency: currency,
+          integration_id: this.integrationId,
+          // ✅ Lock metadata by including it here too (some Paymob versions support this)
+          lock_order_when_paid: true,
+        });
+    
+        const paymentToken = paymentKeyResponse.data.token;
+        console.log('✅ Payment key created');
+    
+        // STEP 4: Build iframe payment URL
+        const paymentUrl = this.iframeId
+          ? `https://ksa.paymob.com/api/acceptance/iframes/${this.iframeId}?payment_token=${paymentToken}`
+          : `https://ksa.paymob.com/api/acceptance/payments/pay?payment_token=${paymentToken}`;
+    
+        // STEP 5: Generate session metadata and store it
+        const session: PaymobCheckoutSession = {
+          id: orderId.toString(),
+          url: paymentUrl,
+          payment_status: 'unpaid',
+          amount_total: amountInCents,
+          currency: currency,
+          customer_details: options.customerEmail ? { email: options.customerEmail } : undefined,
+          metadata: options.metadata, // ✅ Store metadata in session
+        };
+    
+        // Store session in memory with metadata
+        this.sessions.set(session.id, session);
+        console.log('✅ Checkout session created with metadata:', session.id, session.metadata);
+    
+        return session;
+    
+      } catch (error: any) {
+        console.error('❌ Paymob createCheckoutSession error:', error.response?.data || error.message);
+        
+        if (axios.isAxiosError(error)) {
+          const errorMsg = error.response?.data?.detail || 
+                           error.response?.data?.message || 
+                           error.message;
+          throw new Error(`Failed to create checkout session: ${errorMsg}`);
+        }
+        throw new Error(`Failed to create checkout session: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
-      throw new Error(`Failed to create checkout session: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }
+  
   
     /**
      * Get checkout session details (Stripe-compatible)
@@ -312,6 +335,7 @@ async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobChec
     /**
      * Process webhook event (Stripe-compatible)
      */
+    
     async processWebhook(body: string | Buffer | any): Promise<void> {
       if (!this.hmacSecret) {
         console.warn('⚠️ HMAC secret not configured, skipping signature verification');
@@ -434,22 +458,34 @@ async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobChec
     /**
      * Convert Paymob webhook data to Stripe-like format
      */
-    private convertToStripeFormat(webhookData: PaymobWebhookData): any {
-      const success = webhookData.success === 'true' || webhookData.success === true;
-      const amountCents = typeof webhookData.amount_cents === 'number' 
-        ? webhookData.amount_cents 
-        : parseInt(webhookData.amount_cents as string, 10);
+    
+private convertToStripeFormat(webhookData: PaymobWebhookData): any {
+  const success = webhookData.success === 'true' || webhookData.success === true;
+  const amountCents = typeof webhookData.amount_cents === 'number' 
+    ? webhookData.amount_cents 
+    : parseInt(webhookData.amount_cents as string, 10);
+
+  const sessionId = webhookData.order?.id?.toString() || webhookData.id.toString();
   
-      return {
-        id: webhookData.order?.id?.toString() || webhookData.id.toString(),
-        payment_status: success ? 'paid' : 'failed',
-        payment_intent: webhookData.order?.merchant_order_id || webhookData.id.toString(),
-        amount_total: amountCents,
-        currency: webhookData.currency,
-        customer_details: {
-          email: webhookData.billing_data?.email,
-        },
-        metadata: webhookData.data || {},
-      };
-    }
+  // ✅ CRITICAL FIX: Retrieve metadata from in-memory session
+  const storedSession = this.sessions.get(sessionId);
+  const metadata = storedSession?.metadata || webhookData.data || {};
+
+  console.log('🔍 Converting webhook data. Session ID:', sessionId);
+  console.log('🔍 Stored session metadata:', storedSession?.metadata);
+  console.log('🔍 Webhook data.data:', webhookData.data);
+  console.log('🔍 Final metadata being used:', metadata);
+
+  return {
+    id: sessionId,
+    payment_status: success ? 'paid' : 'failed',
+    payment_intent: webhookData.order?.merchant_order_id || webhookData.id.toString(),
+    amount_total: amountCents,
+    currency: webhookData.currency,
+    customer_details: {
+      email: webhookData.billing_data?.email,
+    },
+    metadata: metadata, // ✅ Use retrieved metadata
+  };
+}
 }
