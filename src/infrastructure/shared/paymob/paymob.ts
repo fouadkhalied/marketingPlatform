@@ -116,37 +116,17 @@ export class PaymobPaymentHandler {
         const currency = options.currency || this.defaultCurrency;
     
         // STEP 1: Create an Order with metadata
-        console.log('📦 Creating Paymob order with metadata:', options.metadata);
+        console.log('📦 Creating Paymob order...');
         const orderResponse = await this.apiClient.post('/ecommerce/orders', {
           auth_token: token,
           delivery_needed: 'false',
           amount_cents: amountInCents,
           currency: currency,
-          items: [],
-          // ✅ ADD METADATA HERE - This is the critical fix!
-          shipping_data: {
-            email: options.customerEmail || 'customer@example.com',
-            first_name: options.customerEmail?.split('@')[0] || 'Customer',
-            last_name: 'Name',
-            phone_number: '+966500000000',
-            apartment: 'NA',
-            floor: 'NA',
-            street: 'NA',
-            building: 'NA',
-            shipping_method: 'NA',
-            postal_code: 'NA',
-            city: 'NA',
-            country: 'KSA',
-            state: 'NA',
-          },
-          // ✅ Store metadata in shipping_data or use merchant_order_id
-          merchant_order_id: options.metadata?.userId || `order_${Date.now()}`,
-          // Some Paymob implementations support a 'data' field for custom metadata
-          ...(options.metadata && { data: options.metadata })
+          items: []
         });
     
         const orderId = orderResponse.data.id;
-        console.log('✅ Order created:', orderId, 'with metadata:', options.metadata);
+        console.log('✅ Order created:', orderId);
     
         // STEP 2: Prepare billing data
         const billingData: PaymobBillingData = {
@@ -165,7 +145,7 @@ export class PaymobPaymentHandler {
           state: 'NA',
         };  
     
-        // STEP 3: Create Payment Key with metadata
+        // STEP 3: Create Payment Key
         console.log('🔑 Creating payment key...');
         const paymentKeyResponse = await this.apiClient.post<{ token: string }>('/acceptance/payment_keys', {
           auth_token: token,
@@ -175,8 +155,6 @@ export class PaymobPaymentHandler {
           billing_data: billingData,
           currency: currency,
           integration_id: this.integrationId,
-          // ✅ Lock metadata by including it here too (some Paymob versions support this)
-          lock_order_when_paid: true,
         });
     
         const paymentToken = paymentKeyResponse.data.token;
@@ -187,7 +165,7 @@ export class PaymobPaymentHandler {
           ? `https://ksa.paymob.com/api/acceptance/iframes/${this.iframeId}?payment_token=${paymentToken}`
           : `https://ksa.paymob.com/api/acceptance/payments/pay?payment_token=${paymentToken}`;
     
-        // STEP 5: Generate session metadata and store it
+        // STEP 5: Store session with metadata IN MEMORY
         const session: PaymobCheckoutSession = {
           id: orderId.toString(),
           url: paymentUrl,
@@ -195,12 +173,11 @@ export class PaymobPaymentHandler {
           amount_total: amountInCents,
           currency: currency,
           customer_details: options.customerEmail ? { email: options.customerEmail } : undefined,
-          metadata: options.metadata, // ✅ Store metadata in session
+          metadata: options.metadata, // ✅ Store metadata here
         };
     
-        // Store session in memory with metadata
         this.sessions.set(session.id, session);
-        console.log('✅ Checkout session created with metadata:', session.id, session.metadata);
+        console.log('✅ Session stored with metadata:', { sessionId: session.id, metadata: options.metadata });
     
         return session;
     
@@ -335,7 +312,7 @@ export class PaymobPaymentHandler {
     /**
      * Process webhook event (Stripe-compatible)
      */
-    
+
     async processWebhook(body: string | Buffer | any): Promise<void> {
       if (!this.hmacSecret) {
         console.warn('⚠️ HMAC secret not configured, skipping signature verification');
