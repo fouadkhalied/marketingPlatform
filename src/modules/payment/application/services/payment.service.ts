@@ -118,17 +118,25 @@ export class PaymentService {
 
     async handleCheckoutCompleted(sessionData: any): Promise<void> {
         try {
-            const userId = sessionData.metadata?.userId;
-            if (!userId) throw new Error("Missing userId in metadata");
-
-            const existing = await this.paymentRepo.findBySessionId(
-                sessionData.id
-            );
-            if (existing && existing.status === "completed") {
+            // ✅ CORRECT: Get userId from YOUR database, not from Paymob metadata
+            const existing = await this.paymentRepo.findBySessionId(sessionData.id);
+            
+            if (!existing) {
+                throw new Error(`No pending payment found for session: ${sessionData.id}`);
+            }
+    
+            if (existing.status === "completed") {
                 console.log("⚠️ Already processed, skipping:", sessionData.id);
                 return;
             }
-
+    
+            // ✅ Use userId from your database record
+            const userId = existing.userId;
+            
+            if (!userId) {
+                throw new Error("Missing userId in database record");
+            }
+    
             const dto: CreatePaymentDto = {
                 userId,
                 amount: sessionData.amount_total / 100,
@@ -136,7 +144,7 @@ export class PaymentService {
                 method: "paymob",
                 stripeSessionId: sessionData.id,
             };
-
+    
             await this.createCompletedPayment(dto);
         } catch (error) {
             console.error("❌ Error in Paymob handleCheckoutCompleted:", error);
