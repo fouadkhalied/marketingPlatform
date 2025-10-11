@@ -29,7 +29,7 @@ export class PaymobPaymentHandler {
       this.iframeId = config.iframeId;
       this.hmacSecret = config.hmacSecret;
       this.publishableKey = config.publicKey;
-      this.defaultCurrency = config.defaultCurrency || 'EGP';
+      this.defaultCurrency = config.defaultCurrency || 'SAR';
       this.successUrl = config.successUrl || 'https://yoursite.com/success';
       this.cancelUrl = config.cancelUrl || 'https://yoursite.com/cancel';
       this.secretkey = config.secretKey;
@@ -133,7 +133,7 @@ async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobChec
         email: options.customerEmail || 'customer@example.com',
         first_name: options.customerEmail?.split('@')[0] || 'Customer',
         last_name: 'Name',
-        phone_number: '+201000000000',
+        phone_number: '+966500000000',
         apartment: 'NA',
         floor: 'NA',
         street: 'NA',
@@ -141,7 +141,7 @@ async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobChec
         shipping_method: 'NA',
         postal_code: 'NA',
         city: 'NA',
-        country: 'EG',
+        country: 'KSA',
         state: 'NA',
       };  
   
