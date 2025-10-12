@@ -85,6 +85,29 @@ export class AdvertisingAppService {
     }
   }
 
+  async deletePhotoFromAd(
+    adId: string
+  ): Promise<ApiResponseInterface<boolean>> {
+    try {
+
+        const deletePhoto =await this.advertisingRepository.deletePhotoFromAd(adId);
+
+        if (deletePhoto) {
+          return ResponseBuilder.success(true);
+        }
+  
+      return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, 
+        "failed to delete photo of ad"
+      );
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while uploading photo",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
   async getAdById(id: string): Promise<ApiResponseInterface<Ad | null>> {
     try {
       const ad = await this.advertisingRepository.findById(id);

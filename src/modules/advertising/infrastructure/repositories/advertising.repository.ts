@@ -64,6 +64,32 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
+
+    async deletePhotoFromAd(id: string): Promise<boolean> {
+      try {
+        
+        const [updated] = await db
+          .update(ads)
+          .set({ imageUrl: "" }) 
+          .where(eq(ads.id, id))
+          .returning({ id: ads.id });
+    
+        if (!updated) {
+          throw ErrorBuilder.build(
+            ErrorCode.DATABASE_ERROR,
+            `Failed to add photo to ad with id ${id}`
+          );
+        }
+    
+        return true;
+      } catch (error) {
+        throw ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          "Failed to add photo to ad",
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
     
   
     async findById(id: string): Promise<Ad | null> {

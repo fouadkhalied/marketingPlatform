@@ -376,6 +376,8 @@ app.post('/api/advertising',AuthMiddleware(UserRole.USER), (req,res) => advertis
 
 app.post('/api/advertising/uploadPhoto/:id',AuthMiddleware(UserRole.USER), upload.single("photo"), (req,res) => advertisingController.uploadPhotoToAd(req,res))
 
+app.delete('/api/advertising/deletePhoto/:id',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.deletePhotoFromAd(req,res))
+
 app.get(
   "/api/advertising/listApprovedAdsForUser",
   (req, res) => advertisingController.listApprovedAdsForUser(req, res)
