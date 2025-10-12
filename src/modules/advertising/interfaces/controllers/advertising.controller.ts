@@ -167,7 +167,7 @@ export class AdvertisingController {
 
   async listApprovedAdsForUser(req: Request, res: Response): Promise<void> {
     try {
-      const { limit, page, targetCities } = req.query;
+      const { limit, page, targetCities, title } = req.query;
   
       // ✅ Pagination handling (default: page=1, limit=6)
       const pagination: PaginationParams = {
@@ -216,7 +216,8 @@ if (targetCities) {
       // ✅ Pass validated cities array to service
       const result = await this.advertisingService.listApprovedAdsForUser(
         pagination,
-        citiesArray
+        citiesArray,
+        typeof title === 'string' ? title : undefined
       );
                                   
       const statusCode = this.getStatusCode(result);

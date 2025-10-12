@@ -584,10 +584,11 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
 
     async listApprovedAdsForUser(
       pagination: PaginationParams,
-      targetCities: string[] = []
+      targetCities: string[] = [],
+      title?: string
     ): Promise<PaginatedResponse<any>> {
       try {
-        const { page , limit } = pagination;
+        const { page, limit } = pagination;
         const offset = (page - 1) * limit;
     
         // ✅ Build WHERE conditions dynamically
@@ -600,6 +601,13 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
                 targetCities.map((city) => sql`${city}`),
                 sql`, `
               )}]::ksa_cities[]`
+            : undefined,
+          // ✅ Search in both titleEn and titleAr if title is provided
+          title
+            ? or(
+                sql`LOWER(${ads.titleEn}) LIKE LOWER(${`%${title}%`})`,
+                sql`LOWER(${ads.titleAr}) LIKE LOWER(${`%${title}%`})`
+              )
             : undefined
         );
     
@@ -619,7 +627,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             descriptionEn: ads.descriptionEn,
             descriptionAr: ads.descriptionAr,
             likesCount: ads.likesCount,
-            impressions:ads.totalImpressionsOnAdd,
+            impressions: ads.totalImpressionsOnAdd,
             targetCities: ads.targetCities,
             websiteUrl: ads.websiteUrl,
           })
