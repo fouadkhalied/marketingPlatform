@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  marketing-platform:
+    container_name: marketing-platform
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Add your environment variables here
+      # DATABASE_URL: "postgres://user:password@db:5432/marketing"
+    volumes:
+      - .:/usr/src/app
+    command: >
+      sh -c "npm install && npm run start"
