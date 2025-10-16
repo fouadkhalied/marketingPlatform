@@ -123,7 +123,6 @@ export class PaymentController {
             res.status(500).json({ error: error.message });
         }
     }
-
     async getPurchaseHistory(req: Request, res: Response): Promise<void> {
         try {
             const userId = req.user!.id;

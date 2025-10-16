@@ -94,8 +94,12 @@ export const users = pgTable("users", {
     titleAr: text("title_ar").notNull(),
     descriptionEn: text("description_en").notNull(),
     descriptionAr: text("description_ar").notNull(),
+
     websiteUrl: text("target_url").notNull(),
+    websiteClicks: integer().notNull().default(0),
+    
     imageUrl: text("image_url"),
+    
     status: adStatusEnum("status").notNull().default("pending"),
     targetAudience: text("target_audience"),
     budgetType: text("budget_type").notNull(), // "impressions" or "clicks"
@@ -107,7 +111,10 @@ export const users = pgTable("users", {
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
     likesCount:integer().notNull().default(0),
+    
     active:boolean().notNull().default(false),
+    
+    userActivation:boolean().notNull().default(true),
     
     totalImpressionsOnAdd:integer().notNull().default(0),
 

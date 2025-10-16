@@ -385,10 +385,11 @@ async verifyTokenAndChangePassword(email: string, password: string, token: strin
   }
   async createAdClick(
     adId: string, 
-    userId: string
+    userId: string,
+    forWebsite: boolean
   ): Promise<ApiResponseInterface<string>> {
     try {
-      await this.userRepository.createAdClick(adId, userId);
+      await this.userRepository.createAdClick(adId, userId, forWebsite);
   
       return ResponseBuilder.success("Click recorded successfully");
     } catch (error: any) {

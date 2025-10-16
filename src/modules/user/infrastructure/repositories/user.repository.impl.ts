@@ -234,7 +234,8 @@ export class UserRepositoryImpl implements userInterface {
           .returning();
         return user;
       }
-      async createAdClick(adId: string, userId: string): Promise<boolean> {
+
+      async createAdClick(adId: string, userId: string, forWebsite: boolean): Promise<boolean> {
         return await db.transaction(async (tx) => {
           // Optional: Check if user already clicked this ad (uncomment if needed)
           // const existingClick = await tx
@@ -250,7 +251,17 @@ export class UserRepositoryImpl implements userInterface {
           //   );
           // }
       
-          // 1. Create the click event
+          if (forWebsite) {
+          // 1. Increment the click count on the websiteUrl
+          await tx
+            .update(ads)
+            .set({
+              websiteClicks: sql`${ads.websiteClicks} + 1`,
+            })
+            .where(eq(ads.id, adId));
+
+            return true
+          } else { 
           await tx
             .insert(clicksEvents)
             .values({
@@ -268,8 +279,13 @@ export class UserRepositoryImpl implements userInterface {
             .where(eq(ads.id, adId));
       
           return true;
-        });
+        }
       }
+      );
+        
+      }
+
+
   // ✅ Get all available ratios
   async getAvaialbeImpressionRatios(): Promise<AdminImpressionRatio[]> {
     try {

@@ -1,5 +1,6 @@
 ﻿import { ResponseBuilder } from "../../../../infrastructure/shared/common/apiResponse/apiResponseBuilder";
 import { ApiResponseInterface } from "../../../../infrastructure/shared/common/apiResponse/interfaces/apiResponse.interface";
+import { UserRole } from "../../../../infrastructure/shared/common/auth/enums/userRole";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
@@ -272,11 +273,19 @@ async approveAd(
 
 async activateAd(
   id: string,
+  userId: string,
+  role: string
 ): Promise<ApiResponseInterface<Ad>> {
   try {
-    const activatedAd = await this.advertisingRepository.activateAd(id);
+
+    if (role === UserRole.ADMIN) {
+      const activatedAd = await this.advertisingRepository.activateAd(id);
+      return ResponseBuilder.success(activatedAd, "Ad activated successfully");
+    } else {
+      const activatedUserAd = await this.advertisingRepository.activateUserAd(id, userId);
+      return ResponseBuilder.success(activatedUserAd, "Ad activated successfully");
+    }
     
-    return ResponseBuilder.success(activatedAd, "Ad activated successfully");
   } catch (error: any) {
     // If it's already an ErrorBuilder error, return it as-is
     if (error.code && error.message) {

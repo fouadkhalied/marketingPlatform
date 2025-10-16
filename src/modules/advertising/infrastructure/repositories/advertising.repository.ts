@@ -468,6 +468,53 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
       return result as Ad;
     }
 
+    async activateUserAd(id: string, userId:string): Promise<Ad> {
+      // Verify the ad belongs to the user
+  const [existingAd] = await db
+    .select()
+    .from(ads)
+    .where(
+      and(
+        eq(ads.id, id),
+        eq(ads.userId, userId)
+      )
+    )
+    .limit(1);
+
+  if (!existingAd) {
+    throw ErrorBuilder.build(
+      ErrorCode.AD_NOT_FOUND,
+      "Ad not found or you don't have permission to activate this ad"
+    );
+  }
+
+  // Check if already inactive
+  if (existingAd.userActivation) {
+    throw ErrorBuilder.build(
+      ErrorCode.VALIDATION_ERROR,
+      "Ad is already active"
+    );
+  }
+      // Update to active
+      const [result] = await db
+        .update(ads)
+        .set({
+          userActivation: true,
+          updatedAt: new Date()
+        })
+        .where(eq(ads.id, id))
+        .returning();
+    
+      if (!result) {
+        throw ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          "Failed to activate ad for user"
+        );
+      }
+    
+      return result as Ad;
+    }
+
 
     async getAllPagesForUser(
       isActive: boolean,
@@ -656,6 +703,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             impressions: ads.totalImpressionsOnAdd,
             targetCities: ads.targetCities,
             websiteUrl: ads.websiteUrl,
+            websiteClicks:ads.websiteClicks
           })
           .from(ads)
           .where(whereConditions)
@@ -754,4 +802,5 @@ async deactivateUserAd(userId: string, adId: string): Promise<Ad> {
 
   return deactivatedAd;
 }
+
 }

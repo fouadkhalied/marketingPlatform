@@ -717,6 +717,9 @@ export class UserController {
   async createAdClick(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+
+      const { forWebsite } = req.query
+
   
       if (!id) {
         res.status(400).json({
@@ -729,6 +732,10 @@ export class UserController {
         });
         return;
       }
+
+      const forWebsiteBool = String(forWebsite).toLowerCase() === 'true';
+      console.log(forWebsiteBool);
+      
 
       // if (!req.user?.id) {
       //   res.status(401).json({
@@ -744,7 +751,7 @@ export class UserController {
 
       //const userId = req.user.id
   
-      const result = await this.userService.createAdClick(id,"123");
+      const result = await this.userService.createAdClick(id,"123",forWebsiteBool);
       const statusCode = this.getStatusCode(result);
   
       res.status(statusCode).json(result);

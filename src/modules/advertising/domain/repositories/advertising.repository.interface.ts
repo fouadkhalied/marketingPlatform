@@ -16,7 +16,10 @@ export interface IAdvertisingRepository {
     findByTitle(title: string, params:PaginationParams) : Promise<PaginatedResponse<Ad>>;
     approveAd(id: string,data?: ApproveAdData): Promise<Ad>;
     rejectAd(id: string, reason?: string): Promise<Ad>;
+
     activateAd(id: string):Promise<Ad>;
+    activateUserAd(id: string, userId:string):Promise<Ad>;
+
     getAllPagesForUser(isActive: boolean, userId: string, params: PaginationParams) : Promise<PaginatedResponse<autheticatedPage>>
     getPageAccessTokenById(userId: string,pageId: string): Promise<string | null>
     assignCreditToAd(userId: string, adId: string, credit: number): Promise<Ad | null>

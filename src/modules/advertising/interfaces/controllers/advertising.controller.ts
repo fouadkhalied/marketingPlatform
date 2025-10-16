@@ -405,8 +405,9 @@ async approveAd(req: Request, res: Response): Promise<void> {
   // activate ad
   async avctivateAd(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.user?.id || req.user.role !== UserRole.ADMIN) {
-        res.status(403).json({ error: "Forbidden: Admin access required" });
+
+      if (!req.user?.id) {
+        res.status(403).json(ErrorBuilder.build(ErrorCode.UNAUTHORIZED, "user unauthorized"));
         return;
       }
 
@@ -415,7 +416,7 @@ async approveAd(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      const result = await this.advertisingService.activateAd(req.params.id);
+      const result = await this.advertisingService.activateAd(req.params.id, req.user.id ,req.user.role);
 
       const statusCode = this.getStatusCode(result);
       res.status(statusCode).json(result);
