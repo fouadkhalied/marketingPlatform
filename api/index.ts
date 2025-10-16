@@ -426,7 +426,7 @@ app.put(
 
 app.put(
   "/api/advertising/:id/avctivate",
-  AuthMiddleware(UserRole.ADMIN),
+  AuthMiddleware(UserRole.USER),
   (req, res) => advertisingController.avctivateAd(req, res)
 );
 
