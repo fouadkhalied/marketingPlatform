@@ -470,6 +470,9 @@ app.delete('/api/users/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userCont
 // promote user to admin 
 app.put('/api/users/promote/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.makeUserAdmin(req,res));
 
+// add credit to user balance by admin 
+app.put('/api/users/addCredit/:userId',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.addCretidToUserByAdmin(req,res));
+
 // Get all available impression ratios 
 app.get('/api/users/impression-ratios', (req, res) => userController.getAvailableImpressionRatios(req, res));
 

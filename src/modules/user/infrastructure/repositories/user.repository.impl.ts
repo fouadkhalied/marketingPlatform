@@ -535,7 +535,7 @@ async getDashboardStats(userId: string, days: number = 7): Promise<DashboardStat
       ? ((currentCTR - previousCTR) / previousCTR) * 100 
       : 0;
 
-    const remainingBalance = (userBalance?.balance || 0) + (userBalance?.freeViewsCredits || 0);
+    const remainingBalance = (userBalance?.balance || 0);
 
     return {
       totalImpressions,
@@ -1149,5 +1149,21 @@ async getSystemOverview() {
       error instanceof Error ? error.message : error
     );
   }
+}
+
+async addCretidToUserByAdmin(credit:number, userId: string):Promise<boolean> {
+  const [user] = await db
+          .update(users)
+          .set({
+            balance : sql`${users.balance} + ${credit}`
+          })
+          .where(eq(users.id, userId))
+          .returning();
+      
+        if (!user) {
+          throw new Error("User not found");
+        }
+      
+        return true;
 }
 }

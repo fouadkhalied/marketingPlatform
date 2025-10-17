@@ -734,7 +734,6 @@ export class UserController {
       }
 
       const forWebsiteBool = String(forWebsite).toLowerCase() === 'true';
-      console.log(forWebsiteBool);
       
 
       // if (!req.user?.id) {
@@ -1006,6 +1005,67 @@ async getDashoardMetricsForAdmin(req: Request, res: Response): Promise<void> {
     const result = await this.userService.getAdminDashboard(
     
     );
+    
+    const statusCode = this.getStatusCode(result);
+    res.status(statusCode).json(result);
+  } catch (err: any) {
+    console.error('Error updating profile:', err);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update profile',
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to update profile',
+        details: err.message
+      }
+    });
+  }
+}
+
+async addCretidToUserByAdmin(req: Request, res: Response): Promise<void> {
+  try {
+
+    const {userId} = req.params;
+    const credit = req.body.credit
+
+    if (!req.user?.id) {
+      res.status(401).json({
+        success: false,
+        message: "User must be authenticated",
+        error: {
+          code: "UNAUTHORIZED",
+          message: "User must be authenticated"
+        }
+      });
+      return;
+    }
+
+    if (!credit) {
+      res.status(401).json({
+        success: false,
+        message: "credit must be provided",
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: "credit must be provided"
+        }
+      });
+      return;
+    }
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "userId must be provided",
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: "userId must be provided"
+        }
+      });
+      return;
+    }
+
+    const result = await this.userService.addCretidToUserByAdmin(req.user.id, parseInt(credit), userId as string);
     
     const statusCode = this.getStatusCode(result);
     res.status(statusCode).json(result);

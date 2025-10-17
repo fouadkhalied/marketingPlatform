@@ -75,10 +75,10 @@ export const users = pgTable("users", {
   oauth: oauthEnum("oauth").notNull().default("normal"), // <--- new
   role: userRoleEnum("role").notNull().default("user"),
   verified: boolean("verified").notNull().default(false),
-  freeViewsCredits: integer("free_views_credits").notNull().default(10000),
+  freeViewsCredits: integer("free_views_credits").notNull().default(0),
   adsCount: integer("adsCount").default(0),
   totalSpend: integer("totalSpend").default(0),
-  balance: integer("balance").default(0),
+  balance: integer("balance").default(10),
   stripeCustomerId: text("stripe_customer_id"),
   country: middleEastCountries("country"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
@@ -111,7 +111,6 @@ export const users = pgTable("users", {
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
     likesCount:integer().notNull().default(0),
-    
     active:boolean().notNull().default(false),
     
     userActivation:boolean().notNull().default(true),

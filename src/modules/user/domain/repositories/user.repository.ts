@@ -13,5 +13,6 @@ export interface userInterface {
     updateImpressionRatio(adminId: string , id:string, impressionsPerUnit: number, currency: "usd" | "sar"): Promise<AdminImpressionRatio>;
     getProfile(id:string) :Promise<Partial<User>>;
     updateProfile(id:string,user : Partial<Pick<User, 'username' | 'password' | 'country'>>) :Promise<Partial<User>>
-    createAdClick(adId: string, userId: string, forWebsite: boolean): Promise<boolean>
+    createAdClick(adId: string, userId: string, forWebsite: boolean): Promise<boolean>;
+    addCretidToUserByAdmin(credit:number, userId: string):Promise<boolean>
 }

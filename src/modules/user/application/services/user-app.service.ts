@@ -536,4 +536,11 @@ async getAdminDashboard(days: number = 7):Promise<ApiResponseInterface<any>> {
   });
 }
 
+
+async addCretidToUserByAdmin(id:string, credit:number, userId: string):Promise<ApiResponseInterface<boolean>> {
+  const result = await this.userRepository.addCretidToUserByAdmin(credit,userId);
+
+  return ResponseBuilder.success(result);
+}
+
 }
