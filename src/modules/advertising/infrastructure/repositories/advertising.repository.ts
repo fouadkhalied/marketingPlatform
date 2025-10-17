@@ -777,7 +777,7 @@ async deactivateUserAd(userId: string, adId: string): Promise<Ad> {
   }
 
   // Check if already inactive
-  if (!existingAd.active) {
+  if (!existingAd.userActivation) {
     throw ErrorBuilder.build(
       ErrorCode.VALIDATION_ERROR,
       "Ad is already inactive"
