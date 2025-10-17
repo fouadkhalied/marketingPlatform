@@ -804,4 +804,51 @@ async deactivateUserAd(userId: string, adId: string): Promise<Ad> {
   return deactivatedAd;
 }
 
+async deactivateUserAdByAdmin(userId: string, adId: string): Promise<Ad> {
+  // Verify the ad belongs to the user
+  const [existingAd] = await db
+    .select()
+    .from(ads)
+    .where(
+      and(
+        eq(ads.id, adId),
+      )
+    )
+    .limit(1);
+
+  if (!existingAd) {
+    throw ErrorBuilder.build(
+      ErrorCode.AD_NOT_FOUND,
+      "Ad not found or you don't have permission to deactivate this ad"
+    );
+  }
+
+  // Check if already inactive
+  if (!existingAd.active) {
+    throw ErrorBuilder.build(
+      ErrorCode.VALIDATION_ERROR,
+      "Ad is already inactive"
+    );
+  }
+
+  // Deactivate the ad
+  const [deactivatedAd] = await db
+    .update(ads)
+    .set({
+      active: false,
+      updatedAt: new Date()
+    })
+    .where(eq(ads.id, adId))
+    .returning();
+
+  if (!deactivatedAd) {
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to deactivate ad"
+    );
+  }
+
+  return deactivatedAd;
+}
+
 }

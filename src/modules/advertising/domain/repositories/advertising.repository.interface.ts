@@ -25,4 +25,5 @@ export interface IAdvertisingRepository {
     assignCreditToAd(userId: string, adId: string, credit: number): Promise<Ad | null>
     hasSufficientBalance(userId: string, credit: number): Promise<boolean>
     deactivateUserAd(userId: string, adId: string): Promise<Ad>
+    deactivateUserAdByAdmin(userId: string, adId: string): Promise<Ad>
 }  

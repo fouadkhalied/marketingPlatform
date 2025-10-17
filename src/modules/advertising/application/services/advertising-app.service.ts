@@ -434,10 +434,17 @@ async activateAd(
   // Add to UserAppService class
 async deactivateUserAd(
   userId: string,
-  adId: string
+  adId: string,
+  role: string
 ): Promise<ApiResponseInterface<Ad>> {
   try {
-    const deactivatedAd = await this.advertisingRepository.deactivateUserAd(userId, adId);
+
+    let deactivatedAd;
+
+    if(role === UserRole.USER)
+     deactivatedAd = await this.advertisingRepository.deactivateUserAd(userId, adId);
+   else 
+    deactivatedAd = await this.advertisingRepository.deactivateUserAdByAdmin(userId, adId)
     
     return ResponseBuilder.success(deactivatedAd, "Ad deactivated successfully");
   } catch (error: any) {

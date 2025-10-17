@@ -609,8 +609,9 @@ async deactivateUserAd(req: Request, res: Response): Promise<void> {
     }
 
     const userId = req.user.id;
+    const role = req.user.role;
 
-    const result = await this.advertisingService.deactivateUserAd(userId, id);
+    const result = await this.advertisingService.deactivateUserAd(userId, id, role);
     const statusCode = this.getStatusCode(result);
 
     res.status(statusCode).json(result);
