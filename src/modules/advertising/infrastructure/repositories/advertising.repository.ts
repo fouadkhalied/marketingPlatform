@@ -668,6 +668,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
         const whereConditions = and(
           eq(ads.status, "approved"),
           eq(ads.active, true),
+          eq(ads.userActivation, true),
           gt(ads.impressionsCredit, 0),
           targetCities.length > 0
             ? sql`${ads.targetCities} && ARRAY[${sql.join(
@@ -787,7 +788,7 @@ async deactivateUserAd(userId: string, adId: string): Promise<Ad> {
   const [deactivatedAd] = await db
     .update(ads)
     .set({
-      active: false,
+      userActivation: false,
       updatedAt: new Date()
     })
     .where(eq(ads.id, adId))
