@@ -176,7 +176,7 @@ export class GoogleAppService {
   }
 
   authFailure(req: Request, res: Response) {
-    res.status(401).json({ error: "Google authentication failed" });
+    res.redirect("https://octopusad.com/google/failure")
   }
 
   logout(req: Request, res: Response) {
