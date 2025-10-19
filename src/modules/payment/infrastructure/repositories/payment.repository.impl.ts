@@ -225,9 +225,7 @@ export class PaymentRepositoryImpl implements PaymentRepository {
               .from(purchases)
               .where(eq(purchases.userId, filter.userId))
               .orderBy(
-                sortOrder === 'desc'
-                  ? sql`${sortBy} desc`
-                  : sql`${sortBy} asc`
+                 sql`${sortBy} desc`
               )
               .limit(pagination.limit)
               .offset(offset),
@@ -297,7 +295,7 @@ export class PaymentRepositoryImpl implements PaymentRepository {
               .from(purchases)
               .innerJoin(users, eq(users.id, purchases.userId))
               .orderBy(
-                sortOrder === "desc" ? sql`${sortBy} desc` : sql`${sortBy} asc`
+                sql`${sortBy} desc`
               )
               .limit(pagination.limit)
               .offset(offset),
