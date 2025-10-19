@@ -169,7 +169,7 @@ export class GoogleAppService {
         });
 
         res.redirect(
-          `https://octopusadmarketing.vercel.app/dashboard?${params.toString()}`
+          `https://octopusad.com/dashboard?${params.toString()}`
         );
       }
     )(req, res, next);
