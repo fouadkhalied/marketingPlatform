@@ -129,7 +129,7 @@ app.use(cors({
       "https://marketing-platform-six.vercel.app",
       "http://octopusadmarketing.vercel.app",
       "https://octopusadmarketing.vercel.app",
-      "octopusadmarketing.vercel.app"
+      "https://octopusad.com"
     ];
     
     // Allow requests with no origin (mobile apps, curl, etc.)
