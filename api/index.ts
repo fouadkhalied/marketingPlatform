@@ -7,7 +7,8 @@ import slowDown from 'express-slow-down';
 import compression from 'compression';
 import hpp from 'hpp';
 import multer from "multer";
-
+import fs from "fs";
+import https from "https";
 
 import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
 import { createPaymentController } from "../src/modules/payment/interfaces/factories/payment.factory";
@@ -20,6 +21,13 @@ import passport from 'passport';
 
 const app = express();
 const upload = multer();
+
+
+// certificate options
+const options = {
+  key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/fullchain.pem"),
+};
 
 // ============================================
 // 1. SECURITY HEADERS & HELMET
@@ -529,9 +537,9 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Local dev listener (ignored on Vercel)
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(3000, () => console.log('🚀 Secure server running on http://localhost:3000'));
-}
+
+https.createServer(options, app).listen(3000, () => {
+  console.log("✅ HTTPS Server running at https://octopusad.com:3000");
+});
 
 export default app;
