@@ -11,21 +11,32 @@ export const pagesTypeEnum = pgEnum("page_type", ["facebook", "instagram", "snap
 export const oauthEnum = pgEnum("oauth_provider", ["normal", "google", "facebook"]);
 export const currencyEnum = pgEnum("currency_enum", ["usd", "sar"]);
 export const middleEastCountries = pgEnum("middleEastCountries", [
-  "Bahrain",
-  "Egypt",
-  "Iran",
-  "Iraq",
-  "Palastine",
-  "Jordan",
-  "Kuwait",
-  "Lebanon",
-  "Oman",
-  "Palestine",
-  "Qatar",
-  "SaudiArabia",
-  "Syria",
-  "UnitedArabEmirates",
-  "Yemen"
+  "riyadh",
+  "jeddah",
+  "mecca",
+  "medina",
+  "dammam",
+  "khobar",
+  "dhahran",
+  "jubail",
+  "tabuk",
+  "abha",
+  "khamis-mushait",
+  "taif",
+  "qassim",
+  "buraydah",
+  "hail",
+  "najran",
+  "jazan",
+  "yanbu",
+  "al-kharj",
+  "hafr-al-batin",
+  "al-baha",
+  "ar-ar",
+  "sakaka",
+  "al-majmaah",
+  "al-qatif",
+  "al-zulfi"
 ]);
 
 
