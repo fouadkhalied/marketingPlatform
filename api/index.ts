@@ -9,6 +9,7 @@ import hpp from 'hpp';
 import multer from "multer";
 import fs from "fs";
 import https from "https";
+import http from "http";
 
 import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
 import { createPaymentController } from "../src/modules/payment/interfaces/factories/payment.factory";
@@ -542,4 +543,32 @@ https.createServer(options, app).listen(3000,'0.0.0.0', () => {
   console.log("✅ HTTPS Server running at https://octopusad.com:3000");
 });
 
+const httpApp = express();
+
+httpApp.use('*', (req, res) => {
+  const httpsUrl = `https://${req.hostname}${req.url}`;
+  console.log(`Redirecting HTTP request to: ${httpsUrl}`);
+  res.redirect(301, httpsUrl);
+});
+
+// Start HTTP server on port 80
+http.createServer(httpApp).listen(80, '0.0.0.0', () => {
+  console.log("✅ HTTP Server running on port 80 (redirecting to HTTPS)");
+});
+
+// Start HTTPS server on port 443 (or 3000)
+https.createServer(options, app).listen(443, '0.0.0.0', () => {
+  console.log("✅ HTTPS Server running at https://octopusad.com:443");
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');  
+  process.exit(0);
+});
 export default app;
