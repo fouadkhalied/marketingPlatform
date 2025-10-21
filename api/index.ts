@@ -77,7 +77,7 @@ const globalLimiter = rateLimit({
 // Auth endpoints rate limit (stricter)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit auth attempts
+  max: 10000, // Limit auth attempts
   message: {
     error: 'Too many authentication attempts, please try again later.',
   },
@@ -96,7 +96,7 @@ const passwordResetLimiter = rateLimit({
 // Registration rate limit
 const registrationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // Only 3 registration attempts per hour per IP
+  max: 10000, // Only 3 registration attempts per hour per IP
   message: {
     error: 'Too many registration attempts, please try again later.',
   },
