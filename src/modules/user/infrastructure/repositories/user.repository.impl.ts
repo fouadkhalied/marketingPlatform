@@ -440,6 +440,15 @@ async getDashboardStats(userId: string, days: number = 7): Promise<DashboardStat
 
     const adIds = userAds.map(ad => ad.id);
 
+       // Get user balance
+       const [userBalance] = await db
+       .select({ 
+         balance: users.balance,
+         freeViewsCredits: users.freeViewsCredits 
+       })
+       .from(users)
+       .where(eq(users.id, userId));
+
     if (adIds.length === 0) {
       return {
         totalImpressions: 0,
@@ -448,7 +457,7 @@ async getDashboardStats(userId: string, days: number = 7): Promise<DashboardStat
         clickGrowth: 0,
         clickThroughRate: 0,
         ctrGrowth: 0,
-        remainingBalance: 0,
+        remainingBalance: userBalance?.balance || 0,
         balanceGrowth: 0,
       };
     }
@@ -498,15 +507,6 @@ async getDashboardStats(userId: string, days: number = 7): Promise<DashboardStat
           lte(clicksEvents.createdAt, previousPeriodEnd)
         )
       );
-
-    // Get user balance
-    const [userBalance] = await db
-      .select({ 
-        balance: users.balance,
-        freeViewsCredits: users.freeViewsCredits 
-      })
-      .from(users)
-      .where(eq(users.id, userId));
 
     const totalImpressions = Number(currentImpressions[0]?.count || 0);
     const prevImpressions = Number(previousImpressions[0]?.count || 0);

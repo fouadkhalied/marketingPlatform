@@ -71,7 +71,7 @@ export const ksaCitiesEnum = pgEnum("ksa_cities", [
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").unique(),
+  username: text("username"),
   email: text("email").notNull().unique(),
   password: text("password"), // nullable now
   googleId: text("google_id"),
