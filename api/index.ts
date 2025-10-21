@@ -552,7 +552,7 @@ httpApp.use('*', (req, res) => {
 });
 
 // Start HTTP server on port 80
-http.createServer(httpApp).listen(80, () => {
+http.createServer(httpApp).listen(4000, () => {
   console.log("✅ HTTP Server running on port 80 (redirecting to HTTPS)");
 });
 
