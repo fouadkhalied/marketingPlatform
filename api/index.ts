@@ -25,10 +25,10 @@ const upload = multer();
 
 
 // certificate options
-// const options = {
-//   key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
-//   cert: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/fullchain.pem"),
-// };
+const options = {
+  key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/fullchain.pem"),
+};
 
 // ============================================
 // 1. SECURITY HEADERS & HELMET
@@ -537,8 +537,11 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
+// app.listen(3000, () => {
+//   console.log("✅ HTTP Server running on port 3000");
+// });
 
-https.createServer(app).listen(3000, () => {
+https.createServer(options,app).listen(3000, () => {
   console.log("✅ HTTPS Server running at https://octopusad.com:3000");
 });
 
