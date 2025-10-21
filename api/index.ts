@@ -77,7 +77,7 @@ const globalLimiter = rateLimit({
 // Auth endpoints rate limit (stricter)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit auth attempts
+  max: 50, // Limit auth attempts
   message: {
     error: 'Too many authentication attempts, please try again later.',
   },
@@ -135,7 +135,6 @@ app.use(cors({
       "http://localhost:3002",
       "http://localhost:3003",
       "http://localhost:5000",
-      "https://octopusadmarketing.vercel.app",
       "http://octopusad.com",
       "https://octopusad.com",
       "https://octopusad.com/"
