@@ -20,6 +20,8 @@ export interface IAdvertisingRepository {
     activateAd(id: string):Promise<Ad>;
     activateUserAd(id: string, userId:string):Promise<Ad>;
 
+    promoteAd(id: string, userId: string): Promise<Ad>;
+
     getAllPagesForUser(isActive: boolean, userId: string, params: PaginationParams) : Promise<PaginatedResponse<autheticatedPage>>
     getPageAccessTokenById(userId: string,pageId: string): Promise<string | null>
     assignCreditToAd(userId: string, adId: string, credit: number): Promise<Ad | null>

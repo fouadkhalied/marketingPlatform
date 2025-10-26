@@ -460,4 +460,26 @@ async deactivateUserAd(
     );
   }
 }
+
+async promoteAd(
+  userId: string,
+  adId: string
+): Promise<ApiResponseInterface<Ad>> {
+  try {
+
+    const promoteAd = await this.advertisingRepository.promoteAd(adId,userId)
+    
+    return ResponseBuilder.success(promoteAd, "Ad promoted successfully");
+  } catch (error: any) {
+    if (error.code && error.message) {
+      return error;
+    }
+    
+    return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      error.message || "Failed to deactivate ad"
+    );
+  }
+}
+
 }

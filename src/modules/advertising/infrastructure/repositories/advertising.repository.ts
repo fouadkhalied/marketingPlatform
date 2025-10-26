@@ -1,4 +1,4 @@
-﻿import { and, eq, gt, inArray, like, or, sql } from "drizzle-orm";
+﻿import { and, desc, eq, gt, inArray, like, or, sql } from "drizzle-orm";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
 import { db } from "../../../../infrastructure/db/connection";
 import { Ad, adminImpressionRatio, ads , impressionsEvents, InsertAd, socialMediaPages, users } from "../../../../infrastructure/shared/schema/schema";
@@ -724,7 +724,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
           .from(ads)
           .where(whereConditions);
     
-        // ✅ Fetch paginated ads
+        // ✅ Fetch paginated ads with promoted ads first
         const results = await db
           .select({
             id: ads.id,
@@ -737,11 +737,16 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             impressions: ads.totalImpressionsOnAdd,
             targetCities: ads.targetCities,
             websiteUrl: ads.websiteUrl,
-            websiteClicks:ads.websiteClicks,
-            phoneNumber:ads.phoneNumber
+            websiteClicks: ads.websiteClicks,
+            phoneNumber: ads.phoneNumber,
+            hasPromoted: ads.hasPromoted
           })
           .from(ads)
           .where(whereConditions)
+          .orderBy(
+            desc(ads.hasPromoted), // Promoted ads first (true before false)
+            desc(ads.createdAt)     // Then by creation date (newest first)
+          )
           .limit(limit)
           .offset(offset);
     
@@ -788,7 +793,6 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
         );
       }
     }
-    
     // Add to your repository
 async deactivateUserAd(userId: string, adId: string): Promise<Ad> {
   // Verify the ad belongs to the user
@@ -883,6 +887,81 @@ async deactivateUserAdByAdmin(userId: string, adId: string): Promise<Ad> {
   }
 
   return deactivatedAd;
+}
+
+
+async promoteAd(id: string, userId: string): Promise<Ad> {
+  const PROMOTION_COST = 10;
+
+  return await db.transaction(async (tx) => {
+    // Verify the ad exists and belongs to the user
+    const [existingAd] = await tx
+      .select()
+      .from(ads)
+      .where(
+        and(
+          eq(ads.id, id),
+          eq(ads.userId, userId)
+        )
+      )
+      .limit(1);
+
+    if (!existingAd) {
+      throw ErrorBuilder.build(
+        ErrorCode.AD_NOT_FOUND,
+        "Ad not found or you don't have permission to promote this ad"
+      );
+    }
+
+    // Check if already promoted
+    if (existingAd.hasPromoted) {
+      throw ErrorBuilder.build(
+        ErrorCode.VALIDATION_ERROR,
+        "Ad is already promoted"
+      );
+    }
+
+    // Get user's current balance
+    const [user] = await tx
+      .select({ balance: users.balance })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user || user.balance! < PROMOTION_COST) {
+      throw ErrorBuilder.build(
+        ErrorCode.INSUFFICIENT_BALANCE,
+        `Insufficient balance. Promotion costs ${PROMOTION_COST} credits`
+      );
+    }
+
+    // Deduct balance from user
+    await tx
+      .update(users)
+      .set({
+        balance: sql`${users.balance} - ${PROMOTION_COST}`
+      })
+      .where(eq(users.id, userId));
+
+    // Promote the ad
+    const [promotedAd] = await tx
+      .update(ads)
+      .set({
+        hasPromoted: true,
+        updatedAt: new Date()
+      })
+      .where(eq(ads.id, id))
+      .returning();
+
+    if (!promotedAd) {
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Failed to promote ad"
+      );
+    }
+
+    return promotedAd;
+  });
 }
 
 }

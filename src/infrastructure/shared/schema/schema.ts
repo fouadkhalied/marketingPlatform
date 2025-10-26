@@ -117,6 +117,7 @@ export const users = pgTable("users", {
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
     likesCount:integer().notNull().default(0),
     active:boolean().notNull().default(false),
+    hasPromoted:boolean().notNull().default(false),
     
     userActivation:boolean().notNull().default(true),
     

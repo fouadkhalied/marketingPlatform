@@ -443,6 +443,10 @@ app.put('/api/advertising/:id/deactivate',
   AuthMiddleware(UserRole.USER), 
   (req, res) => advertisingController.deactivateUserAd(req, res));
 
+app.put('/api/advertising/:id/promote', 
+    AuthMiddleware(UserRole.USER), 
+    (req, res) => advertisingController.promoteAd(req, res));
+  
 app.get(
   "/api/advertising/:id",
   AuthMiddleware(UserRole.USER),

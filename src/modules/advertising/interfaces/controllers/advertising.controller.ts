@@ -642,4 +642,53 @@ async deactivateUserAd(req: Request, res: Response): Promise<void> {
     });
   }
 }
+
+async promoteAd(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Ad ID is required',
+        error: {
+          code: 'MISSING_REQUIRED_FIELD',
+          message: 'Ad ID is required'
+        }
+      });
+      return;
+    }
+
+    if (!req.user?.id) {
+      res.status(401).json({
+        success: false,
+        message: "User must be authenticated",
+        error: {
+          code: "UNAUTHORIZED",
+          message: "User must be authenticated"
+        }
+      });
+      return;
+    }
+
+    const userId = req.user.id;
+
+    const result = await this.advertisingService.promoteAd(userId,id);
+    const statusCode = this.getStatusCode(result);
+
+    res.status(statusCode).json(result);
+  } catch (err: any) {
+    console.error('Error deactivating ad:', err);
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to deactivate ad',
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to deactivate ad',
+        details: err.message
+      }
+    });
+  }
+}
 }
