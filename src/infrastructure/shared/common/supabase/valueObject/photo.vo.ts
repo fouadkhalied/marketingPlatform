@@ -1,7 +1,7 @@
 import { PhotosInterface } from "../interfaces/photo.interface";
 
 export class Photo {
-  private maxPhotos: number = 1;
+  private maxPhotos: number = 5;
   private maxFileSize: number = 1 * 1024 * 1024; // 1 MB
   private allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -39,17 +39,18 @@ export class Photo {
     return `ad-${uniqueSuffix}.${fileExtension}`;
   }
 
-  public prepareForUpload(): PhotosInterface {
-    const file = this.files[0]; // ✅ since only 1 file is allowed
-    const extension = file.originalname.split('.').pop();
-    const filename = this.generateFilename(extension!);
-
-    return {
-      buffer: file.buffer,
-      mimeType: file.mimetype,
-      size: file.size,
-      fileName: filename,
-      isMain: true // ✅ always main since only one photo
-    };
+  public prepareForUpload(): PhotosInterface[] {
+    const files = this.files; 
+    return files.map((file: Express.Multer.File) => {
+      const extension = file.originalname.split('.').pop();
+      const filename = this.generateFilename(extension!);
+      return {
+        fileName: filename,
+        isMain: true,
+        buffer: file.buffer,
+        mimeType: file.mimetype,
+        size: file.size
+      };
+    });
   }
 }

@@ -11,22 +11,30 @@ export class UploadPhoto {
   }
 
   async execute(
-    file: Express.Multer.File // ✅ single file instead of array
+    files: Express.Multer.File[]
   ): Promise<PhotoUploadResult> {
     try {
       // prepare photo object (VO validation etc.)
-      const photo: PhotosInterface = new Photo([file]).prepareForUpload();
+      const photos: PhotosInterface[] = new Photo(files).prepareForUpload();
 
       // upload the single photo
-      await this.uploader.upload(photo);
+      const uploadedPhotos = await Promise.all(photos.map(async (photo) => {
+        const uploaded = await this.uploader.upload(photo);
+        return {
+          fileName: photo.fileName,
+          url: uploaded ? await this.uploader.getUrl(photo.fileName) : null
+        };
+      }));
 
       // get photo URL
-      const photoUrl: string = await this.uploader.getUrl(photo.fileName);
-
+      Promise.all(uploadedPhotos.map(async (photo) => {
+        const photoUrl = await this.uploader.getUrl(photo.fileName);
+        return photoUrl;
+      }));
       return {
         success: true,
         message: "ad photo uploaded successfully",
-        url: photoUrl
+        url: uploadedPhotos.map((photo) => photo.url!).filter((url): url is string => url !== null)
       };
     } catch (error: any) {
       throw new Error(error.message)

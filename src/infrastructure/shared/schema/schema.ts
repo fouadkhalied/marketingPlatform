@@ -102,8 +102,9 @@ export const users = pgTable("users", {
     websiteUrl: text("target_url").notNull(),
     websiteClicks: integer().notNull().default(0),
     
-    imageUrl: text("image_url"),
-    
+    imageUrl: text("image_url").array().notNull().default([]),
+    phoneNumber:text("phone_number").notNull().default(""),
+
     status: adStatusEnum("status").notNull().default("pending"),
     targetAudience: text("target_audience"),
     budgetType: text("budget_type").notNull(), // "impressions" or "clicks"

@@ -25,10 +25,10 @@ const upload = multer();
 
 
 // certificate options
-const options = {
-  key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
-  cert: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/fullchain.pem"),
-};
+// const options = {
+//   key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
+//   cert: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/fullchain.pem"),
+// };
 
 // ============================================
 // 1. SECURITY HEADERS & HELMET
@@ -382,9 +382,9 @@ app.get("/api/advertising/search", AuthMiddleware(UserRole.USER), (req,res) => a
 
 app.post('/api/advertising',AuthMiddleware(UserRole.USER), (req,res) => advertisingController.createAd(req,res)) 
 
-app.post('/api/advertising/uploadPhoto/:id',AuthMiddleware(UserRole.USER), upload.single("photo"), (req,res) => advertisingController.uploadPhotoToAd(req,res))
+app.post('/api/advertising/uploadPhoto/:id',AuthMiddleware(UserRole.USER), upload.array("photo"), (req,res) => advertisingController.uploadPhotoToAd(req,res))
 
-app.delete('/api/advertising/deletePhoto/:id',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.deletePhotoFromAd(req,res))
+app.delete('/api/advertising/deletePhoto/:id/:index',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.deletePhotoFromAd(req,res))
 
 app.get(
   "/api/advertising/listApprovedAdsForUser",
@@ -537,25 +537,25 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// app.listen(3000, () => {
-//   console.log("✅ HTTP Server running on port 3000");
+app.listen(3000, () => {
+  console.log("✅ HTTP Server running on port 3000");
+});
+
+// https.createServer(options,app).listen(3000, () => {
+//   console.log("✅ HTTPS Server running at https://octopusad.com:3000");
 // });
 
-https.createServer(options,app).listen(3000, () => {
-  console.log("✅ HTTPS Server running at https://octopusad.com:3000");
-});
+// const httpApp = express();
 
-const httpApp = express();
+// httpApp.use('*', (req, res) => {
+//   const httpsUrl = `https://octopusad.com`;
+//   console.log(`Redirecting HTTP request to: ${httpsUrl}`);
+//   res.redirect(301, httpsUrl);
+// });
 
-httpApp.use('*', (req, res) => {
-  const httpsUrl = `https://octopusad.com`;
-  console.log(`Redirecting HTTP request to: ${httpsUrl}`);
-  res.redirect(301, httpsUrl);
-});
-
-// Start HTTP server on port 80
-http.createServer(httpApp).listen(4000, () => {
-  console.log("✅ HTTP Server running on port 80 (redirecting to HTTPS)");
-});
+// // Start HTTP server on port 80
+// http.createServer(httpApp).listen(4000, () => {
+//   console.log("✅ HTTP Server running on port 80 (redirecting to HTTPS)");
+// });
 
 export default app;

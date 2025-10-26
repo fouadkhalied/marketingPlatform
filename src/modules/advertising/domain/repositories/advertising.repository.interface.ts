@@ -5,8 +5,8 @@ import { autheticatedPage } from "../../application/dto/authenticatedPage.dto";
 
 export interface IAdvertisingRepository {
     create(ad: InsertAd,): Promise<string>;
-    addPhotoToAd(id:string, photo:string): Promise<boolean>;
-    deletePhotoFromAd(id: string): Promise<boolean>;
+    addPhotoToAd(id:string, photo: string[]): Promise<boolean>;
+    deletePhotoFromAd(id: string, index: number): Promise<boolean>;
     findById(id: string): Promise<Ad | null>;
     findAllAdsForAdmin(status: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
     findAllAdsForUser(status: string , userId: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;

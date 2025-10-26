@@ -40,44 +40,77 @@ export class AdvertisingRepository implements IAdvertisingRepository {
   }
   
 
-    async addPhotoToAd(id: string, photo: string): Promise<boolean> {
-      try {
-        const [updated] = await db
-          .update(ads)
-          .set({ imageUrl: photo }) 
-          .where(eq(ads.id, id))
-          .returning({ id: ads.id });
-    
-        if (!updated) {
-          throw ErrorBuilder.build(
-            ErrorCode.DATABASE_ERROR,
-            `Failed to add photo to ad with id ${id}`
-          );
-        }
-    
-        return true;
-      } catch (error) {
+  async addPhotoToAd(id: string, photos: string[]): Promise<boolean> {
+    try {
+      // Fetch current imageUrls
+      const [current] = await db
+        .select({ imageUrls: ads.imageUrl })
+        .from(ads)
+        .where(eq(ads.id, id));
+  
+      if (!current) {
         throw ErrorBuilder.build(
           ErrorCode.DATABASE_ERROR,
-          "Failed to add photo to ad",
-          error instanceof Error ? error.message : error
+          `Ad with id ${id} not found`
         );
       }
+  
+      // Merge existing URLs with new ones
+      const updatedUrls = [...(current.imageUrls || []), ...photos];
+  
+      // Update with merged array
+      const [updated] = await db
+        .update(ads)
+        .set({ imageUrl: updatedUrls }) 
+        .where(eq(ads.id, id))
+        .returning({ id: ads.id });
+  
+      if (!updated) {
+        throw ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          `Failed to add photo to ad with id ${id}`
+        );
+      }
+  
+      return true;
+    } catch (error) {
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Failed to add photo to ad",
+        error instanceof Error ? error.message : error
+      );
     }
-
-    async deletePhotoFromAd(id: string): Promise<boolean> {
+  }
+    async deletePhotoFromAd(id: string, index: number): Promise<boolean> {
       try {
-        
+        // First, get the current ad to access its imageUrl
+        const [ad] = await db
+          .select({ imageUrl: ads.imageUrl })
+          .from(ads)
+          .where(eq(ads.id, id))
+          .limit(1);
+    
+        if (!ad || !ad.imageUrl) {
+          throw ErrorBuilder.build(
+            ErrorCode.AD_NOT_FOUND,
+            `Ad with id ${id} not found or has no images`
+          );
+        }
+    
+        // Remove the photo at the specified index
+        const updatedImageUrl = ad.imageUrl.filter((_, i) => i !== index);
+    
+        // Update the ad with the new imageUrl array
         const [updated] = await db
           .update(ads)
-          .set({ imageUrl: "" }) 
+          .set({ imageUrl: updatedImageUrl })
           .where(eq(ads.id, id))
           .returning({ id: ads.id });
     
         if (!updated) {
           throw ErrorBuilder.build(
             ErrorCode.DATABASE_ERROR,
-            `Failed to add photo to ad with id ${id}`
+            `Failed to delete photo from ad with id ${id}`
           );
         }
     
@@ -85,7 +118,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
       } catch (error) {
         throw ErrorBuilder.build(
           ErrorCode.DATABASE_ERROR,
-          "Failed to add photo to ad",
+          "Failed to delete photo from ad",
           error instanceof Error ? error.message : error
         );
       }
@@ -704,7 +737,8 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             impressions: ads.totalImpressionsOnAdd,
             targetCities: ads.targetCities,
             websiteUrl: ads.websiteUrl,
-            websiteClicks:ads.websiteClicks
+            websiteClicks:ads.websiteClicks,
+            phoneNumber:ads.phoneNumber
           })
           .from(ads)
           .where(whereConditions)

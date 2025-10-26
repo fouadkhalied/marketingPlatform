@@ -55,9 +55,9 @@ export class AdvertisingController {
   
   async uploadPhotoToAd(req: Request, res: Response): Promise<void> {
     try {
-      const file = req.file as Express.Multer.File;
+      const files = req.files as Express.Multer.File[];
   
-      if (!file) {
+      if (!files || files.length === 0) {
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
           "No files uploaded"
@@ -69,6 +69,7 @@ export class AdvertisingController {
       }
   
       const id = req.params.id; // make sure your route has :id
+
       if (!id) {
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
@@ -81,7 +82,7 @@ export class AdvertisingController {
       }
   
       // call service
-      const response = await this.advertisingService.uploadPhotoToAd(file, id);
+      const response = await this.advertisingService.uploadPhotoToAd(files, id);
   
       res.status(response.success ? 200 : 400).json(response);
     } catch (error) {
@@ -109,9 +110,21 @@ export class AdvertisingController {
           .json(errorResponse);
         return;
       }
+
+      const index = req.params.index;
+      if (!index) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          "photo index to delete is required"
+        );
+        res
+          .status(ERROR_STATUS_MAP[ErrorCode.MISSING_REQUIRED_FIELD])
+          .json(errorResponse);
+        return;
+      }
   
       // call service
-      const response = await this.advertisingService.deletePhotoFromAd(id);
+      const response = await this.advertisingService.deletePhotoFromAd(id, parseInt(index));
   
       res.status(response.success ? 200 : 400).json(response);
     } catch (error) {

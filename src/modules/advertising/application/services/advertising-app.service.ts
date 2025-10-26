@@ -54,13 +54,14 @@ export class AdvertisingAppService {
   }
   
   async uploadPhotoToAd(
-    photo: Express.Multer.File,
+    photo: Express.Multer.File[],
     adId: string
-  ): Promise<ApiResponseInterface<{ photo: string }>> {
+  ): Promise<ApiResponseInterface<{ photos: { url: string; index: number }[] }>> {
     try {
       // upload file 
       const photoUploadResult = await this.photoUploader.execute(photo);
 
+      console.log(photoUploadResult);
       
   
       // save photo URL in DB for the ad
@@ -76,7 +77,7 @@ export class AdvertisingAppService {
         );
       }
   
-      return ResponseBuilder.success({ photo: photoUploadResult.url });
+      return ResponseBuilder.success({ photos: photoUploadResult.url.map((url,index) => ({url:url,index:index})) });
     } catch (error) {
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
@@ -87,11 +88,12 @@ export class AdvertisingAppService {
   }
 
   async deletePhotoFromAd(
-    adId: string
+    adId: string,
+    index: number
   ): Promise<ApiResponseInterface<boolean>> {
     try {
 
-        const deletePhoto =await this.advertisingRepository.deletePhotoFromAd(adId);
+        const deletePhoto =await this.advertisingRepository.deletePhotoFromAd(adId,index);
 
         if (deletePhoto) {
           return ResponseBuilder.success(true);
