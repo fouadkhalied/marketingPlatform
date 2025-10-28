@@ -739,7 +739,13 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             websiteUrl: ads.websiteUrl,
             websiteClicks: ads.websiteClicks,
             phoneNumber: ads.phoneNumber,
-            hasPromoted: ads.hasPromoted
+            hasPromoted: ads.hasPromoted,
+            tiktokLink:ads.tiktokLink,
+            youtubeLink:ads.youtubeLink, 
+            googleAdsLink:ads.googleAdsLink, 
+            instagramLink:ads.instagramLink, 
+            facebookLink:ads.facebookLink, 
+            snapchatLink:ads.snapchatLink 
           })
           .from(ads)
           .where(whereConditions)
