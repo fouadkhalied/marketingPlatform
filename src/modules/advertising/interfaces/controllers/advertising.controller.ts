@@ -190,6 +190,8 @@ export class AdvertisingController {
       }
 
       const photoUrl = req.query.photoUrl as string;
+      console.log(photoUrl);
+      
       if (!photoUrl) {
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
