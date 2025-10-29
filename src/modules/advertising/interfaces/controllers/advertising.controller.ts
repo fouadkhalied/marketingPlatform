@@ -141,7 +141,7 @@ export class AdvertisingController {
         return;
       }
 
-      const photoUrl = req.params.photoUrl;
+      const photoUrl = req.query.photoUrl as string;
       if (!photoUrl) {
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
@@ -189,7 +189,7 @@ export class AdvertisingController {
         return;
       }
 
-      const photoUrl = req.params.photoUrl;
+      const photoUrl = req.query.photoUrl as string;
       if (!photoUrl) {
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
