@@ -86,14 +86,53 @@ export class AdvertisingAppService {
       );
     }
   }
+  
+  async updatePhotoFromAd(
+    photo: Express.Multer.File[],
+    adId: string,
+    userId: string,
+    photoUrl: string
+  ): Promise<ApiResponseInterface<{ photos: { url: string; index: number }[] }>> {
+    try {
+      // upload file 
+      const photoUploadResult = await this.photoUploader.execute(photo);
+
+      console.log(photoUploadResult);
+      
+  
+      // save photo URL in DB for the ad
+      const updated = await this.advertisingRepository.updatePhotoFromAd(
+        adId,
+        userId,
+        photoUploadResult.url[0],
+        photoUrl
+      );
+  
+      if (!updated) {
+        return ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          "Failed to attach photo to ad"
+        );
+      }
+  
+      return ResponseBuilder.success({ photos: photoUploadResult.url.map((url,index) => ({url:url,index:index})) });
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while uploading photo",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
 
   async deletePhotoFromAd(
     adId: string,
-    index: number
+    userID: string,
+    photoUrl: string
   ): Promise<ApiResponseInterface<boolean>> {
     try {
 
-        const deletePhoto =await this.advertisingRepository.deletePhotoFromAd(adId,index);
+        const deletePhoto =await this.advertisingRepository.deletePhotoFromAd(adId,userID,photoUrl);
 
         if (deletePhoto) {
           return ResponseBuilder.success(true);
@@ -466,9 +505,7 @@ async promoteAd(
   adId: string
 ): Promise<ApiResponseInterface<Ad>> {
   try {
-
     const promoteAd = await this.advertisingRepository.promoteAd(adId,userId)
-    
     return ResponseBuilder.success(promoteAd, "Ad promoted successfully");
   } catch (error: any) {
     if (error.code && error.message) {

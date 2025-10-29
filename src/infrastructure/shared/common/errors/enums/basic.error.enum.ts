@@ -20,6 +20,7 @@ export enum ErrorCode {
   RESOURCE_NOT_FOUND = "RESOURCE_NOT_FOUND",
   AD_NOT_FOUND = "AD_NOT_FOUND",
   USER_NOT_FOUND = "USER_NOT_FOUND",
+  PHOTO_NOT_FOUND = "PHOTO_NOT_FOUND",
   BAD_REQUEST = "BAD_REQUEST",
      
   // User-specific Errors

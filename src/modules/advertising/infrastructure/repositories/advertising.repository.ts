@@ -81,48 +81,69 @@ export class AdvertisingRepository implements IAdvertisingRepository {
       );
     }
   }
-    async deletePhotoFromAd(id: string, index: number): Promise<boolean> {
-      try {
-        // First, get the current ad to access its imageUrl
-        const [ad] = await db
-          .select({ imageUrl: ads.imageUrl })
-          .from(ads)
-          .where(eq(ads.id, id))
-          .limit(1);
-    
-        if (!ad || !ad.imageUrl) {
-          throw ErrorBuilder.build(
-            ErrorCode.AD_NOT_FOUND,
-            `Ad with id ${id} not found or has no images`
-          );
-        }
-    
-        // Remove the photo at the specified index
-        const updatedImageUrl = ad.imageUrl.filter((_, i) => i !== index);
-    
-        // Update the ad with the new imageUrl array
-        const [updated] = await db
-          .update(ads)
-          .set({ imageUrl: updatedImageUrl })
-          .where(eq(ads.id, id))
-          .returning({ id: ads.id });
-    
-        if (!updated) {
-          throw ErrorBuilder.build(
-            ErrorCode.DATABASE_ERROR,
-            `Failed to delete photo from ad with id ${id}`
-          );
-        }
-    
-        return true;
-      } catch (error) {
+  async deletePhotoFromAd(id: string, userId: string, photoUrl: string): Promise<boolean> {
+    try {
+      // First, get the current ad to access its imageUrl
+      const [ad] = await db
+        .select({ imageUrl: ads.imageUrl })
+        .from(ads)
+        .where(and(eq(ads.id, id), eq(ads.userId, userId)))
+        .limit(1);
+      
+      if (!ad || !ad.imageUrl) {
         throw ErrorBuilder.build(
-          ErrorCode.DATABASE_ERROR,
-          "Failed to delete photo from ad",
-          error instanceof Error ? error.message : error
+          ErrorCode.AD_NOT_FOUND,
+          `Ad with id ${id} not found or has no images`
         );
       }
+      
+      // Check if the photo URL exists in the array
+      if (!ad.imageUrl.includes(photoUrl)) {
+        throw ErrorBuilder.build(
+          ErrorCode.PHOTO_NOT_FOUND,
+          `Photo URL not found in ad with id ${id}`
+        );
+      }
+      
+      // Remove the photo at the specified URL
+      const updatedImageUrl = ad.imageUrl.filter((url) => url !== photoUrl);
+      
+      // Prevent deleting the last photo if business rule requires at least one
+      // if (updatedImageUrl.length === 0) {
+      //   throw ErrorBuilder.build(
+      //     ErrorCode.VALIDATION_ERROR,
+      //     'Cannot delete the last photo from an ad'
+      //   );
+      // }
+      
+      // Update the ad with the new imageUrl array
+      const [updated] = await db
+        .update(ads)
+        .set({ imageUrl: updatedImageUrl })
+        .where(and(eq(ads.id, id), eq(ads.userId, userId))) // Add userId check here too
+        .returning({ id: ads.id });
+      
+      if (!updated) {
+        throw ErrorBuilder.build(
+          ErrorCode.DATABASE_ERROR,
+          `Failed to delete photo from ad with id ${id}`
+        );
+      }
+      
+      return true;
+    } catch (error) {
+      // Re-throw custom errors as-is
+      if (error instanceof Error && error.name === 'CustomError') {
+        throw error;
+      }
+      
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Failed to delete photo from ad",
+        error instanceof Error ? error.message : String(error)
+      );
     }
+  }
     
   
     async findById(id: string): Promise<Ad | null> {
@@ -895,6 +916,68 @@ async deactivateUserAdByAdmin(userId: string, adId: string): Promise<Ad> {
   return deactivatedAd;
 }
 
+async updatePhotoFromAd(
+  id: string, 
+  userId: string, 
+  newPhotoUrl: string,
+  oldPhotoUrl: string
+): Promise<boolean> {
+  try {
+    // First, get the current ad to access its imageUrl
+    const [ad] = await db
+      .select({ imageUrl: ads.imageUrl })
+      .from(ads)
+      .where(and(eq(ads.id, id), eq(ads.userId, userId)))
+      .limit(1);
+    
+    if (!ad || !ad.imageUrl) {
+      throw ErrorBuilder.build(
+        ErrorCode.AD_NOT_FOUND,
+        `Ad with id ${id} not found or has no images`
+      );
+    }
+    
+    // Check if the old photo URL exists in the array
+    if (!ad.imageUrl.includes(oldPhotoUrl)) {
+      throw ErrorBuilder.build(
+        ErrorCode.PHOTO_NOT_FOUND,
+        `Photo URL not found in ad with id ${id}`
+      );
+    }
+    
+    // Replace the old photo URL with the new one
+    const updatedImageUrl = ad.imageUrl.map((url) => 
+      url === oldPhotoUrl ? newPhotoUrl : url
+    );
+    
+    // Update the ad with the new imageUrl array
+    const [updated] = await db
+      .update(ads)
+      .set({ imageUrl: updatedImageUrl })
+      .where(and(eq(ads.id, id), eq(ads.userId, userId)))
+      .returning({ id: ads.id });
+    
+    if (!updated) {
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        `Failed to update photo in ad with id ${id}`
+      );
+    }
+    
+    return true;
+  } catch (error) {
+    // Re-throw custom errors as-is
+    if (error instanceof Error && error.name === 'CustomError') {
+      throw error;
+    }
+    
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to update photo in ad",
+      error instanceof Error ? error.message : String(error)
+    );
+  }
+}
 
 async promoteAd(id: string, userId: string): Promise<Ad> {
   const PROMOTION_COST = 10;
