@@ -384,9 +384,9 @@ app.post('/api/advertising',AuthMiddleware(UserRole.USER), (req,res) => advertis
 
 app.post('/api/advertising/uploadPhoto/:id',AuthMiddleware(UserRole.USER), upload.array("photo"), (req,res) => advertisingController.uploadPhotoToAd(req,res))
 
-app.delete('/api/advertising/deletePhoto/:id/:photoUrl',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.deletePhotoFromAd(req,res))
+app.delete('/api/advertising/deletePhoto/:id',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.deletePhotoFromAd(req,res))
 
-app.put('/api/advertising/updatePhoto/:id/:photoUrl',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.updatePhotoFromAd(req,res))
+app.put('/api/advertising/updatePhoto/:id',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.updatePhotoFromAd(req,res))
 
 app.get(
   "/api/advertising/listApprovedAdsForUser",
