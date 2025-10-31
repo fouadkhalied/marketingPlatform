@@ -973,21 +973,13 @@ async updatePhotoFromAd(
     );
   }
 }
-
 async promoteAd(id: string, userId: string): Promise<Ad> {
-
   return await db.transaction(async (tx) => {
-    
     // Verify the ad exists and belongs to the user
     const [existingAd] = await tx
       .select()
       .from(ads)
-      .where(
-        and(
-          eq(ads.id, id),
-          eq(ads.userId, userId)
-        )
-      )
+      .where(and(eq(ads.id, id), eq(ads.userId, userId)))
       .limit(1);
 
     if (!existingAd) {
@@ -997,8 +989,6 @@ async promoteAd(id: string, userId: string): Promise<Ad> {
       );
     }
 
-    
-
     // Check if already promoted
     if (existingAd.hasPromoted) {
       throw ErrorBuilder.build(
@@ -1007,23 +997,27 @@ async promoteAd(id: string, userId: string): Promise<Ad> {
       );
     }
 
+    // Get promotion ratio
     const [ratio] = await tx
-        .select({ impressionsPerUnit: adminImpressionRatio.impressionsPerUnit })
-        .from(adminImpressionRatio)
-        .where(and(eq(adminImpressionRatio.currency, 'sar'), eq(adminImpressionRatio.promoted,true)));  
-
+      .select({ impressionsPerUnit: adminImpressionRatio.impressionsPerUnit })
+      .from(adminImpressionRatio)
+      .where(
+        and(
+          eq(adminImpressionRatio.currency, 'sar'),
+          eq(adminImpressionRatio.promoted, true)
+        )
+      );
 
     if (!ratio) {
       throw ErrorBuilder.build(
         ErrorCode.VALIDATION_ERROR,
-        "ratio for promoted ads not is found"
+        "Ratio for promoted ads not found"
       );
-    }    
+    }
 
-    const PROMOTION_COST:number = existingAd.impressionsCredit / ratio.impressionsPerUnit;
-    
-    console.log(PROMOTION_COST);
-    
+    // Calculate promotion cost (rounded to integer)
+    const promotionCost = Math.round(existingAd.impressionsCredit / ratio.impressionsPerUnit);
+    console.log('Promotion cost:', promotionCost);
 
     // Get user's current balance
     const [user] = await tx
@@ -1032,10 +1026,10 @@ async promoteAd(id: string, userId: string): Promise<Ad> {
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (!user || user.balance! < PROMOTION_COST) {
+    if (!user || user.balance === null || user.balance < promotionCost) {
       throw ErrorBuilder.build(
         ErrorCode.INSUFFICIENT_BALANCE,
-        `Insufficient balance. Promotion costs ${PROMOTION_COST} credits`
+        `Insufficient balance. Promotion costs ${promotionCost} credits`
       );
     }
 
@@ -1043,22 +1037,16 @@ async promoteAd(id: string, userId: string): Promise<Ad> {
     await tx
       .update(users)
       .set({
-        balance: sql`${users.balance} - ${PROMOTION_COST}`
+        balance: sql`${users.balance} - ${promotionCost}`
       })
       .where(eq(users.id, userId));
 
-
-      await tx
-      .update(ads)
-      .set({
-        spended: sql`${ads.spended} + ${PROMOTION_COST}`
-      })
-      .where(eq(ads.id, id));
-    // Promote the ad
+    // Promote the ad and update spend in a single query
     const [promotedAd] = await tx
       .update(ads)
       .set({
         hasPromoted: true,
+        spended: sql`${ads.spended} + ${promotionCost}`,
         updatedAt: new Date()
       })
       .where(eq(ads.id, id))
@@ -1075,6 +1063,81 @@ async promoteAd(id: string, userId: string): Promise<Ad> {
   });
 }
 
+async dePromoteAd(id: string, userId: string): Promise<Ad> {
+  return await db.transaction(async (tx) => {
+    // Verify the ad exists and belongs to the user
+    const [existingAd] = await tx
+      .select()
+      .from(ads)
+      .where(and(eq(ads.id, id), eq(ads.userId, userId)))
+      .limit(1);
+
+    if (!existingAd) {
+      throw ErrorBuilder.build(
+        ErrorCode.AD_NOT_FOUND,
+        "Ad not found or you don't have permission to depromote this ad"
+      );
+    }
+
+    // Check if already depromoted
+    if (!existingAd.hasPromoted) {
+      throw ErrorBuilder.build(
+        ErrorCode.VALIDATION_ERROR,
+        "Ad is already depromoted"
+      );
+    }
+
+    // Get promotion ratio
+    const [ratio] = await tx
+      .select({ impressionsPerUnit: adminImpressionRatio.impressionsPerUnit })
+      .from(adminImpressionRatio)
+      .where(
+        and(
+          eq(adminImpressionRatio.currency, 'sar'),
+          eq(adminImpressionRatio.promoted, true)
+        )
+      );
+
+    if (!ratio) {
+      throw ErrorBuilder.build(
+        ErrorCode.VALIDATION_ERROR,
+        "Ratio for promoted ads not found"
+      );
+    }
+
+    // Calculate refund amount (rounded to integer)
+    const refundAmount = Math.round(existingAd.impressionsCredit / ratio.impressionsPerUnit);
+    console.log('Refund amount:', refundAmount);
+
+    // Refund balance to user
+    await tx
+      .update(users)
+      .set({
+        balance: sql`${users.balance} + ${refundAmount}`
+      })
+      .where(eq(users.id, userId));
+
+    // Depromote the ad and update spend in a single query
+    const [dePromotedAd] = await tx
+      .update(ads)
+      .set({
+        hasPromoted: false,
+        spended: sql`${ads.spended} - ${refundAmount}`,
+        updatedAt: new Date()
+      })
+      .where(eq(ads.id, id))
+      .returning();
+
+    if (!dePromotedAd) {
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Failed to depromote ad"
+      );
+    }
+
+    return dePromotedAd;
+  });
+}
 
 async createPixel(pixelData: pixel): Promise<any> {
     // ✅ 1. Check if a pixel with the same platform + pixelId already exists

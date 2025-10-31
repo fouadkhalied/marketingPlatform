@@ -521,6 +521,26 @@ async promoteAd(
   }
 }
 
+async dePromoteAd(
+  userId: string,
+  adId: string
+): Promise<ApiResponseInterface<Ad>> {
+  try {
+    const promoteAd = await this.advertisingRepository.dePromoteAd(adId,userId)
+    return ResponseBuilder.success(promoteAd, "Ad de promoted successfully");
+  } catch (error: any) {
+    if (error.code && error.message) {
+      return error;
+    }
+    
+    return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      error.message || "Failed to deactivate ad"
+    );
+  }
+}
+
+
 
 async createPixel(pixel: pixel): Promise<ApiResponseInterface<pixel>> {
   try {
