@@ -525,7 +525,7 @@ app.post(
 // Get all pixels (with pagination)
 app.get(
   '/api/pixels',
-  AuthMiddleware(UserRole.ADMIN),
+  AuthMiddleware(UserRole.USER),
   (req, res) => advertisingController.getAllPixels(req, res)
 );
 
