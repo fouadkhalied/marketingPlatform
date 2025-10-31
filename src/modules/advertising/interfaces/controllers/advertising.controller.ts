@@ -1076,7 +1076,7 @@ async generatePixelCodeForAllPixels(req: Request, res: Response): Promise<void> 
     // Generate pixel codes for all pixels
     const pixelCodes = await Promise.all(
       pixels.data.map(async (pixel) => {
-        return await this.advertisingService.generatePixelCode(pixel.pixelId);
+        return await this.advertisingService.generatePixelCode(pixel.id);
       })
     );
 
