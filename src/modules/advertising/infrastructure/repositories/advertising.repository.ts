@@ -901,7 +901,8 @@ async updatePhotoFromAd(
   id: string, 
   userId: string, 
   newPhotoUrl: string,
-  oldPhotoUrl: string
+  oldPhotoUrl: string,
+  role: string
 ): Promise<boolean> {
   try {
     // First, get the current ad to access its imageUrl
@@ -912,10 +913,12 @@ async updatePhotoFromAd(
       .limit(1);
     
     if (!ad || !ad.imageUrl) {
-      throw ErrorBuilder.build(
-        ErrorCode.AD_NOT_FOUND,
-        `Ad with id ${id} not found or has no images`
-      );
+      if (role !== "admin") {
+        throw ErrorBuilder.build(
+          ErrorCode.AD_NOT_FOUND,
+          `Ad with id ${id} not found or has no images`
+        );
+      }
     }
     
     // Check if the old photo URL exists in the array

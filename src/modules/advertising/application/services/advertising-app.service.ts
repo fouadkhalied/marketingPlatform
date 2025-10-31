@@ -91,7 +91,8 @@ export class AdvertisingAppService {
     photo: Express.Multer.File[],
     adId: string,
     userId: string,
-    photoUrl: string
+    photoUrl: string,
+    role: string
   ): Promise<ApiResponseInterface<{ photos: { url: string; index: number }[] }>> {
     try {
       // upload file 
@@ -105,7 +106,8 @@ export class AdvertisingAppService {
         adId,
         userId,
         photoUploadResult.url[0],
-        photoUrl
+        photoUrl,
+        role
       );
   
       if (!updated) {

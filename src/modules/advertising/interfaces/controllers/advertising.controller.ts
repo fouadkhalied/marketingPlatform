@@ -101,7 +101,7 @@ export class AdvertisingController {
 
   async updatePhotoFromAd(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.user?.id) {
+      if (!req.user?.id || req.user.role) {
         res.status(401).json({ error: "User not authenticated" });
         return;
       }
@@ -156,7 +156,7 @@ export class AdvertisingController {
       }
   
       // call service
-      const response = await this.advertisingService.updatePhotoFromAd(files,id,req.user.id,photoUrl);
+      const response = await this.advertisingService.updatePhotoFromAd(files,id,req.user.id,photoUrl,req.user.role);
   
       res.status(response.success ? 200 : 400).json(response);
     } catch (error) {
