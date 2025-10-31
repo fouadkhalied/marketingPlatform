@@ -1084,7 +1084,7 @@ async generatePixelCodeForAllPixels(req: Request, res: Response): Promise<void> 
     res.status(200).json({
       success: true,
       message: 'Pixel codes generated successfully',
-      data: pixelCodes,
+      data: pixelCodes.map((data)=> data.data?.code),
     });
   } catch (err: any) {
     console.error('Error generating pixel codes:', err);
