@@ -525,6 +525,12 @@ app.get(
   (req, res) => advertisingController.getAllPixels(req, res)
 );
 
+app.get(
+  '/api/pixels/generate-code-for-all-pixels',
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => advertisingController.generatePixelCodeForAllPixels(req, res)
+);
+
 // Get single pixel by ID
 app.get(
   '/api/pixels/:id',
@@ -548,13 +554,6 @@ app.delete(
 );
 
 // Generate pixel tracking code
-app.get(
-  '/api/pixels/generate-code-for-all-pixels',
-  AuthMiddleware(UserRole.ADMIN),
-  (req, res) => advertisingController.generatePixelCodeForAllPixels(req, res)
-);
-
-
 app.get(
   '/api/pixels/:id/generate-code',
   AuthMiddleware(UserRole.ADMIN),
