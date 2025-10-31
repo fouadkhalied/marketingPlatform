@@ -85,7 +85,6 @@ export const pixelPlatformEnum = pgEnum("pixel_platform", [
   "shopify",
 ]);
 
-
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username"),
@@ -156,6 +155,8 @@ export const users = pgTable("users", {
   // Currency code (USD, EUR, EGP, etc.)
   currency: currencyEnum("currency")
     .notNull(),
+  
+  promoted: boolean("promoted").notNull().default(false),  
 
   impressionsPerUnit: integer("impressions_per_unit")
     .notNull(),

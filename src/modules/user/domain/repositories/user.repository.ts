@@ -11,6 +11,7 @@ export interface userInterface {
     deleteUser(id: string): Promise<boolean>;
     getAvaialbeImpressionRatios(): Promise<AdminImpressionRatio[]>;
     updateImpressionRatio(adminId: string , id:string, impressionsPerUnit: number, currency: "usd" | "sar"): Promise<AdminImpressionRatio>;
+    //createImpressionRatio(adminId: string , impressionsPerUnit: number,promoted: boolean ,currency: "usd" | "sar"): Promise<AdminImpressionRatio>;
     getProfile(id:string) :Promise<Partial<User>>;
     updateProfile(id:string,user : Partial<Pick<User, 'username' | 'password' | 'country'>>) :Promise<Partial<User>>
     createAdClick(adId: string, userId: string, forWebsite: boolean): Promise<boolean>;

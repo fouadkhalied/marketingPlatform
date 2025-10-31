@@ -654,7 +654,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
         const [ratio] = await tx
         .select({ impressionsPerUnit: adminImpressionRatio.impressionsPerUnit })
         .from(adminImpressionRatio)
-        .where(eq(adminImpressionRatio.currency, 'sar'));  
+        .where(and(eq(adminImpressionRatio.currency, 'sar'), eq(adminImpressionRatio.promoted,false)));  
         // Calculate total impressions
         const totalImpressions = credit * Number(ratio.impressionsPerUnit);
     
@@ -975,9 +975,9 @@ async updatePhotoFromAd(
 }
 
 async promoteAd(id: string, userId: string): Promise<Ad> {
-  const PROMOTION_COST = 10;
 
   return await db.transaction(async (tx) => {
+    
     // Verify the ad exists and belongs to the user
     const [existingAd] = await tx
       .select()
@@ -997,6 +997,8 @@ async promoteAd(id: string, userId: string): Promise<Ad> {
       );
     }
 
+    
+
     // Check if already promoted
     if (existingAd.hasPromoted) {
       throw ErrorBuilder.build(
@@ -1004,6 +1006,24 @@ async promoteAd(id: string, userId: string): Promise<Ad> {
         "Ad is already promoted"
       );
     }
+
+    const [ratio] = await tx
+        .select({ impressionsPerUnit: adminImpressionRatio.impressionsPerUnit })
+        .from(adminImpressionRatio)
+        .where(and(eq(adminImpressionRatio.currency, 'sar'), eq(adminImpressionRatio.promoted,true)));  
+
+
+    if (!ratio) {
+      throw ErrorBuilder.build(
+        ErrorCode.VALIDATION_ERROR,
+        "ratio for promoted ads not is found"
+      );
+    }    
+
+    const PROMOTION_COST:number = existingAd.impressionsCredit / ratio.impressionsPerUnit;
+    
+    console.log(PROMOTION_COST);
+    
 
     // Get user's current balance
     const [user] = await tx
@@ -1027,6 +1047,13 @@ async promoteAd(id: string, userId: string): Promise<Ad> {
       })
       .where(eq(users.id, userId));
 
+
+      await tx
+      .update(ads)
+      .set({
+        spended: sql`${ads.spended} + ${PROMOTION_COST}`
+      })
+      .where(eq(ads.id, id));
     // Promote the ad
     const [promotedAd] = await tx
       .update(ads)
