@@ -896,7 +896,6 @@ async deactivateUserAdByAdmin(userId: string, adId: string): Promise<Ad> {
 
   return deactivatedAd;
 }
-
 async updatePhotoFromAd(
   id: string, 
   userId: string, 
@@ -905,40 +904,53 @@ async updatePhotoFromAd(
   role: string
 ): Promise<boolean> {
   try {
-    // First, get the current ad to access its imageUrl
-    const [ad] = await db
-      .select({ imageUrl: ads.imageUrl })
-      .from(ads)
-      .where(and(eq(ads.id, id), eq(ads.userId, userId)))
-      .limit(1);
-    
-    if (!ad || !ad.imageUrl) {
-      if (role !== "admin") {
-        throw ErrorBuilder.build(
-          ErrorCode.AD_NOT_FOUND,
-          `Ad with id ${id} not found or has no images`
-        );
-      }
+    let ad: any;
+
+    // Corrected logic: admins can access any ad, users only their own
+    if (role === "admin") {
+      ad = await db
+        .select({ imageUrl: ads.imageUrl })
+        .from(ads)
+        .where(eq(ads.id, id))
+        .limit(1);
+    } else {
+      ad = await db
+        .select({ imageUrl: ads.imageUrl })
+        .from(ads)
+        .where(and(eq(ads.id, id), eq(ads.userId, userId)))
+        .limit(1);
     }
     
-    // Check if the old photo URL exists in the array
-    if (!ad.imageUrl.includes(oldPhotoUrl)) {
+    if (!ad || ad.length === 0 || !ad[0].imageUrl) {
+      throw ErrorBuilder.build(
+        ErrorCode.AD_NOT_FOUND,
+        `Ad with id ${id} not found or has no images`
+      );
+    }
+    
+    // Access the first element since select returns an array
+    const currentAd = ad[0];
+    
+    if (!currentAd.imageUrl.includes(oldPhotoUrl)) {
       throw ErrorBuilder.build(
         ErrorCode.PHOTO_NOT_FOUND,
         `Photo URL not found in ad with id ${id}`
       );
     }
     
-    // Replace the old photo URL with the new one
-    const updatedImageUrl = ad.imageUrl.map((url) => 
+    const updatedImageUrl = currentAd.imageUrl.map((url: string) => 
       url === oldPhotoUrl ? newPhotoUrl : url
     );
     
-    // Update the ad with the new imageUrl array
+    // Apply same role-based logic to update
+    const updateCondition = role === "admin" 
+      ? eq(ads.id, id)
+      : and(eq(ads.id, id), eq(ads.userId, userId));
+    
     const [updated] = await db
       .update(ads)
       .set({ imageUrl: updatedImageUrl })
-      .where(and(eq(ads.id, id), eq(ads.userId, userId)))
+      .where(updateCondition)
       .returning({ id: ads.id });
     
     if (!updated) {
@@ -950,7 +962,6 @@ async updatePhotoFromAd(
     
     return true;
   } catch (error) {
-    // Re-throw custom errors as-is
     if (error instanceof Error && error.name === 'CustomError') {
       throw error;
     }
