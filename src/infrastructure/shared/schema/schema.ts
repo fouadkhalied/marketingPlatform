@@ -69,6 +69,23 @@ export const ksaCitiesEnum = pgEnum("ksa_cities", [
   "al-zulfi"
 ]);
 
+export const pixelPlatformEnum = pgEnum("pixel_platform", [
+  "facebook",
+  "instagram",
+  "tiktok",
+  "snapchat",
+  "google_ads",
+  "pinterest",
+  "linkedin",
+  "twitter",
+  "reddit",
+  "quora",
+  "bing",
+  "youtube",
+  "shopify",
+]);
+
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username"),
@@ -254,6 +271,14 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   });
 
+  export const pixels = pgTable('pixels', {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    name: varchar("name").notNull(),
+    pixelId: varchar("pixel_id").notNull(),
+    platform: pixelPlatformEnum("platform").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  });
   
   // Relations
   export const usersRelations = relations(users, ({ many }) => ({

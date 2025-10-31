@@ -23,6 +23,7 @@ export const ERROR_STATUS_MAP: Record<ErrorCode, number> = {
   [ErrorCode.AD_NOT_FOUND]: 404,
   [ErrorCode.USER_NOT_FOUND]: 404,
   [ErrorCode.PHOTO_NOT_FOUND]: 404,
+  [ErrorCode.PIXEL_NOT_FOUND]: 404,
   [ErrorCode.BAD_REQUEST]: 404,
   [ErrorCode.TOO_MANY_REQUESTS]: 404,
      

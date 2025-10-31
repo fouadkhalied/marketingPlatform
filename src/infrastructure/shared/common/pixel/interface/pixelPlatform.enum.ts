@@ -1,0 +1,15 @@
+export const PixelPlatform = [ 
+  "facebook",
+  "instagram",
+  "tiktok",
+  "snapchat",
+  "google_ads",
+  "pinterest",
+  "linkedin",
+  "twitter",
+  "reddit",
+  "quora",
+  "bing",
+  "youtube",
+  "shopify",
+]

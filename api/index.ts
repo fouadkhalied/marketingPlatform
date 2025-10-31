@@ -503,10 +503,58 @@ app.put(
   (req, res) => userController.createAdClick(req, res)
 );
 
-//
+// dashboard
 app.get('/api/dashboard/user', AuthMiddleware(UserRole.USER), (req,res)=>userController.getDashoardMetricsForUser(req,res))
 
 app.get('/api/dashboard/admin', AuthMiddleware(UserRole.ADMIN), (req,res)=>userController.getDashoardMetricsForAdmin(req,res))
+
+// pixels
+
+// Create new pixel
+app.post(
+  '/api/pixels',
+  AuthMiddleware(UserRole.ADMIN),
+  sanitizeInput,
+  (req, res) => advertisingController.createPixelApp(req, res)
+);
+
+// Get all pixels (with pagination)
+app.get(
+  '/api/pixels',
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => advertisingController.getAllPixels(req, res)
+);
+
+// Get single pixel by ID
+app.get(
+  '/api/pixels/:id',
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => advertisingController.getPixelById(req, res)
+);
+
+// Update pixel
+app.put(
+  '/api/pixels/:id',
+  AuthMiddleware(UserRole.ADMIN),
+  sanitizeInput,
+  (req, res) => advertisingController.updatePixel(req, res)
+);
+
+// Delete pixel
+app.delete(
+  '/api/pixels/:id',
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => advertisingController.deletePixel(req, res)
+);
+
+// Generate pixel tracking code
+app.get(
+  '/api/pixels/:id/generate-code',
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => advertisingController.generatePixelCode(req, res)
+);
+
+
 // ============================================
 // 10. ERROR HANDLING
 // ============================================

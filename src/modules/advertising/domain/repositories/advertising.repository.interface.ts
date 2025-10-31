@@ -1,4 +1,5 @@
 ﻿import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
+import { pixel } from "../../../../infrastructure/shared/common/pixel/interface/pixelBody.interface";
 import { Ad, InsertAd } from "../../../../infrastructure/shared/schema/schema";
 import { ApproveAdData } from "../../application/dto/approveAdData";
 import { autheticatedPage } from "../../application/dto/authenticatedPage.dto";
@@ -29,4 +30,10 @@ export interface IAdvertisingRepository {
     hasSufficientBalance(userId: string, credit: number): Promise<boolean>
     deactivateUserAd(userId: string, adId: string): Promise<Ad>
     deactivateUserAdByAdmin(userId: string, adId: string): Promise<Ad>
+
+    createPixel(pixel: pixel): Promise<pixel>;
+    getPixelById(pixelId: string): Promise<pixel | null>;
+    getAllPixels(pagination: PaginationParams): Promise<PaginatedResponse<pixel>>;
+    updatePixel(pixelId: string, updateData: Partial<pixel>): Promise<pixel>;
+    deletePixel(pixelId: string): Promise<boolean>;
 }  
