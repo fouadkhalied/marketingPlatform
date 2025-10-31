@@ -449,6 +449,10 @@ app.put('/api/advertising/:id/promote',
     AuthMiddleware(UserRole.USER), 
     (req, res) => advertisingController.promoteAd(req, res));
   
+app.put('/api/advertising/:id/depromote', 
+    AuthMiddleware(UserRole.USER), 
+    (req, res) => advertisingController.depromoteAd(req, res));
+        
 app.get(
   "/api/advertising/:id",
   AuthMiddleware(UserRole.USER),
