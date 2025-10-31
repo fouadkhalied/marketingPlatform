@@ -554,6 +554,12 @@ app.get(
   (req, res) => advertisingController.generatePixelCode(req, res)
 );
 
+app.get(
+  '/api/pixels/generate-code-for-all-pixels',
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => advertisingController.generatePixelCodeForAllPixels(req, res)
+);
+
 
 // ============================================
 // 10. ERROR HANDLING

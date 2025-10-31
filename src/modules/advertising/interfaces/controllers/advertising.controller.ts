@@ -1031,4 +1031,72 @@ async generatePixelCode(req: Request, res: Response): Promise<void> {
     });
   }
 }
+
+async generatePixelCodeForAllPixels(req: Request, res: Response): Promise<void> {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    // Validate pagination parameters
+    if (page < 1) {
+      res.status(400).json({
+        success: false,
+        message: 'Page number must be greater than 0',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Page number must be greater than 0',
+        },
+      });
+      return;
+    }
+
+    if (limit < 1 || limit > 100) {
+      res.status(400).json({
+        success: false,
+        message: 'Limit must be between 1 and 100',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Limit must be between 1 and 100',
+        },
+      });
+      return;
+    }
+    
+    const pixels = await this.advertisingService.getAllPixels({ page, limit });
+
+    // Check if pixels data exists
+    if (!pixels.data || pixels.data.length === 0) {
+      res.status(200).json({
+        success: true,
+        message: 'No pixels found'
+      });
+      return;
+    }
+
+    // Generate pixel codes for all pixels
+    const pixelCodes = await Promise.all(
+      pixels.data.map(async (pixel) => {
+        return await this.advertisingService.generatePixelCode(pixel.pixelId);
+      })
+    );
+
+    // Return the results with pagination info
+    res.status(200).json({
+      success: true,
+      message: 'Pixel codes generated successfully',
+      data: pixelCodes,
+    });
+  } catch (err: any) {
+    console.error('Error generating pixel codes:', err);
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate pixel codes',
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: err.message,
+      },
+    });
+  }
+}
 }
