@@ -1,0 +1,18 @@
+export type targetAudienceValues =
+  | "cars"
+  | "realestate"
+  | "devices"
+  | "animals"
+  | "furniture"
+  | "jobs"
+  | "services"
+  | "fashion"
+  | "games"
+  | "rarities"
+  | "art"
+  | "trips"
+  | "food"
+  | "gardens"
+  | "sports"
+  | "fund"
+  | "more";

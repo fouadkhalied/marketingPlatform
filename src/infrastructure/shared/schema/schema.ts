@@ -85,6 +85,31 @@ export const pixelPlatformEnum = pgEnum("pixel_platform", [
   "shopify",
 ]);
 
+export const targetAudienceEnum = pgEnum("target_audience", [
+  "cars",
+  "realestate",
+  "devices",
+  "animals",
+  "furniture",
+  "jobs",
+  "services",
+  "fashion",
+  "games",
+  "rarities",
+  "art",
+  "trips",
+  "food",
+  "gardens",
+  "occasions",
+  "tourism",
+  "lost",
+  "coach",
+  "code",
+  "fund",
+  "sports",
+  "more"
+]);
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username"),
@@ -127,7 +152,7 @@ export const freeCredits = pgTable("free_credits", {
     phoneNumber:text("phone_number").notNull().default(""),
 
     status: adStatusEnum("status").notNull().default("pending"),
-    targetAudience: text("target_audience"),
+    targetAudience: targetAudienceEnum("target_audience"),
     budgetType: text("budget_type").notNull(), // "impressions" or "clicks"
     impressionsCredit: integer().notNull().default(0), 
     spended: integer("budget_credit").notNull().default(0),

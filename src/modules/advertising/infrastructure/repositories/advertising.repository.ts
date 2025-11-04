@@ -1,13 +1,14 @@
 ﻿import { and, desc, eq, gt, inArray, like, ne, or, sql } from "drizzle-orm";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
 import { db } from "../../../../infrastructure/db/connection";
-import { Ad, adminImpressionRatio, ads , impressionsEvents, InsertAd, pixels, socialMediaPages, users } from "../../../../infrastructure/shared/schema/schema";
+import { Ad, adminImpressionRatio, ads , impressionsEvents, InsertAd, pixels, socialMediaPages, targetAudienceEnum, users } from "../../../../infrastructure/shared/schema/schema";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { autheticatedPage } from "../../application/dto/authenticatedPage.dto";
 import { ApproveAdData } from "../../application/dto/approveAdData";
 import { pixel } from "../../../../infrastructure/shared/common/pixel/interface/pixelBody.interface";
+import { targetAudienceValues } from "../../domain/enums/ads.targetAudence.enum";
 
 export class AdvertisingRepository implements IAdvertisingRepository {
   async create(ad: InsertAd): Promise<string> {
@@ -694,7 +695,8 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
       pagination: PaginationParams,
       targetCities: string[] = [],
       title?: string,
-      description?: string
+      description?: string,
+      targetAudience: string[] = []
     ): Promise<PaginatedResponse<any>> {
       try {
         const { page, limit } = pagination;
@@ -711,6 +713,12 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
                 targetCities.map((city) => sql`${city}`),
                 sql`, `
               )}]::ksa_cities[]`
+            : undefined,
+          targetAudience.length > 0
+            ? sql`${ads.targetCities} && ARRAY[${sql.join(
+              targetAudience.map((audience) => sql`${audience}`),
+              sql`, `
+            )}]::target_audience[]`
             : undefined,
           // ✅ Search in both titleEn and titleAr if title is provided
           title
