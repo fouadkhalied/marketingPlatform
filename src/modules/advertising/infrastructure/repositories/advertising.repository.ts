@@ -754,6 +754,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             websiteUrl: ads.websiteUrl,
             websiteClicks: ads.websiteClicks,
             phoneNumber: ads.phoneNumber,
+            targetAudience: ads.targetAudience,
             hasPromoted: ads.hasPromoted,
             tiktokLink:ads.tiktokLink,
             youtubeLink:ads.youtubeLink, 
