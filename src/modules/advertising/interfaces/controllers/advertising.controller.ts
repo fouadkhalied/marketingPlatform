@@ -292,7 +292,15 @@ export class AdvertisingController {
 
   async listApprovedAdsForUser(req: Request, res: Response): Promise<void> {
     try {
-      const { limit, page, targetCities, title , description, targetAudience } = req.query;
+      const { limit, page, targetCities, title , description, targetAudience , source} = req.query;
+
+      if (source && !PixelPlatform.includes(source.toString().toLowerCase())) {
+        res
+          .status(400)
+          .json({
+            error: `Invalid source. Allowed values are: ${PixelPlatform.join(", ")}`
+          });
+      }
   
       // ✅ Pagination handling (default: page=1, limit=6)
       const pagination: PaginationParams = {

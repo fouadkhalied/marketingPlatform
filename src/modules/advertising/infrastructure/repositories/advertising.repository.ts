@@ -696,7 +696,8 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
       targetCities: string[] = [],
       title?: string,
       description?: string,
-      targetAudience?: targetAudienceValues
+      targetAudience?: targetAudienceValues,
+      source?:string
     ): Promise<PaginatedResponse<any>> {
       try {
         const { page, limit } = pagination;
@@ -783,11 +784,14 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
               totalImpressionsOnAdd: sql`${ads.totalImpressionsOnAdd} + 1`,
             })
             .where(inArray(ads.id, adIds));
+
+            
     
           // ✅ Insert an impression event per ad
           const impressionEventsData = adIds.map((adId) => ({
             eventId: `impression_${adId}_${Date.now()}_${Math.random()}`,
             adId,
+            source: source ? source : "web",
           }));
     
           await db.insert(impressionsEvents).values(impressionEventsData);

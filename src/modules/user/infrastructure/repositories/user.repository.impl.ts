@@ -802,6 +802,7 @@ async getRecentActivity(userId: string, limit: number = 10) {
         id: impressionsEvents.id,
         adId: impressionsEvents.adId,
         type: sql<string>`'impression'`,
+        source: impressionsEvents.source,
         createdAt: impressionsEvents.createdAt,
       })
       .from(impressionsEvents)
