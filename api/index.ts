@@ -499,7 +499,7 @@ app.get('/api/users/impression-ratios', (req, res) => userController.getAvailabl
 app.put('/api/users/impression-ratios/:id', AuthMiddleware(UserRole.ADMIN), (req, res) => userController.updateImpressionRatio(req, res));
 
 // create ad report
-app.post('/api/users/ad-report', AuthMiddleware(UserRole.USER), (req,res) => userController.createAdReport(req,res));
+app.post('/api/users/ad-report', (req,res) => userController.createAdReport(req,res));
 
 // get ad reports
 app.get('/api/users/ad-reports', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.getAdReports(req,res));

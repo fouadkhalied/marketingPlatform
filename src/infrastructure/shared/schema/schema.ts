@@ -469,7 +469,6 @@ export const freeCredits = pgTable("free_credits", {
   export const createAdSchema = insertAdSchema.extend({
     postIdOnPlatform: z.string().optional(),
     pageId: z.string().optional(),
-    targetAudience: z.string().min(1, "Target audience is required"),
     budgetType: z.enum(["impressions", "clicks"]),
   });
   

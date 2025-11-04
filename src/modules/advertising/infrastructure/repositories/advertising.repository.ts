@@ -696,7 +696,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
       targetCities: string[] = [],
       title?: string,
       description?: string,
-      targetAudience: string[] = []
+      targetAudience?: targetAudienceValues
     ): Promise<PaginatedResponse<any>> {
       try {
         const { page, limit } = pagination;
@@ -714,11 +714,8 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
                 sql`, `
               )}]::ksa_cities[]`
             : undefined,
-          targetAudience.length > 0
-            ? sql`${ads.targetCities} && ARRAY[${sql.join(
-              targetAudience.map((audience) => sql`${audience}`),
-              sql`, `
-            )}]::target_audience[]`
+          targetAudience
+            ? eq(ads.targetAudience, targetAudience)
             : undefined,
           // ✅ Search in both titleEn and titleAr if title is provided
           title
