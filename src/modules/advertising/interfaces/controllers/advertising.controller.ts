@@ -352,7 +352,8 @@ if (targetCities) {
         citiesArray,
         typeof title === 'string' ? title : undefined,
         typeof description === 'string' ? description : undefined,
-        typeof targetAudience === 'string'? targetAudience : undefined
+        typeof targetAudience === 'string'? targetAudience : undefined,
+        typeof source === 'string'? source : undefined
       );
                                   
       const statusCode = this.getStatusCode(result);
