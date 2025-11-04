@@ -59,8 +59,11 @@ export class SeoAppService {
       }
 
       const variable = await this.seoRepository.createSeoVariable(data);
+      
       return ResponseBuilder.success(variable, "SEO variable created successfully");
     } catch (error: any) {
+        console.log(error);
+        
       if (error.code && error.message) {
         return error;
       }

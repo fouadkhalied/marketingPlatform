@@ -241,7 +241,7 @@ export const freeCredits = pgTable("free_credits", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     title: text("title").notNull(),
     description: text("description").notNull(),
-    tag_line: text("description").notNull()
+    tag_line: text("tag_line").notNull()
   });
   
   export const impressionsEvents = pgTable("impressions_events", {
