@@ -210,9 +210,10 @@ export class AdvertisingAppService {
     pagination: PaginationParams,
     locations: string[],
     title?:string,
+    description?:string
   ): Promise<ApiResponseInterface<Ad[]>> {
     try {
-      const ads = await this.advertisingRepository.listApprovedAdsForUser(pagination, locations, title);
+      const ads = await this.advertisingRepository.listApprovedAdsForUser(pagination, locations, title, description);
       return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
     } catch (error) {
       return ErrorBuilder.build(

@@ -693,7 +693,8 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
     async listApprovedAdsForUser(
       pagination: PaginationParams,
       targetCities: string[] = [],
-      title?: string
+      title?: string,
+      description?: string
     ): Promise<PaginatedResponse<any>> {
       try {
         const { page, limit } = pagination;
@@ -716,6 +717,13 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             ? or(
                 sql`LOWER(${ads.titleEn}) LIKE LOWER(${`%${title}%`})`,
                 sql`LOWER(${ads.titleAr}) LIKE LOWER(${`%${title}%`})`
+              )
+            : undefined,
+            // ✅ Search in both descriptionEn and descriptionAr if description is provided
+          description
+            ? or(
+                sql`LOWER(${ads.descriptionEn}) LIKE LOWER(${`%${description}%`})`,
+                sql`LOWER(${ads.descriptionAr}) LIKE LOWER(${`%${description}%`})`
               )
             : undefined
         );

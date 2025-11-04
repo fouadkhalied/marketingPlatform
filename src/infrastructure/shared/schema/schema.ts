@@ -98,12 +98,17 @@ export const users = pgTable("users", {
   freeViewsCredits: integer("free_views_credits").notNull().default(0),
   adsCount: integer("adsCount").default(0),
   totalSpend: integer("totalSpend").default(0),
-  balance: integer("balance").default(10),
+  balance: integer("balance").default(0),
   stripeCustomerId: text("stripe_customer_id"),
   country: middleEastCountries("country"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
+
+export const freeCredits = pgTable("free_credits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  credits: integer("credits").notNull().default(0),
+})
 
   export const ads = pgTable("ads", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -149,6 +154,17 @@ export const users = pgTable("users", {
     snapchatLink: text("snapchat_link"),
   });
 
+  export const adsReport = pgTable("ads_report", {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    adId: varchar("ad_id").notNull().references(() => ads.id),
+    email: text("email").notNull(),
+    username: text("username").notNull(),
+    phoneNumber: text("phone_number").notNull(),
+    reportDescription: text("report_description").notNull(),
+    createdAt: timestamp("created_at").notNull().default(sql`now()`),
+    updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+  });
+
   export const adminImpressionRatio = pgTable("admin_impression_ratio", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
@@ -166,6 +182,7 @@ export const users = pgTable("users", {
   
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+  
   });
 
   export const socialMediaPages = pgTable("social_media_pages", {

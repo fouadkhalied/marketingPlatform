@@ -1,4 +1,6 @@
+import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { AdminImpressionRatio, CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
+import { AdsReport } from "../../application/dtos/ads-report.dto";
 
 export interface userInterface {
     getUser(id: string): Promise<Partial<User & { socialMediaPages: Array<{ pageId: string; pageName: string; pageType: string; isActive: boolean }> }> | undefined>;
@@ -16,4 +18,10 @@ export interface userInterface {
     updateProfile(id:string,user : Partial<Pick<User, 'username' | 'password' | 'country'>>) :Promise<Partial<User>>
     createAdClick(adId: string, userId: string, forWebsite: boolean): Promise<boolean>;
     addCretidToUserByAdmin(credit:number, userId: string):Promise<boolean>
+
+    createAdReport(adId: string, email: string, username: string, phoneNumber: string, reportDescription: string): Promise<boolean>;
+    getAdReports(pagination: PaginationParams): Promise<PaginatedResponse<AdsReport>>;
+
+    updateFreeCredits(credits: number): Promise<boolean>;
+    getFreeCredits(): Promise<number>;
 }

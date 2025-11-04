@@ -949,6 +949,81 @@ async updateProfile(req: Request, res: Response): Promise<void> {
 }
 
 
+async updateFreeCredits(req: Request, res: Response): Promise<void> {
+  try {
+    const { credits } = req.body;
+    if (!credits) {
+      res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Credits are required"));
+      return;
+    }
+    const result = await this.userService.updateFreeCredits(credits);
+    const statusCode = this.getStatusCode(result);
+    res.status(statusCode).json(result);
+  } catch (error:any) {
+    console.error('Error updating free credits:', error);
+    res.status(500).json(ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to update free credits", error.message));
+  }
+}
+
+
+async getFreeCredits(req: Request, res: Response): Promise<void> {
+  try {
+    const result = await this.userService.getFreeCredits();
+    const statusCode = this.getStatusCode(result);
+    res.status(statusCode).json(result);
+  } catch (error:any) {
+    console.error('Error getting free credits:', error);
+    res.status(500).json(ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to get free credits", error.message));
+  }
+}
+
+async createAdReport(req: Request, res: Response): Promise<void> {
+  try {
+    const { adId, email, username, phoneNumber, reportDescription } = req.body;
+    if (!adId) {
+      res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Ad ID is required"));
+      return;
+    }
+    if (!email) {
+      res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Email is required"));
+      return;
+    }
+    if (!username) {
+      res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Username is required"));
+      return;
+    }
+    if (!phoneNumber) {
+      res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Phone number is required"));
+      return;
+    }
+    if (!reportDescription) {
+      res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Report description is required"));
+      return;
+    }
+    const result = await this.userService.createAdReport(adId, email, username, phoneNumber, reportDescription);
+    const statusCode = this.getStatusCode(result);
+    res.status(statusCode).json(result);
+  } catch (error:any) {
+    console.error('Error creating ad report:', error);
+    res.status(500).json(ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to create ad report", error.message));
+  }
+}
+
+async getAdReports(req: Request, res: Response): Promise<void> {
+  try {
+    const { page, limit } = req.query;
+    const pagination: PaginationParams = {
+      page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
+      limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+    };
+    const result = await this.userService.getAdReports(pagination);
+    const statusCode = this.getStatusCode(result);
+    res.status(statusCode).json(result);
+  } catch (error:any) {
+    console.error('Error getting ad reports:', error);
+    res.status(500).json(ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to get ad reports", error.message));
+  }
+}
 
 async getDashoardMetricsForUser(req: Request, res: Response): Promise<void> {
   try {

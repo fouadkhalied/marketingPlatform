@@ -3,11 +3,12 @@ import { userInterface } from "../../domain/repositories/user.repository";
 
 import { eq, desc, sql, and, gte, lte, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { adminImpressionRatio, AdminImpressionRatio, ads, clicksEvents, CreateUser, impressionsEvents, middleEastCountries, purchases, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
+import { adminImpressionRatio, AdminImpressionRatio, ads, adsReport, clicksEvents, CreateUser, freeCredits, impressionsEvents, middleEastCountries, purchases, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { AdminChartData, AdminDashboardStats, ChartData, DashboardStats, RecentActivity, TopPerformingAd } from "../../application/dtos/dashboard/dashboard.interfaces";
+import { AdsReport } from "../../application/dtos/ads-report.dto";
 
 export class UserRepositoryImpl implements userInterface {
     async hashPassword(password: string): Promise<string> {
@@ -95,12 +96,15 @@ export class UserRepositoryImpl implements userInterface {
         }
       
         const hashedPassword = await this.hashPassword(insertUser.password);
+
+        const [freeCreditsData] = await db.select().from(freeCredits).limit(1);
       
         const [user] = await db
           .insert(users)
           .values({
             ...insertUser,
             password: hashedPassword,
+            balance: freeCreditsData?.credits || 0,
           })
           .returning();
       
@@ -416,10 +420,75 @@ async updateProfile(id: string, updates: Partial<Pick<User, 'username' | 'passwo
 }
 
 
+async updateFreeCredits(credits: number): Promise<boolean> {
+  const [updated] = await db
+    .update(freeCredits)
+    .set({ credits })
+    .returning();
+  return !!updated;
+}
 
+async getFreeCredits(): Promise<number> {
+  const [credits] = await db
+    .select({ credits: freeCredits.credits })
+    .from(freeCredits)
+    .limit(1);
+  return credits?.credits || 0;
+}
 
+async createAdReport(adId: string, email: string, username: string, phoneNumber: string, reportDescription: string): Promise<boolean> {
+  try {
+    const [report] = await db
+      .insert(adsReport)
+      .values({ adId, email, username, phoneNumber, reportDescription })
+      .returning();
+    return !!report;
+  } catch (error) {
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to create ad report",
+      error instanceof Error ? error.message : error
+    );
+  }
+}
 
-
+async getAdReports(pagination: PaginationParams): Promise<PaginatedResponse<AdsReport>> {
+  try {
+    const { page, limit } = pagination;
+    const offset = (page - 1) * limit;
+    const reports = await db
+      .select({
+        id: adsReport.id,
+        adId: adsReport.adId,
+        email: adsReport.email,
+        username: adsReport.username,
+        phoneNumber: adsReport.phoneNumber,
+        reportDescription: adsReport.reportDescription,
+        createdAt: adsReport.createdAt,
+      })
+      .from(adsReport)
+      .orderBy(desc(adsReport.createdAt))
+      .limit(limit)
+      .offset(offset);
+    return {
+      data: reports as AdsReport[],
+        pagination: {
+          currentPage: page,
+          limit,
+          totalCount: reports.length,
+          totalPages: Math.ceil(reports.length / limit),
+          hasNext: page < Math.ceil(reports.length / limit),
+          hasPrevious: page > 1,
+        },
+    };
+  } catch (error) {
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to get ad reports",
+      error instanceof Error ? error.message : error
+    );
+  }
+}
 // dashboard 
 
 async getDashboardStats(userId: string, days: number = 7): Promise<DashboardStats> {

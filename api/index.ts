@@ -416,6 +416,7 @@ app.get(
   AuthMiddleware(UserRole.USER),
   (req,res) => advertisingController.getPostInsights(req,res)
 )
+
 app.post(
   "/api/advertising/:id/assign-credit",
   AuthMiddleware(UserRole.USER),
@@ -497,6 +498,18 @@ app.get('/api/users/impression-ratios', (req, res) => userController.getAvailabl
 // Update impression ratio (admin only)
 app.put('/api/users/impression-ratios/:id', AuthMiddleware(UserRole.ADMIN), (req, res) => userController.updateImpressionRatio(req, res));
 
+// create ad report
+app.post('/api/users/ad-report', AuthMiddleware(UserRole.USER), (req,res) => userController.createAdReport(req,res));
+
+// get ad reports
+app.get('/api/users/ad-reports', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.getAdReports(req,res));
+
+// update free credits
+app.put('/api/users/update-free-credits', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.updateFreeCredits(req,res));
+
+// get free credits
+app.get('/api/users/get-free-credits', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.getFreeCredits(req,res));
+
 // profile 
 app.get('/api/users/profile', AuthMiddleware(UserRole.USER), (req,res) => userController.getProfile(req,res));
 app.put('/api/users/profile', AuthMiddleware(UserRole.USER), (req,res) => userController.updateProfile(req,res));
@@ -538,7 +551,7 @@ app.get(
 // Get single pixel by ID
 app.get(
   '/api/pixels/:id',
-  AuthMiddleware(UserRole.ADMIN),
+  AuthMiddleware(UserRole.USER),
   (req, res) => advertisingController.getPixelById(req, res)
 );
 

@@ -9,6 +9,7 @@ import { AdminImpressionRatio, CreateUser, User } from "../../../../infrastructu
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { FacebookPageService } from "./facebook-app.service";
+import { AdsReport } from "../dtos/ads-report.dto";
 
 export class UserAppService {
   constructor(
@@ -505,6 +506,42 @@ async updateProfile(
   }
 }
 
+
+async createAdReport(adId: string, email: string, username: string, phoneNumber: string, reportDescription: string): Promise<ApiResponseInterface<boolean>> {
+  try {
+    const result = await this.userRepository.createAdReport(adId, email, username, phoneNumber, reportDescription);
+    return ResponseBuilder.success(result, "Ad report created successfully");
+  } catch (error) {
+    return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to create ad report");
+  }
+}
+
+async getAdReports(pagination: PaginationParams): Promise<ApiResponseInterface<AdsReport[]>> {
+  try {
+    const result = await this.userRepository.getAdReports(pagination);
+    return ResponseBuilder.paginatedSuccess(result.data, result.pagination);
+  } catch (error) {
+    return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to get ad reports");
+  }
+}
+
+async updateFreeCredits(credits: number): Promise<ApiResponseInterface<boolean>> {
+  try {
+    const result = await this.userRepository.updateFreeCredits(credits);
+    return ResponseBuilder.success(result, "Free credits updated successfully");
+  } catch (error) {
+    return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to update free credits");
+  }
+}
+
+async getFreeCredits(): Promise<ApiResponseInterface<number>> {
+  try {
+    const result = await this.userRepository.getFreeCredits();
+    return ResponseBuilder.success(result, "Free credits retrieved successfully");
+  } catch (error) {
+    return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to get free credits");
+  }
+}
 
 
 async getUserDashboard(userId: string) : Promise<ApiResponseInterface<any>> {
