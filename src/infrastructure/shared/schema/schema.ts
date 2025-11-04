@@ -235,6 +235,14 @@ export const freeCredits = pgTable("free_credits", {
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
   });
+
+  
+  export const seoVariables = pgTable("seo_variables", {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    tag_line: text("description").notNull()
+  });
   
   export const impressionsEvents = pgTable("impressions_events", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -488,10 +496,11 @@ export const freeCredits = pgTable("free_credits", {
   export type CreateUser = z.infer<typeof insertUserSchema>;
   export type CreateGoogleUser = z.infer<typeof insertGoogleUserSchema>;
   export type CreateFacebookUser = z.infer<typeof insertFacebookUserSchema>
-
+  export type SeoVariable = typeof seoVariables.$inferSelect;
+   
   export type Ad = typeof ads.$inferSelect;
   export type InsertAd = z.infer<typeof insertAdSchema>;
-  
+  export type CreateSeoVariable = typeof seoVariables.$inferInsert;
   export type Purchase = typeof purchases.$inferSelect;
   export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
   export type ImpressionEvent = typeof impressionsEvents.$inferSelect;

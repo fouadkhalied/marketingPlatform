@@ -577,6 +577,45 @@ app.get(
   (req, res) => advertisingController.generatePixelCode(req, res)
 );
 
+
+
+// SEO
+app.post(
+  "/api/seo",
+  AuthMiddleware(UserRole.ADMIN),
+  sanitizeInput,
+  (req, res) => userController.createSeoVariable(req, res)
+);
+
+// Get all SEO variables
+app.get(
+  "/api/seo",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => userController.getAllSeoVariables(req, res)
+);
+
+// Get SEO variable by ID
+app.get(
+  "/api/seo/:id",
+  AuthMiddleware(UserRole.USER),
+  (req, res) => userController.getSeoVariableById(req, res)
+);
+
+// Update SEO variable
+app.put(
+  "/api/seo/:id",
+  AuthMiddleware(UserRole.ADMIN),
+  sanitizeInput,
+  (req, res) => userController.updateSeoVariable(req, res)
+);
+
+// Delete SEO variable
+app.delete(
+  "/api/seo/:id",
+  AuthMiddleware(UserRole.ADMIN),
+  (req, res) => userController.deleteSeoVariable(req, res)
+);
+
 // ============================================
 // 10. ERROR HANDLING
 // ============================================

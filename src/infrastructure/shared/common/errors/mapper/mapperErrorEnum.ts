@@ -26,6 +26,7 @@ export const ERROR_STATUS_MAP: Record<ErrorCode, number> = {
   [ErrorCode.PIXEL_NOT_FOUND]: 404,
   [ErrorCode.BAD_REQUEST]: 404,
   [ErrorCode.TOO_MANY_REQUESTS]: 404,
+  [ErrorCode.SEO_NOT_FOUND]:404,
      
   // User-specific Errors
   [ErrorCode.USER_ALREADY_EXISTS]: 409,

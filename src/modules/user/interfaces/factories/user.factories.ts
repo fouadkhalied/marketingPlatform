@@ -3,8 +3,10 @@ import { JwtService } from "../../../../infrastructure/shared/common/auth/module
 import { EmailService } from "../../../../infrastructure/shared/common/email/module/resend.module";
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
 import { FacebookPageService } from "../../application/services/facebook-app.service";
+import { SeoAppService } from "../../application/services/seo-app.service";
 import { UserAppService } from "../../application/services/user-app.service";
 import { FacebookPageRepositoryImpl } from "../../infrastructure/repositories/facebook.repository.impl";
+import { SeoRepositoryImpl } from "../../infrastructure/repositories/seo.repository.impl";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
 import { UserController } from "../controllers/user.controller";
 
@@ -15,6 +17,8 @@ export function createUserController(): UserController {
   const userRepository = new UserRepositoryImpl();
 
   const facebookRepository = new FacebookPageRepositoryImpl();
+
+  const seoRepository = new SeoRepositoryImpl();
 
   // Create services 
   const emailService = new EmailService();
@@ -29,8 +33,10 @@ export function createUserController(): UserController {
   // Pass repository and services to application service 
   const userService = new UserAppService(userRepository, otpService, jwtService, facebookPageService);
 
+  const seoService = new SeoAppService(seoRepository);
+
   // Pass application service to controller
-  const userController = new UserController(userService);
+  const userController = new UserController(userService,seoService);
 
   return userController;
 
