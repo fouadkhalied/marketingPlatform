@@ -984,18 +984,18 @@ async createAdReport(req: Request, res: Response): Promise<void> {
       res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Ad ID is required"));
       return;
     }
-    if (!email) {
-      res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Email is required"));
-      return;
-    }
-    if (!username) {
-      res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Username is required"));
-      return;
-    }
-    if (!phoneNumber) {
-      res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Phone number is required"));
-      return;
-    }
+    // if (!email) {
+    //   res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Email is required"));
+    //   return;
+    // }
+    // if (!username) {
+    //   res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Username is required"));
+    //   return;
+    // }
+    // if (!phoneNumber) {
+    //   res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Phone number is required"));
+    //   return;
+    // }
     if (!reportDescription) {
       res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Report description is required"));
       return;
