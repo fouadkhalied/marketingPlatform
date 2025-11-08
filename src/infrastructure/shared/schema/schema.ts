@@ -182,9 +182,9 @@ export const freeCredits = pgTable("free_credits", {
   export const adsReport = pgTable("ads_report", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     adId: varchar("ad_id").notNull().references(() => ads.id),
-    email: text("email").notNull(),
-    username: text("username").notNull(),
-    phoneNumber: text("phone_number").notNull(),
+    email: text("email").notNull().default(""),
+    username: text("username").notNull().default(""),
+    phoneNumber: text("phone_number").notNull().default(""),
     reportDescription: text("report_description").notNull(),
     createdAt: timestamp("created_at").notNull().default(sql`now()`),
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),

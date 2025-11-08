@@ -768,6 +768,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
           .where(whereConditions)
           .orderBy(
             desc(ads.hasPromoted), // Promoted ads first (true before false)
+            sql`RANDOM()`,
             desc(ads.createdAt)     // Then by creation date (newest first)
           )
           .limit(limit)
