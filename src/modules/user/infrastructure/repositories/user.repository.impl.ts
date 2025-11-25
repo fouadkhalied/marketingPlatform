@@ -288,7 +288,7 @@ export class UserRepositoryImpl implements userInterface {
       );
         
       }
-
+      
 
   // ✅ Get all available ratios
   async getAvaialbeImpressionRatios(): Promise<AdminImpressionRatio[]> {

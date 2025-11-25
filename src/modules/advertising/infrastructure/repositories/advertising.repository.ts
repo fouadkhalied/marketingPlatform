@@ -127,7 +127,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
     return true;
   }
     
-  
+
     async findById(id: string): Promise<Ad | null> {
       try {
         const [result] = await db.select().from(ads).where(eq(ads.id, id));
@@ -759,6 +759,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
             hasPromoted: ads.hasPromoted,
             tiktokLink:ads.tiktokLink,
             youtubeLink:ads.youtubeLink, 
+            youtubeVideo:ads.youtubeVideo,
             googleAdsLink:ads.googleAdsLink, 
             instagramLink:ads.instagramLink, 
             facebookLink:ads.facebookLink, 

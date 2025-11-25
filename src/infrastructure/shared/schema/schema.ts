@@ -137,7 +137,7 @@ export const freeCredits = pgTable("free_credits", {
 
   export const ads = pgTable("ads", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    userId: varchar("user_id").notNull().references(() => users.id),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
     postIdOnPlatform: varchar("post_id_on_platform").unique(),
     pageId: varchar("page_id").references(() => socialMediaPages.pageId),
     titleEn: text("title_en").notNull(),
@@ -173,6 +173,7 @@ export const freeCredits = pgTable("free_credits", {
 
     tiktokLink: text("tiktok_link"),
     youtubeLink: text("youtube_link"),
+    youtubeVideo: text("youtube_video"),
     googleAdsLink: text("google_ads_link"),
     instagramLink: text("instagram_link"),
     facebookLink: text("facebook_link"),
@@ -181,7 +182,7 @@ export const freeCredits = pgTable("free_credits", {
 
   export const adsReport = pgTable("ads_report", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    adId: varchar("ad_id").notNull().references(() => ads.id),
+    adId: varchar("ad_id").notNull().references(() => ads.id , { onDelete: 'cascade' }),
     email: text("email").notNull().default(""),
     username: text("username").notNull().default(""),
     phoneNumber: text("phone_number").notNull().default(""),
@@ -212,7 +213,7 @@ export const freeCredits = pgTable("free_credits", {
 
   export const socialMediaPages = pgTable("social_media_pages", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    userId: varchar("user_id").notNull().references(() => users.id),
+    userId: varchar("user_id").notNull().references(() => users.id , { onDelete: 'cascade' }),
     pageType: pagesTypeEnum("pageType").notNull(),
     pageId: text("page_id").notNull().unique(),
     pageName: text("page_name").notNull(),
@@ -224,7 +225,7 @@ export const freeCredits = pgTable("free_credits", {
   
   export const purchases = pgTable("purchases", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    userId: varchar("user_id").notNull().references(() => users.id),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     //impressionsAllocated: integer("impressions_allocated").notNull().default(0),
     status: purchaseStatusEnum("status").notNull().default("pending"),
@@ -236,7 +237,7 @@ export const freeCredits = pgTable("free_credits", {
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
   });
 
-  
+
   export const seoVariables = pgTable("seo_variables", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     title: text("title").notNull(),
@@ -247,7 +248,7 @@ export const freeCredits = pgTable("free_credits", {
   export const impressionsEvents = pgTable("impressions_events", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     eventId: varchar("event_id").notNull().unique(),
-    adId: varchar("ad_id").notNull().references(() => ads.id),
+    adId: varchar("ad_id").notNull().references(() => ads.id , { onDelete: 'cascade' }),
     source: text("source").notNull().default("web"),
     viewerHash: text("viewer_hash"),
     ipHash: text("ip_hash"),
@@ -260,7 +261,7 @@ export const freeCredits = pgTable("free_credits", {
   export const clicksEvents = pgTable("clicks_events", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     //eventId: varchar("event_id").notNull(),
-    adId: varchar("ad_id").notNull().references(() => ads.id),
+    adId: varchar("ad_id").notNull().references(() => ads.id , { onDelete: 'cascade' }),
     //userId: varchar("user_id").notNull().references(() => users.id),
     //impressionEventId: varchar("impression_event_id").references(() => impressionsEvents.id),
     source: text("source").notNull().default("web"),
@@ -272,7 +273,7 @@ export const freeCredits = pgTable("free_credits", {
   
   export const aggregatedStats = pgTable("aggregated_stats", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    adId: varchar("ad_id").notNull().references(() => ads.id),
+    adId: varchar("ad_id").notNull().references(() => ads.id , { onDelete: 'cascade' }),
     date: timestamp("date").notNull(),
     impressions: integer("impressions").notNull().default(0),
     clicks: integer("clicks").notNull().default(0),
@@ -283,7 +284,7 @@ export const freeCredits = pgTable("free_credits", {
   
   export const auditLogs = pgTable("audit_logs", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    userId: varchar("user_id").references(() => users.id),
+    userId: varchar("user_id").references(() => users.id , { onDelete: 'cascade' }),
     action: text("action").notNull(),
     resourceType: text("resource_type").notNull(),
     resourceId: varchar("resource_id"),
@@ -295,7 +296,7 @@ export const freeCredits = pgTable("free_credits", {
 
   export const adUserEngagement = pgTable("ad_user_engagement", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    adId: varchar("ad_id").notNull().references(() => ads.id),
+    adId: varchar("ad_id").notNull().references(() => ads.id , { onDelete: 'cascade' }),
     userId: varchar("user_id").notNull().references(() => users.id),
   
     liked: boolean("liked").notNull().default(false),
