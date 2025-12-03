@@ -98,6 +98,9 @@ export class UserRepositoryImpl implements userInterface {
         const hashedPassword = await this.hashPassword(insertUser.password);
 
         const [freeCreditsData] = await db.select().from(freeCredits).limit(1);
+
+        console.log(freeCredits);
+        
       
         const [user] = await db
           .insert(users)
@@ -107,6 +110,9 @@ export class UserRepositoryImpl implements userInterface {
             balance: freeCreditsData?.credits || 0,
           })
           .returning();
+
+          console.log(user);
+          
       
         return user;
       }
@@ -425,10 +431,6 @@ async updateFreeCredits(credits: number): Promise<boolean> {
     .update(freeCredits)
     .set({ credits })
     .returning();
-
-    
-  console.log(updated);
-  console.log(credits);
   
     
   return !!updated;
