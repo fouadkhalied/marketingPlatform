@@ -98,8 +98,6 @@ export class UserRepositoryImpl implements userInterface {
         const hashedPassword = await this.hashPassword(insertUser.password);
 
         const [freeCreditsData] = await db.select().from(freeCredits).limit(1);
-
-        console.log(freeCredits);
         
       
         const [user] = await db

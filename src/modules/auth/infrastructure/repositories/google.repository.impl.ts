@@ -1,5 +1,5 @@
 import { db } from "../../../../infrastructure/db/connection";
-import { CreateGoogleUser, users } from "../../../../infrastructure/shared/schema/schema";
+import { CreateGoogleUser, freeCredits, users } from "../../../../infrastructure/shared/schema/schema";
 import { eq } from "drizzle-orm";
 import { User } from "../../../../infrastructure/shared/schema/schema";
 import { IGoogleRepository } from "../../domain/repositories/google.interface";
@@ -25,7 +25,14 @@ export class GoogleRepositoryImpl implements IGoogleRepository {
 
   // 2. Create user (generic so you can use it for Google, Facebook, or email-password signup)
   async createUser(data: CreateGoogleUser): Promise<User> {
+    const [freeCreditsData] = await db.select().from(freeCredits).limit(1);
+
+    
+    data.balance = freeCreditsData.credits
     const [newUser] = await db.insert(users).values(data).returning();
+
+    console.log(newUser);
+    
     return newUser;
   }
 
