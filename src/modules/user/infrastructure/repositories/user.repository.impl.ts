@@ -425,6 +425,8 @@ async updateFreeCredits(credits: number): Promise<boolean> {
     .update(freeCredits)
     .set({ credits })
     .returning();
+  console.log(updated);
+    
   return !!updated;
 }
 

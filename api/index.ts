@@ -23,7 +23,6 @@ import passport from 'passport';
 const app = express();
 const upload = multer();
 
-
 // certificate options
 const options = {
   key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
