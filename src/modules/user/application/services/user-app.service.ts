@@ -5,7 +5,8 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { OTPResult } from "../../../../infrastructure/shared/common/otp/interfaces/optResult";
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
-import { AdminImpressionRatio, CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
+import { AdminImpressionRatio, Ad, CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
+import { AdAnalyticsFullDetails } from "../dtos/dashboard/dashboard.interfaces";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { FacebookPageService } from "./facebook-app.service";
@@ -578,6 +579,24 @@ async addCretidToUserByAdmin(id:string, credit:number, userId: string):Promise<A
   const result = await this.userRepository.addCretidToUserByAdmin(credit,userId);
 
   return ResponseBuilder.success(result);
+}
+
+async getAdAnalyticsFullDetails(adId: string): Promise<ApiResponseInterface<AdAnalyticsFullDetails>> {
+  try {
+    const adDetails = await this.userRepository.getAdAnalyticsFullDetails(adId);
+    if (!adDetails) {
+      return ErrorBuilder.build(ErrorCode.AD_NOT_FOUND, "Ad not found");
+    }
+    return ResponseBuilder.success(adDetails, "Ad analytics details retrieved successfully");
+  } catch (error: any) {
+    if (error.code && error.message) {
+      return error;
+    }
+    return ErrorBuilder.build(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      error.message || "Failed to retrieve ad analytics details"
+    );
+  }
 }
 
 }

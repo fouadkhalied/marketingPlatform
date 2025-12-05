@@ -31,7 +31,7 @@ export class GoogleRepositoryImpl implements IGoogleRepository {
     data.balance = freeCreditsData.credits
     const [newUser] = await db.insert(users).values(data).returning();
 
-    console.log(newUser);
+  //  console.log(newUser);
     
     return newUser;
   }

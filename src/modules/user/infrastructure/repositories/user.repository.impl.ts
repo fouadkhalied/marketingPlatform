@@ -3,11 +3,11 @@ import { userInterface } from "../../domain/repositories/user.repository";
 
 import { eq, desc, sql, and, gte, lte, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { adminImpressionRatio, AdminImpressionRatio, ads, adsReport, clicksEvents, CreateUser, freeCredits, impressionsEvents, middleEastCountries, purchases, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
+import { adminImpressionRatio, Ad, AdminImpressionRatio, ads, adsReport, clicksEvents, CreateUser, freeCredits, impressionsEvents, middleEastCountries, purchases, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
-import { AdminChartData, AdminDashboardStats, ChartData, DashboardStats, RecentActivity, TopPerformingAd } from "../../application/dtos/dashboard/dashboard.interfaces";
+import { AdminChartData, AdminDashboardStats, AdAnalyticsFullDetails, ChartData, DashboardStats, RecentActivity, TopPerformingAd } from "../../application/dtos/dashboard/dashboard.interfaces";
 import { AdsReport } from "../../application/dtos/ads-report.dto";
 
 export class UserRepositoryImpl implements userInterface {
@@ -1235,12 +1235,208 @@ async addCretidToUserByAdmin(credit:number, userId: string):Promise<boolean> {
           })
           .where(eq(users.id, userId))
           .returning();
-      
+
         if (!user) {
           throw new Error("User not found");
         }
-      
+
         return true;
+}
+
+async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | undefined> {
+  try {
+    // Get basic ad details
+    const [ad] = await db
+      .select()
+      .from(ads)
+      .where(eq(ads.id, adId));
+
+    if (!ad) {
+      return undefined;
+    }
+
+    // Get analytics data for the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Get total impressions for this ad
+    const [impressionsResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(impressionsEvents)
+      .where(
+        and(
+          eq(impressionsEvents.adId, adId),
+          gte(impressionsEvents.createdAt, thirtyDaysAgo)
+        )
+      );
+
+    // Get total clicks for this ad
+    const [clicksResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clicksEvents)
+      .where(
+        and(
+          eq(clicksEvents.adId, adId),
+          gte(clicksEvents.createdAt, thirtyDaysAgo)
+        )
+      );
+
+    // Get daily breakdown for chart data
+    const dailyImpressions = await db
+      .select({
+        date: sql<string>`DATE(${impressionsEvents.createdAt})`,
+        count: sql<number>`count(*)`,
+      })
+      .from(impressionsEvents)
+      .where(
+        and(
+          eq(impressionsEvents.adId, adId),
+          gte(impressionsEvents.createdAt, thirtyDaysAgo)
+        )
+      )
+      .groupBy(sql`DATE(${impressionsEvents.createdAt})`)
+      .orderBy(sql`DATE(${impressionsEvents.createdAt})`);
+
+    const dailyClicks = await db
+      .select({
+        date: sql<string>`DATE(${clicksEvents.createdAt})`,
+        count: sql<number>`count(*)`,
+      })
+      .from(clicksEvents)
+      .where(
+        and(
+          eq(clicksEvents.adId, adId),
+          gte(clicksEvents.createdAt, thirtyDaysAgo)
+        )
+      )
+      .groupBy(sql`DATE(${clicksEvents.createdAt})`)
+      .orderBy(sql`DATE(${clicksEvents.createdAt})`);
+
+    // Calculate growth metrics (compare last 15 days vs previous 15 days)
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+    const thirtyDaysAgoFromFifteen = new Date(fifteenDaysAgo);
+    thirtyDaysAgoFromFifteen.setDate(thirtyDaysAgoFromFifteen.getDate() - 15);
+
+    const [currentImpressions] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(impressionsEvents)
+      .where(
+        and(
+          eq(impressionsEvents.adId, adId),
+          gte(impressionsEvents.createdAt, fifteenDaysAgo)
+        )
+      );
+
+    const [previousImpressions] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(impressionsEvents)
+      .where(
+        and(
+          eq(impressionsEvents.adId, adId),
+          gte(impressionsEvents.createdAt, thirtyDaysAgoFromFifteen),
+          lte(impressionsEvents.createdAt, fifteenDaysAgo)
+        )
+      );
+
+    const [currentClicks] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clicksEvents)
+      .where(
+        and(
+          eq(clicksEvents.adId, adId),
+          gte(clicksEvents.createdAt, fifteenDaysAgo)
+        )
+      );
+
+    const [previousClicks] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clicksEvents)
+      .where(
+        and(
+          eq(clicksEvents.adId, adId),
+          gte(clicksEvents.createdAt, thirtyDaysAgoFromFifteen),
+          lte(clicksEvents.createdAt, fifteenDaysAgo)
+        )
+      );
+
+    // Merge daily impressions and clicks data
+    const impressionMap = new Map(
+      dailyImpressions.map(d => [d.date, Number(d.count)])
+    );
+    const clickMap = new Map(
+      dailyClicks.map(d => [d.date, Number(d.count)])
+    );
+
+    // Create chart data for last 30 days
+    const chartData: ChartData[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      chartData.push({
+        date: dateStr,
+        impressions: impressionMap.get(dateStr) || 0,
+        clicks: clickMap.get(dateStr) || 0,
+      });
+    }
+
+    // Calculate metrics
+    const totalImpressions = Number(impressionsResult?.count || 0);
+    const totalClicks = Number(clicksResult?.count || 0);
+    const currentImpressionsCount = Number(currentImpressions?.count || 0);
+    const previousImpressionsCount = Number(previousImpressions?.count || 0);
+    const currentClicksCount = Number(currentClicks?.count || 0);
+    const previousClicksCount = Number(previousClicks?.count || 0);
+
+    const clickThroughRate = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+
+    const impressionGrowth = previousImpressionsCount > 0
+      ? ((currentImpressionsCount - previousImpressionsCount) / previousImpressionsCount) * 100
+      : 0;
+
+    const clickGrowth = previousClicksCount > 0
+      ? ((currentClicksCount - previousClicksCount) / previousClicksCount) * 100
+      : 0;
+
+    const previousCTR = previousImpressionsCount > 0
+      ? (previousClicksCount / previousImpressionsCount) * 100
+      : 0;
+    const currentCTR = currentImpressionsCount > 0
+      ? (currentClicksCount / currentImpressionsCount) * 100
+      : 0;
+
+    const ctrGrowth = previousCTR > 0
+      ? ((currentCTR - previousCTR) / previousCTR) * 100
+      : 0;
+
+    return {
+      // Analytics data
+      analytics: {
+        totalImpressions,
+        totalClicks,
+        clickThroughRate: Math.round(clickThroughRate * 100) / 100,
+        websiteClicks: ad.websiteClicks,
+        likesCount: ad.likesCount,
+        performance: {
+          dailyBreakdown: chartData,
+          growthMetrics: {
+            impressionGrowth: Math.round(impressionGrowth * 100) / 100,
+            clickGrowth: Math.round(clickGrowth * 100) / 100,
+            ctrGrowth: Math.round(ctrGrowth * 100) / 100,
+          },
+        },
+      },
+    };
+  } catch (error) {
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to fetch ad analytics details",
+      error instanceof Error ? error.message : error
+    );
+  }
 }
 }
 

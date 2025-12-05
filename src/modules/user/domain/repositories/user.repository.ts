@@ -1,6 +1,7 @@
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
-import { AdminImpressionRatio, CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
+import { AdminImpressionRatio, Ad, CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { AdsReport } from "../../application/dtos/ads-report.dto";
+import { AdAnalyticsFullDetails } from "../../application/dtos/dashboard/dashboard.interfaces";
 
 export interface userInterface {
     getUser(id: string): Promise<Partial<User & { socialMediaPages: Array<{ pageId: string; pageName: string; pageType: string; isActive: boolean }> }> | undefined>;
@@ -24,4 +25,5 @@ export interface userInterface {
 
     updateFreeCredits(credits: number): Promise<boolean>;
     getFreeCredits(): Promise<number>;
+    getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | undefined>;
 }

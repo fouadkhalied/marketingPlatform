@@ -51,3 +51,23 @@ export interface DashboardStats {
     username?: string | null;
     createdAt: Date;
   }
+
+  export interface AdAnalyticsFullDetails {
+   
+    // Analytics data
+    analytics: {
+      totalImpressions: number;
+      totalClicks: number;
+      clickThroughRate: number;
+      websiteClicks: number;
+      likesCount: number;
+      performance: {
+        dailyBreakdown: ChartData[];
+        growthMetrics: {
+          impressionGrowth: number;
+          clickGrowth: number;
+          ctrGrowth: number;
+        };
+      };
+    };
+  }
