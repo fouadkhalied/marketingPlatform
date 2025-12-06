@@ -74,11 +74,13 @@ export interface DashboardStats {
         views: number;
       }[];
       financials: {
-        totalBudgetCredits: number;
-        spentAmount: number;
-        remainingCredits: number;
-        costPerImpression: number;
-        currency: string;
-      };
+        totalBudgetImpressions: number;  // Total impressions allocated (was totalBudgetCredits)
+        usedImpressions: number;          // Impressions consumed so far (was spentAmount)
+        remainingImpressions: number;     // Impressions still available (was remainingCredits)
+        costPerImpression: number;        // Cost per single impression
+        totalCostSpent: number;           // Monetary value of impressions used
+        totalBudgetCost: number;          // Monetary value of total budget
+        currency: string;                 // Currency code (e.g., 'sar')
+      }
     };
   }

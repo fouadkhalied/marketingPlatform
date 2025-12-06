@@ -1478,12 +1478,16 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
           views: item.views,
         })),
         financials: {
-          totalBudgetCredits: ad.impressionsCredit,
-          spentAmount: Math.round(spentAmount * 100) / 100,
-          remainingCredits: Math.round(remainingCredits * 100) / 100,
+          totalBudgetImpressions: ad.impressionsCredit, // Total impressions allocated
+          usedImpressions: totalImpressions, // Impressions used so far
+          remainingImpressions: Math.max(0, ad.impressionsCredit - totalImpressions), // Impressions left
+          
+          // Optional: Show monetary value
           costPerImpression: Math.round(costPerImpression * 10000) / 10000,
+          totalCostSpent: Math.round((totalImpressions * costPerImpression) * 100) / 100,
+          totalBudgetCost: Math.round((ad.impressionsCredit * costPerImpression) * 100) / 100,
           currency: currency,
-        },
+        }
       },
     };
   } catch (error) {
