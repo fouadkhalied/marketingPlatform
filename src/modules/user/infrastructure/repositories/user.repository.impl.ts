@@ -1446,9 +1446,6 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
     const remainingCredits = Math.max(0, ad.impressionsCredit - spentAmount);
 
     return {
-      // Basic ad details
-      ...ad,
-
       // Analytics data
       analytics: {
         totalImpressions,
