@@ -1312,6 +1312,32 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
       .groupBy(sql`DATE(${clicksEvents.createdAt})`)
       .orderBy(sql`DATE(${clicksEvents.createdAt})`);
 
+    // Get source analytics from impressions
+    const sourceAnalytics = await db
+      .select({
+        source: impressionsEvents.source,
+        views: sql<number>`count(*)`,
+      })
+      .from(impressionsEvents)
+      .where(
+        and(
+          eq(impressionsEvents.adId, adId),
+          gte(impressionsEvents.createdAt, thirtyDaysAgo)
+        )
+      )
+      .groupBy(impressionsEvents.source);
+
+    // Get current impression pricing ratio
+    const [currentRatio] = await db
+      .select({
+        impressionsPerUnit: adminImpressionRatio.impressionsPerUnit,
+        currency: adminImpressionRatio.currency,
+      })
+      .from(adminImpressionRatio)
+      .where(eq(adminImpressionRatio.promoted, ad.hasPromoted))
+      .orderBy(desc(adminImpressionRatio.createdAt))
+      .limit(1);
+
     // Calculate growth metrics (compare last 15 days vs previous 15 days)
     const fifteenDaysAgo = new Date();
     fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
@@ -1412,7 +1438,17 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
       ? ((currentCTR - previousCTR) / previousCTR) * 100
       : 0;
 
+    // Calculate financial metrics
+    const impressionsPerUnit = currentRatio?.impressionsPerUnit || 1000; // Default fallback
+    const currency = currentRatio?.currency || 'sar';
+    const costPerImpression = 1 / impressionsPerUnit; // Cost per impression
+    const spentAmount = totalImpressions * costPerImpression;
+    const remainingCredits = Math.max(0, ad.impressionsCredit - spentAmount);
+
     return {
+      // Basic ad details
+      ...ad,
+
       // Analytics data
       analytics: {
         totalImpressions,
@@ -1427,6 +1463,17 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
             clickGrowth: Math.round(clickGrowth * 100) / 100,
             ctrGrowth: Math.round(ctrGrowth * 100) / 100,
           },
+        },
+        source: sourceAnalytics.map(item => ({
+          type: item.source,
+          views: Number(item.views),
+        })),
+        financials: {
+          totalBudgetCredits: ad.impressionsCredit,
+          spentAmount: Math.round(spentAmount * 100) / 100,
+          remainingCredits: Math.round(remainingCredits * 100) / 100,
+          costPerImpression: Math.round(costPerImpression * 10000) / 10000,
+          currency: currency,
         },
       },
     };

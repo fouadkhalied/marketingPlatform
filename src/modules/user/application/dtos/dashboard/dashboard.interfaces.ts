@@ -53,7 +53,7 @@ export interface DashboardStats {
   }
 
   export interface AdAnalyticsFullDetails {
-   
+
     // Analytics data
     analytics: {
       totalImpressions: number;
@@ -68,6 +68,17 @@ export interface DashboardStats {
           clickGrowth: number;
           ctrGrowth: number;
         };
+      };
+      source: {
+        type: string;
+        views: number;
+      }[];
+      financials: {
+        totalBudgetCredits: number;
+        spentAmount: number;
+        remainingCredits: number;
+        costPerImpression: number;
+        currency: string;
       };
     };
   }
