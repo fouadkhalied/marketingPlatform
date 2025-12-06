@@ -1312,8 +1312,11 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
       .groupBy(sql`DATE(${clicksEvents.createdAt})`)
       .orderBy(sql`DATE(${clicksEvents.createdAt})`);
 
+    // Define all possible platforms
+    const allPlatforms = ['web', 'facebook', 'instagram', 'tiktok', 'snapchat', 'youtube', 'google_ads'];
+
     // Get source analytics from impressions
-    const sourceAnalytics = await db
+    const sourceAnalyticsQuery = await db
       .select({
         source: impressionsEvents.source,
         views: sql<number>`count(*)`,
@@ -1326,6 +1329,15 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
         )
       )
       .groupBy(impressionsEvents.source);
+
+    // Create a map of existing analytics
+    const sourceMap = new Map(sourceAnalyticsQuery.map(item => [item.source, Number(item.views)]));
+
+    // Ensure all platforms are included with their counts (0 if no impressions)
+    const sourceAnalytics = allPlatforms.map(platform => ({
+      source: platform,
+      views: sourceMap.get(platform) || 0,
+    }));
 
     // Get current impression pricing ratio
     const [currentRatio] = await db
@@ -1463,7 +1475,7 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
         },
         source: sourceAnalytics.map(item => ({
           type: item.source,
-          views: Number(item.views),
+          views: item.views,
         })),
         financials: {
           totalBudgetCredits: ad.impressionsCredit,
