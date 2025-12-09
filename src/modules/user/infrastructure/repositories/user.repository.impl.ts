@@ -835,7 +835,8 @@ async getRecentActivity(userId: string, limit: number = 10) {
       .slice(0, limit)
       .map(activity => ({
         ...activity,
-        adTitle: adMap.get(activity.adId)?.titleEn || 'Unknown Ad',
+        titleEn: adMap.get(activity.adId)?.titleEn,
+        titleAr: adMap.get(activity.adId)?.titleAr
       }));
 
     return activities;
@@ -1490,6 +1491,7 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
         }
       },
     };
+    adTitle
   } catch (error) {
     throw ErrorBuilder.build(
       ErrorCode.DATABASE_ERROR,
