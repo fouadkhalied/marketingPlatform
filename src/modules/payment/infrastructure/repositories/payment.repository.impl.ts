@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../../../infrastructure/db/connection";
-import { InsertPurchase, Purchase, purchases, users } from "../../../../infrastructure/shared/schema/schema";
+import { InsertPurchase, Purchase, purchases, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaymentRepository } from "../../domain/repositories/payment.repository";
 
 export class PaymentRepositoryImpl implements PaymentRepository {
@@ -112,6 +112,21 @@ export class PaymentRepositoryImpl implements PaymentRepository {
             throw new Error(`Failed to save payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
+
+    async findUserById(id: string): Promise<User | null> {
+      try {
+          const [result] = await db
+              .select()
+              .from(users)
+              .where(eq(users.id, id))
+              .limit(1);
+
+          return result || null;
+      } catch (error) {
+          console.error('❌ Database find error:', error);
+          return null;
+      }
+  }
 
     async findById(id: string): Promise<Purchase | null> {
         try {

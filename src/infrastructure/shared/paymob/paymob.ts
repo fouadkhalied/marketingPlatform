@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 import { CheckoutSessionOptions, PaymentVerification, PaymobBillingData, PaymobCheckoutSession, PaymobConfig, PaymobOrder, PaymobWebhookData, PaymobWebhookEvent, RefundOptions, WebhookHandler } from "./paymob.interface";
 import crypto from "crypto";
+import { User } from "../schema/schema";
 
 
 export class PaymobPaymentHandler {
@@ -108,7 +109,7 @@ export class PaymobPaymentHandler {
      * Create a checkout session (Stripe-compatible interface)
      */
 
-    async createCheckoutSession(options: CheckoutSessionOptions): Promise<PaymobCheckoutSession> {
+    async createCheckoutSession(user: User , options: CheckoutSessionOptions): Promise<PaymobCheckoutSession> {
       try {
         const token = await this.authenticate();
     
@@ -130,9 +131,9 @@ export class PaymobPaymentHandler {
     
         // STEP 2: Prepare billing data
         const billingData: PaymobBillingData = {
-          email: options.customerEmail || 'customer@example.com',
-          first_name: options.customerEmail?.split('@')[0] || 'Customer',
-          last_name: 'Name',
+          email: user.email,
+          first_name: user.username || '',
+          last_name: user.username || '',
           phone_number: '+966500000000',
           apartment: 'NA',
           floor: 'NA',
@@ -144,6 +145,9 @@ export class PaymobPaymentHandler {
           country: 'KSA',
           state: 'NA',
         };  
+
+        console.log(billingData);
+        
     
         // STEP 3: Create Payment Key
         console.log('🔑 Creating payment key...');
@@ -320,7 +324,7 @@ export class PaymobPaymentHandler {
   
       try {
         // Parse body if it's a string or buffer
-        let webhookData: PaymobWebhookData;
+        let webhookData: any;
         if (typeof body === 'string') {
           webhookData = JSON.parse(body);
         } else if (Buffer.isBuffer(body)) {
@@ -328,12 +332,16 @@ export class PaymobPaymentHandler {
         } else {
           webhookData = body;
         }
+
+        const transactionData = webhookData.type === 'TRANSACTION' 
+        ? webhookData.obj 
+        : webhookData;
   
         // Verify signature if HMAC secret is configured
         if (this.hmacSecret) {
-          const isValid = this.verifyWebhookSignature(webhookData);
+          const isValid = this.verifyWebhookSignature(transactionData);
           if (!isValid) {
-            throw new Error('Invalid webhook signature'+ webhookData.success+webhookData.hmac);
+            throw new Error('Invalid webhook signature'+ transactionData.success+transactionData.hmac);
           }
         }
 

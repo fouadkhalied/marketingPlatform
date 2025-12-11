@@ -1,4 +1,4 @@
-import { InsertPurchase, Purchase } from "../../../../infrastructure/shared/schema/schema";
+import { InsertPurchase, Purchase, User } from "../../../../infrastructure/shared/schema/schema";
 export type PurchaseWithUser = Partial<Purchase> & {
     userName: string | null;
     userBalance: number | null;
@@ -10,6 +10,7 @@ export interface PaymentRepository {
     findBySessionId(sessionId: string): Promise<Purchase | null>;
     updateStatus(sessionId: string, status: 'pending' | 'completed' | 'failed' | 'refunded'): Promise<boolean>;
     getUserBalance(userId: string): Promise<number>;
+    findUserById(id: string): Promise<User | null> 
     getPurchaseHistory(
         filter: { userId: string },
         pagination: { page: number; limit: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }
