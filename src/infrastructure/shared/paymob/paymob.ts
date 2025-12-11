@@ -320,22 +320,35 @@ export class PaymobPaymentHandler {
   
       try {
         // Parse body if it's a string or buffer
-        let webhookData: PaymobWebhookData;
+        let webhookPayload: any;
         if (typeof body === 'string') {
-          webhookData = JSON.parse(body);
+          webhookPayload = JSON.parse(body);
         } else if (Buffer.isBuffer(body)) {
-          webhookData = JSON.parse(body.toString());
+          webhookPayload = JSON.parse(body.toString());
         } else {
-          webhookData = body;
+          webhookPayload = body;
         }
   
+        console.log('🔍 Full webhook payload keys:', Object.keys(webhookPayload));
+        console.log('🔍 Has hmac at root?', 'hmac' in webhookPayload);
+        console.log('🔍 HMAC value:', webhookPayload.hmac);
+
+         // ✅ Extract transaction data from "obj"
+       const webhookData: PaymobWebhookData = webhookPayload.obj;
+    
+       // ✅ But get HMAC from root level
+       const receivedHmac = webhookPayload.hmac;
+
+
+
         // Verify signature if HMAC secret is configured
-        if (this.hmacSecret) {
-          const isValid = this.verifyWebhookSignature(webhookData);
+        if (this.hmacSecret && receivedHmac) {
+          const isValid = this.verifyWebhookSignature(webhookData, receivedHmac);
           if (!isValid) {
             throw new Error('Invalid webhook signature');
           }
         }
+
   
         // Map Paymob events to Stripe-like event types
         const eventType = this.mapPaymobEventType(webhookData);
@@ -377,17 +390,14 @@ export class PaymobPaymentHandler {
     /**
      * Verify webhook signature using HMAC
      */
-    private verifyWebhookSignature(webhookData: PaymobWebhookData): boolean {
-      console.log(webhookData);
-      
+    private verifyWebhookSignature(webhookData: PaymobWebhookData, receivedHmac: string): boolean {
       if (!this.hmacSecret) {
         return true; // Skip verification if no secret
       }
   
       try {
-
         console.log(webhookData);
-
+        
         const concatenatedString = [
           webhookData.amount_cents,
           webhookData.created_at,
@@ -410,13 +420,23 @@ export class PaymobPaymentHandler {
           webhookData.source_data?.type || '',
           webhookData.success,
         ].join('');
+
+        console.log('🔐 HMAC Verification:');
+        console.log('  Concatenated length:', concatenatedString.length);
+        console.log('  Received HMAC:', receivedHmac);
+
+        
+        
   
         const calculatedHmac = crypto
           .createHmac('sha512', this.hmacSecret)
           .update(concatenatedString)
           .digest('hex');
   
-        return calculatedHmac === webhookData.hmac;
+          console.log('  Calculated HMAC:', calculatedHmac);
+          console.log('  Match:', calculatedHmac === receivedHmac);
+
+        return calculatedHmac === receivedHmac;
   
       } catch (error:any) {
         console.error('❌ Error verifying webhook signature:', error);
