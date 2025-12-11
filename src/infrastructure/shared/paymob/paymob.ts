@@ -378,11 +378,16 @@ export class PaymobPaymentHandler {
      * Verify webhook signature using HMAC
      */
     private verifyWebhookSignature(webhookData: PaymobWebhookData): boolean {
+      console.log(webhookData);
+      
       if (!this.hmacSecret) {
         return true; // Skip verification if no secret
       }
   
       try {
+
+        console.log(webhookData);
+
         const concatenatedString = [
           webhookData.amount_cents,
           webhookData.created_at,

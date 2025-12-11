@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../../../infrastructure/db/connection";
 import { InsertPurchase, Purchase, purchases, users } from "../../../../infrastructure/shared/schema/schema";
-import { PaymentRepository, PurchaseWithUser } from "../../domain/repositories/payment.repository";
+import { PaymentRepository } from "../../domain/repositories/payment.repository";
 
 export class PaymentRepositoryImpl implements PaymentRepository {
     async save(payment: InsertPurchase): Promise<Purchase> {
