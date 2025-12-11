@@ -333,7 +333,7 @@ export class PaymobPaymentHandler {
         if (this.hmacSecret) {
           const isValid = this.verifyWebhookSignature(webhookData);
           if (!isValid) {
-            throw new Error('Invalid webhook signature'+ webhookData.success);
+            throw new Error('Invalid webhook signature'+ webhookData.success+webhookData.hmac);
           }
         }
 
