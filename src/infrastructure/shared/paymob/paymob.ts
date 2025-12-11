@@ -132,9 +132,9 @@ export class PaymobPaymentHandler {
         // STEP 2: Prepare billing data
         const billingData: PaymobBillingData = {
           email: user.email,
-          first_name: user.username || '',
-          last_name: user.username || '',
-          phone_number: '+966502274696',
+          first_name: 'Abdulrahman',
+          last_name: 'Hawari',
+          phone_number: '966592555769',
           apartment: 'NA',
           floor: 'NA',
           street: 'NA',
