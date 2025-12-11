@@ -115,6 +115,9 @@ export const users = pgTable("users", {
   username: text("username"),
   email: text("email").notNull().unique(),
   password: text("password"), // nullable now
+  firstName: text("fisrt_name"),
+  lastName:text("last_name"),
+  phoneNumber:text("phone_number"),
   googleId: text("google_id"),
   facebookId: text("facebook_id"),
   oauth: oauthEnum("oauth").notNull().default("normal"), // <--- new
