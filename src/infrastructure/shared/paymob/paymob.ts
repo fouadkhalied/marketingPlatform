@@ -321,37 +321,48 @@ export class PaymobPaymentHandler {
       if (!this.hmacSecret) {
         console.warn('⚠️ HMAC secret not configured, skipping signature verification');
       }
-  
+    
       try {
         // Parse body if it's a string or buffer
-        let webhookData: any;
+        let rawWebhookData: any;
         if (typeof body === 'string') {
-          webhookData = JSON.parse(body);
+          rawWebhookData = JSON.parse(body);
         } else if (Buffer.isBuffer(body)) {
-          webhookData = JSON.parse(body.toString());
+          rawWebhookData = JSON.parse(body.toString());
         } else {
-          webhookData = body;
+          rawWebhookData = body;
         }
-
-        const transactionData = webhookData.type === 'TRANSACTION' 
-        ? webhookData.obj 
-        : webhookData;
-  
+    
+        console.log('📦 Raw webhook data:', JSON.stringify(rawWebhookData, null, 2));
+    
+        // ✅ FIX 1: Extract transaction data from wrapper
+        // Paymob sends: { type: 'TRANSACTION', obj: { ...actual transaction data... } }
+        const webhookData: PaymobWebhookData = rawWebhookData.type === 'TRANSACTION' 
+          ? rawWebhookData.obj 
+          : rawWebhookData;
+    
+        console.log('🔍 Extracted transaction data:', {
+          id: webhookData.id,
+          success: webhookData.success,
+          amount_cents: webhookData.amount_cents,
+          orderId: webhookData.order?.id,
+          hasHmac: !!webhookData.hmac
+        });
+    
         // Verify signature if HMAC secret is configured
         if (this.hmacSecret) {
-          const isValid = this.verifyWebhookSignature(transactionData);
+          const isValid = this.verifyWebhookSignature(webhookData);
           if (!isValid) {
-            throw new Error('Invalid webhook signature'+ transactionData.success+transactionData.hmac);
+            throw new Error(`Invalid webhook signature. Success: ${webhookData.success}, HMAC present: ${!!webhookData.hmac}`);
           }
+          console.log('✅ Webhook signature verified');
         }
-
-        
-  
+    
         // Map Paymob events to Stripe-like event types
         const eventType = this.mapPaymobEventType(webhookData);
         
         console.log(`🎯 Processing Paymob webhook: ${eventType}`);
-  
+    
         // Create Stripe-like event object
         const event: PaymobWebhookEvent = {
           type: eventType,
@@ -360,7 +371,7 @@ export class PaymobPaymentHandler {
             object: this.convertToStripeFormat(webhookData),
           },
         };
-  
+    
         // Update session status in memory
         if (webhookData.order?.id) {
           const sessionId = webhookData.order.id.toString();
@@ -368,39 +379,49 @@ export class PaymobPaymentHandler {
           if (session) {
             session.payment_status = webhookData.success ? 'paid' : 'failed';
             this.sessions.set(sessionId, session);
+            console.log(`💾 Updated session ${sessionId} status to: ${session.payment_status}`);
           }
         }
-  
+    
         // Call registered handler
         const handler = this.webhookHandlers.get(eventType);
         if (handler) {
           await handler(event);
+          console.log(`✅ Handler executed for: ${eventType}`);
         } else {
           console.log(`ℹ️ No handler registered for: ${eventType}`);
         }
-  
-      } catch (error:any) {
+    
+      } catch (error: any) {
+        console.error('❌ Webhook processing error:', error);
         throw new Error(`Webhook verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
-  
+    
     /**
      * Verify webhook signature using HMAC
      */
     private verifyWebhookSignature(webhookData: PaymobWebhookData): boolean {
-      console.log(webhookData);
-      
       if (!this.hmacSecret) {
         return true; // Skip verification if no secret
       }
-  
+    
       try {
-        
+        // ✅ FIX 2: Handle both string and boolean success values
+        const successValue = webhookData.success === true || webhookData.success === 'true' 
+          ? 'true' 
+          : 'false';
+    
+        // ✅ FIX 3: Convert error_occured to string
+        const errorOccured = webhookData.error_occured === true || webhookData.error_occured === 'true'
+          ? 'true'
+          : 'false';
+    
         const concatenatedString = [
           webhookData.amount_cents,
           webhookData.created_at,
           webhookData.currency,
-          webhookData.error_occured,
+          errorOccured,  // Use converted value
           webhookData.has_parent_transaction,
           webhookData.id,
           webhookData.integration_id,
@@ -416,26 +437,28 @@ export class PaymobPaymentHandler {
           webhookData.source_data?.pan || '',
           webhookData.source_data?.sub_type || '',
           webhookData.source_data?.type || '',
-          webhookData.success,
+          successValue,  // Use converted value
         ].join('');
-
-        console.log(concatenatedString);
-  
+    
+        console.log('🔐 HMAC concatenated string:', concatenatedString);
+        console.log('🔐 Expected HMAC from Paymob:', webhookData.hmac);
+    
         const calculatedHmac = crypto
           .createHmac('sha512', this.hmacSecret)
           .update(concatenatedString)
           .digest('hex');
-  
-          console.log(webhookData.hmac);
-          
+    
+        console.log('🔐 Calculated HMAC:', calculatedHmac);
+        console.log('🔐 HMAC Match:', calculatedHmac === webhookData.hmac);
+    
         return calculatedHmac === webhookData.hmac;
-  
-      } catch (error:any) {
+    
+      } catch (error: any) {
         console.error('❌ Error verifying webhook signature:', error);
         return false;
       }
     }
-  
+    
     /**
      * Map Paymob transaction status to Stripe event types
      */
@@ -448,38 +471,36 @@ export class PaymobPaymentHandler {
         return 'payment_intent.payment_failed';
       }
     }
-  
+    
     /**
      * Convert Paymob webhook data to Stripe-like format
      */
+    private convertToStripeFormat(webhookData: PaymobWebhookData): any {
+      const success = webhookData.success === 'true' || webhookData.success === true;
+      const amountCents = typeof webhookData.amount_cents === 'number' 
+        ? webhookData.amount_cents 
+        : parseInt(webhookData.amount_cents as string, 10);
     
-private convertToStripeFormat(webhookData: PaymobWebhookData): any {
-  const success = webhookData.success === 'true' || webhookData.success === true;
-  const amountCents = typeof webhookData.amount_cents === 'number' 
-    ? webhookData.amount_cents 
-    : parseInt(webhookData.amount_cents as string, 10);
-
-  const sessionId = webhookData.order?.id?.toString() || webhookData.id.toString();
-  
-  // ✅ CRITICAL FIX: Retrieve metadata from in-memory session
-  const storedSession = this.sessions.get(sessionId);
-  const metadata = storedSession?.metadata || webhookData.data || {};
-
-  console.log('🔍 Converting webhook data. Session ID:', sessionId);
-  console.log('🔍 Stored session metadata:', storedSession?.metadata);
-  console.log('🔍 Webhook data.data:', webhookData.data);
-  console.log('🔍 Final metadata being used:', metadata);
-
-  return {
-    id: sessionId,
-    payment_status: success ? 'paid' : 'failed',
-    payment_intent: webhookData.order?.merchant_order_id || webhookData.id.toString(),
-    amount_total: amountCents,
-    currency: webhookData.currency,
-    customer_details: {
-      email: webhookData.billing_data?.email,
-    },
-    metadata: metadata, // ✅ Use retrieved metadata
-  };
+      const sessionId = webhookData.order?.id?.toString() || webhookData.id.toString();
+      
+      // ✅ Retrieve metadata from in-memory session
+      const storedSession = this.sessions.get(sessionId);
+      const metadata = storedSession?.metadata || webhookData.data || {};
+    
+      console.log('🔍 Converting webhook data. Session ID:', sessionId);
+      console.log('🔍 Stored session metadata:', storedSession?.metadata);
+      console.log('🔍 Final metadata being used:', metadata);
+    
+      return {
+        id: sessionId,
+        payment_status: success ? 'paid' : 'failed',
+        payment_intent: webhookData.order?.merchant_order_id || webhookData.id.toString(),
+        amount_total: amountCents,
+        currency: webhookData.currency,
+        customer_details: {
+          email: webhookData.billing_data?.email,
+        },
+        metadata: metadata,
+      };
 }
 }
