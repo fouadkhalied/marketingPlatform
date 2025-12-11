@@ -333,9 +333,11 @@ export class PaymobPaymentHandler {
         if (this.hmacSecret) {
           const isValid = this.verifyWebhookSignature(webhookData);
           if (!isValid) {
-            throw new Error('Invalid webhook signature');
+            throw new Error('Invalid webhook signature'+ webhookData.success);
           }
         }
+
+        
   
         // Map Paymob events to Stripe-like event types
         const eventType = this.mapPaymobEventType(webhookData);
@@ -378,15 +380,14 @@ export class PaymobPaymentHandler {
      * Verify webhook signature using HMAC
      */
     private verifyWebhookSignature(webhookData: PaymobWebhookData): boolean {
+      console.log(webhookData);
       
       if (!this.hmacSecret) {
         return true; // Skip verification if no secret
       }
   
       try {
-
-        console.log(webhookData);
-
+        
         const concatenatedString = [
           webhookData.amount_cents,
           webhookData.created_at,
@@ -409,6 +410,8 @@ export class PaymobPaymentHandler {
           webhookData.source_data?.type || '',
           webhookData.success,
         ].join('');
+
+        console.log(concatenatedString);
   
         const calculatedHmac = crypto
           .createHmac('sha512', this.hmacSecret)
