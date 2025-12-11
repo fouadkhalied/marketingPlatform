@@ -378,7 +378,6 @@ export class PaymobPaymentHandler {
      * Verify webhook signature using HMAC
      */
     private verifyWebhookSignature(webhookData: PaymobWebhookData): boolean {
-      console.log(webhookData);
       
       if (!this.hmacSecret) {
         return true; // Skip verification if no secret
@@ -416,6 +415,8 @@ export class PaymobPaymentHandler {
           .update(concatenatedString)
           .digest('hex');
   
+          console.log(webhookData.hmac);
+          
         return calculatedHmac === webhookData.hmac;
   
       } catch (error:any) {
