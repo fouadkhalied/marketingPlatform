@@ -134,7 +134,7 @@ export class PaymobPaymentHandler {
           email: user.email,
           first_name: user.username || '',
           last_name: user.username || '',
-          phone_number: '+966500000000',
+          phone_number: '+966502274696',
           apartment: 'NA',
           floor: 'NA',
           street: 'NA',
