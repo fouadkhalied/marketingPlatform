@@ -13,7 +13,7 @@ export class SupabaseUploader implements IUploader {
   constructor() {
     this.minioClient = minioClient
     this.bucketName = 'supabase-storage';
-    this.minioPublicUrl = 'http://75.119.136.7:9000';
+    this.minioPublicUrl = 'https://octopusad.com/storage/supabase-storage';
   }
 
   async upload(file: PhotosInterface): Promise<boolean> {
