@@ -24,6 +24,7 @@ const s3Client = new S3Client({
 
 // Files to migrate (the ones you kept)
 // Files to migrate (EXACT Supabase filenames)
+// Files to migrate (EXACT last part of the Supabase URLs)
 const filesToMigrate = [
   'ad-1764526974046-1486.png',
   'ad-1764970010623-2561.png',
@@ -52,10 +53,12 @@ const filesToMigrate = [
   'ad-1764969773931-469.png',
   'ad-1765211373579-5209.jpg',
   'ad-1765263450669-5220.png',
+  'ad-1765811743091-9851.png',
   'ad-1764971869799-8793.png',
   'ad-1765366893734-6323.png',
   'ad-1765348760660-3866.png'
 ]
+
 
 
 // Detect content type from filename
