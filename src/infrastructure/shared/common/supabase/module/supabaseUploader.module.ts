@@ -75,7 +75,7 @@ export class SupabaseUploader implements IUploader {
 
   async getUrl(filePath: string): Promise<string> {
     try {
-      return `${this.minioPublicUrl}/${this.bucketName}/${filePath}`;
+      return `${this.minioPublicUrl}/${filePath}`;
     } catch (error: any) {
       throw new Error(`error in getting photo URL: ${error.message}`);
     }
