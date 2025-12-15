@@ -24,7 +24,7 @@ const s3Client = new S3Client({
 
 // Files to migrate (the ones you kept)
 const filesToMigrate = [
-  'ad-1765806364826-1222.png'
+  'ad-1765811743091-9851.png'
 ]
 
 // Detect content type from filename
