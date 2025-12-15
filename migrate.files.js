@@ -1,21 +1,23 @@
 // migrate-files.js
-import { createClient } from '@supabase/supabase-js'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
-import fetch from 'node-fetch'
+const { createClient } = require('@supabase/supabase-js');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+
 
 // Supabase Cloud configuration (source)
 const supabaseUrl = 'https://bswsekovxuifojugqdbx.supabase.co'
 const supabaseKey = process.env.SUPABASE_ANON_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 const contaboId = process.env.CONTABO_IP
+const password = process.env.AWS_SECRET_ACCESS_KEY
 
 // MinIO configuration (destination)
 const s3Client = new S3Client({
-  endpoint: 'http://your-contabo-ip:9000',
+  endpoint: `http://${contaboId}:9000`,
   region: 'us-east-1',
   credentials: {
     accessKeyId: 'admin',
-    secretAccessKey: 'your-minio-password'
+    secretAccessKey: password
   },
   forcePathStyle: true
 })
