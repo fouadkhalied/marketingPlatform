@@ -1,4 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3'
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const minioClient = new S3Client({
     endpoint: 'https://octopusad.com/storage/supabase-storage',
