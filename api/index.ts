@@ -658,9 +658,9 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-app.listen(3000, () => {
-  console.log("✅ HTTP Server running on port 3000");
-});
+// app.listen(3000, () => {
+//   console.log("✅ HTTP Server running on port 3000");
+// });
 
 https.createServer(options,app).listen(3000, () => {
   console.log("✅ HTTPS Server running at https://octopusad.com:3000");
