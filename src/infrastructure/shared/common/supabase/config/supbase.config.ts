@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const minioClient = new S3Client({
-    endpoint: 'http://localhost:9000',
+    endpoint: 'http://75.119.136.7:9000',
     region: 'us-east-1',
     credentials: {
       accessKeyId: 'admin', // admin
