@@ -1,7 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3'
 
 const minioClient = new S3Client({
-    endpoint: 'http://75.119.136.7:9000',
+    endpoint: 'https://octopusad.com/storage/supabase-storage',
     region: 'us-east-1',
     credentials: {
       accessKeyId: 'admin', // admin
@@ -11,6 +11,6 @@ const minioClient = new S3Client({
   })
   
   const BUCKET_NAME = 'supabase-storage'
-  const MINIO_PUBLIC_URL = 'http://75.119.136.7:9000' 
+  const MINIO_PUBLIC_URL = 'https://octopusad.com/storage/supabase-storage' 
   
 export {minioClient, BUCKET_NAME , MINIO_PUBLIC_URL}
