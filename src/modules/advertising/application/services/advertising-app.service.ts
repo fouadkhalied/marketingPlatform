@@ -96,9 +96,8 @@ export class AdvertisingAppService {
   ): Promise<ApiResponseInterface<{ photos: { url: string; index: number }[] }>> {
     try {
       // upload file 
+      await this.photoUploader.deletePhoto(photoUrl)
       const photoUploadResult = await this.photoUploader.execute(photo);
-
-      console.log(photoUploadResult);
       
   
       // save photo URL in DB for the ad
@@ -134,7 +133,9 @@ export class AdvertisingAppService {
   ): Promise<ApiResponseInterface<boolean>> {
     try {
 
-        const deletePhoto =await this.advertisingRepository.deletePhotoFromAd(adId,userID,photoUrl);
+       await this.photoUploader.deletePhoto(photoUrl);
+
+       const deletePhoto =await this.advertisingRepository.deletePhotoFromAd(adId,userID,photoUrl);
 
         if (deletePhoto) {
           return ResponseBuilder.success(true);

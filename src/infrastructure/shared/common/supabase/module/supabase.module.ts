@@ -41,6 +41,14 @@ export class UploadPhoto {
     }
   }
 
+  async deletePhoto(url: string) {
+    try {
+      await this.uploader.delete(url);
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  }
+
 //   private async save(propertyId: number, coverUrl: string, photosUrl: string[]): Promise<void> {
 //     await this.repo.savePropertyCoverPhoto(propertyId, coverUrl);
 //     await this.repo.savePropertyPhotos(propertyId, photosUrl);
