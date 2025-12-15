@@ -24,10 +24,10 @@ const app = express();
 const upload = multer();
 
 // certificate options
-// const options = {
-//   key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
-//   cert: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/fullchain.pem"),
-// };
+const options = {
+  key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/fullchain.pem"),
+};
 
 // ============================================
 // 1. SECURITY HEADERS & HELMET
@@ -662,21 +662,21 @@ app.listen(3000, () => {
   console.log("✅ HTTP Server running on port 3000");
 });
 
-// https.createServer(options,app).listen(3000, () => {
-//   console.log("✅ HTTPS Server running at https://octopusad.com:3000");
-// });
+https.createServer(options,app).listen(3000, () => {
+  console.log("✅ HTTPS Server running at https://octopusad.com:3000");
+});
 
-// const httpApp = express();
+const httpApp = express();
 
-// httpApp.use('*', (req, res) => {
-//   const httpsUrl = `https://octopusad.com`;
-//   console.log(`Redirecting HTTP request to: ${httpsUrl}`);
-//   res.redirect(301, httpsUrl);
-// });
+httpApp.use('*', (req, res) => {
+  const httpsUrl = `https://octopusad.com`;
+  console.log(`Redirecting HTTP request to: ${httpsUrl}`);
+  res.redirect(301, httpsUrl);
+});
 
-// // Start HTTP server on port 80
-// http.createServer(httpApp).listen(4000, () => {
-//   console.log("✅ HTTP Server running on port 80 (redirecting to HTTPS)");
-// });
+// Start HTTP server on port 80
+http.createServer(httpApp).listen(4000, () => {
+  console.log("✅ HTTP Server running on port 80 (redirecting to HTTPS)");
+});
 
 export default app;
