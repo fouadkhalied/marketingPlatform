@@ -9,6 +9,30 @@ import { ERROR_STATUS_MAP } from "../../errors/mapper/mapperErrorEnum";
 import { JwtPayload } from "../interfaces/jwtPayload";
 import { appConfig } from "../../../../config/app.config";
 
+// Simple in-memory cache for user data
+interface CacheEntry {
+  data: {
+    id: string;
+    email: string;
+    role: typeof userRoleEnum.enumValues[number];
+    oauth: string;
+  };
+  timestamp: number;
+}
+
+const userCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+// Function to invalidate user cache (useful when user data is updated)
+export const invalidateUserCache = (userId: string) => {
+  userCache.delete(userId);
+};
+
+// Function to clear all cache (useful for maintenance)
+export const clearUserCache = () => {
+  userCache.clear();
+};
+
 // Role-based authentication middleware
 export const AuthMiddleware = (allowedRole?: typeof userRoleEnum.enumValues[number]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -39,34 +63,48 @@ export const AuthMiddleware = (allowedRole?: typeof userRoleEnum.enumValues[numb
 
       let userData;
 
-      // 3. For normal users, fetch from DB
+      // 3. For normal users, fetch from cache or DB
       if (!decoded.oauth || decoded.oauth === "normal") {
-        const userResult = await db
-          .select({
-            id: users.id,
-            email: users.email,
-            role: users.role,
-            oauth: users.oauth
-          })
-          .from(users)
-          .where(eq(users.id, decoded.userId))
-          .limit(1);
+        // Check cache first
+        const cachedUser = userCache.get(decoded.userId);
+        const now = Date.now();
 
-        if (userResult.length === 0) {
-          const errorResponse = ErrorBuilder.build(
-            ErrorCode.UNAUTHORIZED,
-            'User not found'
-          );
-          return res.status(ERROR_STATUS_MAP[ErrorCode.UNAUTHORIZED]).json(errorResponse);
+        if (cachedUser && (now - cachedUser.timestamp) < CACHE_TTL) {
+          userData = cachedUser.data;
+        } else {
+          // Cache miss or expired, fetch from DB
+          const userResult = await db
+            .select({
+              id: users.id,
+              email: users.email,
+              role: users.role,
+              oauth: users.oauth
+            })
+            .from(users)
+            .where(eq(users.id, decoded.userId))
+            .limit(1);
+
+          if (userResult.length === 0) {
+            const errorResponse = ErrorBuilder.build(
+              ErrorCode.UNAUTHORIZED,
+              'User not found'
+            );
+            return res.status(ERROR_STATUS_MAP[ErrorCode.UNAUTHORIZED]).json(errorResponse);
+          }
+
+          userData = {
+            id: userResult[0].id,
+            email: userResult[0].email,
+            role: userResult[0].role,
+            oauth: userResult[0].oauth
+          };
+
+          // Cache the user data
+          userCache.set(decoded.userId, {
+            data: userData,
+            timestamp: now
+          });
         }
-
-
-        userData = {
-          id: userResult[0].id,
-          email: userResult[0].email,
-          role: userResult[0].role,
-          oauth: userResult[0].oauth
-        };
       } else {
         // 4. OAuth users (Google/Facebook)
         userData = {
