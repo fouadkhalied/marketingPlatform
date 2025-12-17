@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db } from "../../../../infrastructure/db/connection";
 import { InsertPurchase, Purchase, purchases, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { PaymentRepository } from "../../domain/repositories/payment.repository";
@@ -240,7 +240,7 @@ export class PaymentRepositoryImpl implements PaymentRepository {
               .from(purchases)
               .where(eq(purchases.userId, filter.userId))
               .orderBy(
-                 sql`${sortBy} desc`
+                desc(purchases.createdAt)
               )
               .limit(pagination.limit)
               .offset(offset),
@@ -310,7 +310,7 @@ export class PaymentRepositoryImpl implements PaymentRepository {
               .from(purchases)
               .innerJoin(users, eq(users.id, purchases.userId))
               .orderBy(
-                sql`${sortBy} desc`
+                desc(purchases.createdAt)
               )
               .limit(pagination.limit)
               .offset(offset),
