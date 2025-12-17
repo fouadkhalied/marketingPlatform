@@ -365,9 +365,24 @@ export class AdvertisingRepository implements IAdvertisingRepository {
 
 
   
-    async delete(id: string, userId: string): Promise<boolean> {
+    async delete(id: string, userId: string, role: string): Promise<boolean> {
       try {
-        const result = await db.delete(ads).where(and(eq(ads.id, id), eq(ads.userId,userId))).returning({ id: ads.id });
+        let result;
+        
+        if (role === 'admin') {
+          // Admin can delete any ad
+          result = await db
+            .delete(ads)
+            .where(eq(ads.id, id))
+            .returning({ id: ads.id });
+        } else {
+          // Regular users can only delete their own ads
+          result = await db
+            .delete(ads)
+            .where(and(eq(ads.id, id), eq(ads.userId, userId)))
+            .returning({ id: ads.id });
+        }
+        
         return result.length > 0;
       } catch (error) {
         throw ErrorBuilder.build(

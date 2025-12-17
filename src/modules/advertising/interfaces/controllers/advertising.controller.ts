@@ -439,7 +439,7 @@ async getAdsByTitle(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      if (!req.user?.id) {
+      if (!req.user?.id || !req.user?.role) {
         const errorResponse = ErrorBuilder.build(
           ErrorCode.UNAUTHORIZED_ACCESS,
           "please login"
@@ -448,7 +448,7 @@ async getAdsByTitle(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      const result = await this.advertisingService.deleteAd(req.params.id, req.user.id);
+      const result = await this.advertisingService.deleteAd(req.params.id, req.user.id, req.user.role);
 
       const statusCode = this.getStatusCode(result);
       res.status(statusCode).json(result);
