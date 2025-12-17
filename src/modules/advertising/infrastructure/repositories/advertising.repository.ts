@@ -372,6 +372,7 @@ export class AdvertisingRepository implements IAdvertisingRepository {
               id: ads.id,
               userId: ads.userId,
               impressionsCredit: ads.impressionsCredit,
+              hasPromoted: ads.hasPromoted,
             })
             .from(ads)
             .where(
@@ -384,16 +385,23 @@ export class AdvertisingRepository implements IAdvertisingRepository {
             return false;
           }
     
-          // 2. Get the conversion ratio
+          // 2. Get the conversion ratio based on promotion status
           const [ratio] = await tx
             .select({ impressionsPerUnit: adminImpressionRatio.impressionsPerUnit })
             .from(adminImpressionRatio)
             .where(
               and(
                 eq(adminImpressionRatio.currency, 'sar'),
-                eq(adminImpressionRatio.promoted, false)
+                eq(adminImpressionRatio.promoted, adToDelete.hasPromoted)
               )
             );
+    
+          if (!ratio) {
+            throw ErrorBuilder.build(
+              ErrorCode.VALIDATION_ERROR,
+              "Conversion ratio not found"
+            );
+          }
     
           // 3. Calculate refund amount
           const impressionsRemaining = adToDelete.impressionsCredit ?? 0;
