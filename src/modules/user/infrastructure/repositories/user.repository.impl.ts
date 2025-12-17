@@ -1314,7 +1314,7 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
       .orderBy(sql`DATE(${clicksEvents.createdAt})`);
 
     // Define all possible platforms
-    const allPlatforms = ['web', 'facebook', 'instagram', 'tiktok', 'snapchat', 'youtube', 'google_ads'];
+    const allPlatforms = ['web', 'facebook', 'instagram', 'tiktok', 'snapchat', 'youtube', 'google_ads', 'twitter'];
 
     // Get source analytics from impressions
     const sourceAnalyticsQuery = await db
@@ -1491,7 +1491,6 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
         }
       },
     };
-    adTitle
   } catch (error) {
     throw ErrorBuilder.build(
       ErrorCode.DATABASE_ERROR,
