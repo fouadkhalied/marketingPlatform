@@ -430,7 +430,25 @@ async getAdsByTitle(req: Request, res: Response): Promise<void> {
   // ✅ Delete Ad
   async deleteAd(req: Request, res: Response): Promise<void> {
     try {
-      const result = await this.advertisingService.deleteAd(req.params.id);
+      if (!req.params.id) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.VALIDATION_ERROR,
+          "id must be sent"
+        );
+        res.status(403).json(errorResponse);
+        return;
+      }
+
+      if (!req.user?.id) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.UNAUTHORIZED_ACCESS,
+          "please login"
+        );
+        res.status(403).json(errorResponse);
+        return;
+      }
+
+      const result = await this.advertisingService.deleteAd(req.params.id, req.user.id);
 
       const statusCode = this.getStatusCode(result);
       res.status(statusCode).json(result);

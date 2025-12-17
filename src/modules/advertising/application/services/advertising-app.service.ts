@@ -275,9 +275,11 @@ export class AdvertisingAppService {
     }
   }
 
-  async deleteAd(id: string): Promise<ApiResponseInterface<{ deleted: boolean }>> {
+  async deleteAd(id: string, userId : string): Promise<ApiResponseInterface<{ deleted: boolean }>> {
     try {
-      const deleted = await this.advertisingRepository.delete(id);
+
+      
+      const deleted = await this.advertisingRepository.delete(id, userId);
 
       if (!deleted) {
         return ErrorBuilder.build(

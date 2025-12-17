@@ -14,7 +14,7 @@ export interface IAdvertisingRepository {
     findAllAdsForUser(status: string , userId: string, pagination: PaginationParams): Promise<PaginatedResponse<Ad>>;
     listApprovedAdsForUser(pagination: PaginationParams, locations: string[], title?:string, description?:string, targetAudience?:string, source?:string): Promise<PaginatedResponse<Ad>>;
     update(id: string, ad: Partial<InsertAd>): Promise<Ad | null>;
-    delete(id: string): Promise<boolean>;
+    delete(id: string, userId: string): Promise<boolean>;
     findByTitle(title: string, params:PaginationParams) : Promise<PaginatedResponse<Ad>>;
     approveAd(id: string,data?: ApproveAdData): Promise<Ad>;
     rejectAd(id: string, reason?: string): Promise<Ad>;

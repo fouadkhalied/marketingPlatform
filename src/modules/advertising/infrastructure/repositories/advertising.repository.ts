@@ -365,9 +365,9 @@ export class AdvertisingRepository implements IAdvertisingRepository {
 
 
   
-    async delete(id: string): Promise<boolean> {
+    async delete(id: string, userId: string): Promise<boolean> {
       try {
-        const result = await db.delete(ads).where(eq(ads.id, id)).returning({ id: ads.id });
+        const result = await db.delete(ads).where(and(eq(ads.id, id), eq(ads.userId,userId))).returning({ id: ads.id });
         return result.length > 0;
       } catch (error) {
         throw ErrorBuilder.build(
@@ -1180,6 +1180,7 @@ async createPixel(pixelData: pixel): Promise<any> {
         `A pixel with ID "${pixelData.pixelId}" already exists for platform "${pixelData.platform}"`
       );
     }
+    
 
     // ✅ 2. Insert new pixel
     const [createdPixel] = await db
