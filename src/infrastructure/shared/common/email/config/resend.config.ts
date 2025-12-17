@@ -41,8 +41,8 @@ export const senderEmail = process.env.SENDER_EMAIL;
 // Verify connection configuration on startup
 transporter.verify((error, success) => {
   if (error) {
-    console.error("❌ Email configuration error:", error);
-    console.error(process.env.SMTP_PASSWORD)
+    //console.error("❌ Email configuration error:", error);
+    //console.error(process.env.SMTP_PASSWORD)
   } else {
     console.log("✅ Email server is ready to send messages");
   }

@@ -324,7 +324,6 @@ export class AdvertisingRepository implements IAdvertisingRepository {
       }
     }
     
-    
     async update(id: string, ad: Partial<InsertAd>): Promise<Ad | null> {
       try {
         // Clone and sanitize the update data
@@ -335,23 +334,26 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         
         dateFields.forEach(field => {
           if (updateData[field]) {
-            // If it's a string, convert to Date
             if (typeof updateData[field] === 'string') {
               updateData[field] = new Date(updateData[field]);
             }
-            // If it's already a Date, leave it as is
-            // Drizzle will handle the conversion to ISO string
           }
         });
         
+        // Always set status to pending when updating
+        updateData.status = 'pending';
     
-        const [result] = await db
-          .update(ads)
-          .set(updateData)
-          .where(eq(ads.id, id))
-          .returning();
+        const result = await db.transaction(async(tx) => {
+          const [updated] = await tx
+            .update(ads)
+            .set(updateData)
+            .where(eq(ads.id, id))
+            .returning();
           
-        return result ? (result as Ad) : null;
+          return updated;
+        });
+          
+        return result || null;
       } catch (error) {
         throw ErrorBuilder.build(
           ErrorCode.DATABASE_ERROR,
