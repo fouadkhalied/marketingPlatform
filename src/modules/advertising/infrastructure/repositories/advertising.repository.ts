@@ -363,27 +363,60 @@ export class AdvertisingRepository implements IAdvertisingRepository {
       }
     }
 
-
-  
     async delete(id: string, userId: string, role: string): Promise<boolean> {
       try {
-        let result;
-        
-        if (role === 'admin') {
-          // Admin can delete any ad
-          result = await db
+        return await db.transaction(async (tx) => {
+          // 1. First, get the ad details to calculate refund
+          const [adToDelete] = await tx
+            .select({
+              id: ads.id,
+              userId: ads.userId,
+              impressionsCredit: ads.impressionsCredit,
+            })
+            .from(ads)
+            .where(
+              role === 'admin' 
+                ? eq(ads.id, id) 
+                : and(eq(ads.id, id), eq(ads.userId, userId))
+            );
+    
+          if (!adToDelete) {
+            return false;
+          }
+    
+          // 2. Get the conversion ratio
+          const [ratio] = await tx
+            .select({ impressionsPerUnit: adminImpressionRatio.impressionsPerUnit })
+            .from(adminImpressionRatio)
+            .where(
+              and(
+                eq(adminImpressionRatio.currency, 'sar'),
+                eq(adminImpressionRatio.promoted, false)
+              )
+            );
+    
+          // 3. Calculate refund amount
+          const impressionsRemaining = adToDelete.impressionsCredit ?? 0;
+          const refundAmount = impressionsRemaining / Number(ratio.impressionsPerUnit);
+    
+          // 4. Return credit to user's balance (only if there's a refund)
+          if (refundAmount > 0) {
+            await tx
+              .update(users)
+              .set({
+                balance: sql`${users.balance} + ${refundAmount}`,
+              })
+              .where(eq(users.id, adToDelete.userId));
+          }
+    
+          // 5. Delete the ad
+          const result = await tx
             .delete(ads)
             .where(eq(ads.id, id))
             .returning({ id: ads.id });
-        } else {
-          // Regular users can only delete their own ads
-          result = await db
-            .delete(ads)
-            .where(and(eq(ads.id, id), eq(ads.userId, userId)))
-            .returning({ id: ads.id });
-        }
-        
-        return result.length > 0;
+    
+          return result.length > 0;
+        });
       } catch (error) {
         throw ErrorBuilder.build(
           ErrorCode.DATABASE_ERROR,
@@ -392,7 +425,6 @@ export class AdvertisingRepository implements IAdvertisingRepository {
         );
       }
     }
-
     
 async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
   try {
