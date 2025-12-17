@@ -401,6 +401,7 @@ async approveAd(id: string, data?: ApproveAdData): Promise<Ad> {
       active : true,
       status: "approved" as const,
       updatedAt: sql`now()`,
+      rejectionReason: ''
     };
 
     // Add social media links only if they are provided

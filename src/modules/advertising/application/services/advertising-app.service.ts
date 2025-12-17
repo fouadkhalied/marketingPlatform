@@ -274,6 +274,7 @@ export class AdvertisingAppService {
       );
     }
   }
+  
 
   async deleteAd(id: string, userId : string, role :string): Promise<ApiResponseInterface<{ deleted: boolean }>> {
     try {
