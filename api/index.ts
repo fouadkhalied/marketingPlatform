@@ -19,6 +19,9 @@ import { CheckVerificationRequest } from "../src/modules/user/interfaces/control
 import { createAllAdvertisingControllers } from "../src/modules/advertising/interfaces/factories/advertising.factory";
 import { setupAdvertisingRoutes } from "../src/modules/advertising/interfaces/routes/advertising.routes";
 import { createAuthController } from "../src/modules/auth/interfaces/factories/auth.controller.factory";
+import { connectMongoDB } from "../src/infrastructure/db/mongodb-connection";
+import { createBlogController } from "../src/modules/blogs/interfaces/factories/blog.factory";
+import { setupBlogRoutes } from "../src/modules/blogs/interfaces/routes/blog.routes";
 import passport from 'passport';
 
 const app = express();
@@ -380,6 +383,11 @@ app.get('/api/payment/getPurchaseHistoryForAdmin',AuthMiddleware(UserRole.ADMIN)
 const advertisingRoutes = setupAdvertisingRoutes(advertisingController);
 app.use(advertisingRoutes);
 
+// Blog routes
+const blogController = createBlogController();
+const blogRoutes = setupBlogRoutes(blogController);
+app.use(blogRoutes);
+
 // facebook Outh
 app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(req,res));
 
@@ -515,13 +523,23 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// app.listen(3000, () => {
-//   console.log("✅ HTTP Server running on port 3000");
-// });
+// Initialize MongoDB connection and start server
+async function startServer() {
+  try {
+    // Connect to MongoDB
+    await connectMongoDB();
 
-https.createServer(options,app).listen(3000, () => {
-  console.log("✅ HTTPS Server running at https://octopusad.com:3000");
-});
+    // Start HTTPS server
+    https.createServer(options, app).listen(3000, () => {
+      console.log("✅ HTTPS Server running at https://octopusad.com:3000");
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 const httpApp = express();
 

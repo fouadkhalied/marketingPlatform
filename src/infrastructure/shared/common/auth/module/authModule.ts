@@ -14,6 +14,7 @@ interface CacheEntry {
   data: {
     id: string;
     email: string;
+    name: string;
     role: typeof userRoleEnum.enumValues[number];
     oauth: string;
   };
@@ -77,6 +78,7 @@ export const AuthMiddleware = (allowedRole?: typeof userRoleEnum.enumValues[numb
             .select({
               id: users.id,
               email: users.email,
+              name: users.username,
               role: users.role,
               oauth: users.oauth
             })
@@ -95,6 +97,7 @@ export const AuthMiddleware = (allowedRole?: typeof userRoleEnum.enumValues[numb
           userData = {
             id: userResult[0].id,
             email: userResult[0].email,
+            name: userResult[0].name || userResult[0].email.split('@')[0] || 'User',
             role: userResult[0].role,
             oauth: userResult[0].oauth
           };
@@ -110,6 +113,7 @@ export const AuthMiddleware = (allowedRole?: typeof userRoleEnum.enumValues[numb
         userData = {
           id: decoded.userId,
           email: decoded.email,
+          name: decoded.email.split('@')[0] || 'OAuth User', // Use email prefix as name
           role: decoded.role,
           oauth: decoded.oauth
         };
@@ -126,6 +130,8 @@ export const AuthMiddleware = (allowedRole?: typeof userRoleEnum.enumValues[numb
 
       // 6. Attach user to request
       req.user = userData;
+      console.log(userData.name);
+      
 
       next();
 
