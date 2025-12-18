@@ -16,7 +16,8 @@ import { createPaymentController } from "../src/modules/payment/interfaces/facto
 import { AuthMiddleware } from "../src/infrastructure/shared/common/auth/module/authModule";
 import { UserRole } from "../src/infrastructure/shared/common/auth/enums/userRole";
 import { CheckVerificationRequest } from "../src/modules/user/interfaces/controllers/user.controller";
-import { createAdvertisingController } from "../src/modules/advertising/interfaces/factories/advertising.factory";
+import { createAllAdvertisingControllers } from "../src/modules/advertising/interfaces/factories/advertising.factory";
+import { setupAdvertisingRoutes } from "../src/modules/advertising/interfaces/routes/advertising.routes";
 import { createAuthController } from "../src/modules/auth/interfaces/factories/auth.controller.factory";
 import passport from 'passport';
 
@@ -24,10 +25,10 @@ const app = express();
 const upload = multer();
 
 // certificate options
-const options = {
-  key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
-  cert: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/fullchain.pem"),
-};
+// const options = {
+//   key: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/privkey.pem"),
+//   cert: fs.readFileSync("/etc/letsencrypt/live/octopusad.com/fullchain.pem"),
+// };
 
 // ============================================
 // 1. SECURITY HEADERS & HELMET
@@ -251,7 +252,7 @@ authController.setGoogleStrategy();
 
 const userController = createUserController();
 const paymentController = createPaymentController();
-const advertisingController = createAdvertisingController();
+const advertisingController = createAllAdvertisingControllers();
 
 
 // Apply global rate limiting and security
@@ -375,102 +376,9 @@ app.get('/api/payment/getPurchaseHistoryForAdmin',AuthMiddleware(UserRole.ADMIN)
 (req, res) => paymentController.getPurchaseHistoryForAdmin(req, res))
 
 
-// Adverstising routes
-
-app.get("/api/advertising/search", AuthMiddleware(UserRole.USER), (req,res) => advertisingController.getAdsByTitle(req,res))
-
-app.post('/api/advertising',AuthMiddleware(UserRole.USER), (req,res) => advertisingController.createAd(req,res)) 
-
-app.post('/api/advertising/uploadPhoto/:id',AuthMiddleware(UserRole.USER), upload.array("photo"), (req,res) => advertisingController.uploadPhotoToAd(req,res))
-
-app.delete('/api/advertising/deletePhoto/:id',AuthMiddleware(UserRole.USER),(req,res) => advertisingController.deletePhotoFromAd(req,res))
-
-app.put('/api/advertising/updatePhoto/:id',AuthMiddleware(UserRole.USER),upload.array("photo"),(req,res) => advertisingController.updatePhotoFromAd(req,res))
-
-app.get(
-  "/api/advertising/listApprovedAdsForUser",
-  (req, res) => advertisingController.listApprovedAdsForUser(req, res)
-);
-
-app.get(
-  "/api/advertising/list",
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.listAds(req, res)
-);
-
-app.get(
-  "/api/advertising/list/userPages",
-  AuthMiddleware(UserRole.USER),
-  (req,res) => advertisingController.getAllPagesForUser(req,res)
-)
-
-app.get(
-  "/api/advertising/list/pages/:pageId/posts",
-  AuthMiddleware(UserRole.USER),
-  (req,res) => advertisingController.getPostsFromPage(req,res)
-)
-
-app.get(
-  "/api/advertising/insights/pages/:pageId/posts/:postId",
-  AuthMiddleware(UserRole.USER),
-  (req,res) => advertisingController.getPostInsights(req,res)
-)
-
-app.post(
-  "/api/advertising/:id/assign-credit",
-  AuthMiddleware(UserRole.USER),
-  sanitizeInput,
-  (req,res)=>advertisingController.assignCreditToAd(req,res)
-)
-app.put(
-  "/api/advertising/:id/approve",
-  AuthMiddleware(UserRole.ADMIN),
-  (req, res) => advertisingController.approveAd(req, res)
-);
-
-app.put(
-  "/api/advertising/:id/reject",
-  AuthMiddleware(UserRole.ADMIN),
-  (req, res) => advertisingController.rejectAd(req, res)
-);
-
-app.put(
-  "/api/advertising/:id/avctivate",
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.avctivateAd(req, res)
-);
-
-// Deactivate user's ad
-app.put('/api/advertising/:id/deactivate', 
-  AuthMiddleware(UserRole.USER), 
-  (req, res) => advertisingController.deactivateUserAd(req, res));
-
-app.put('/api/advertising/:id/promote', 
-    AuthMiddleware(UserRole.USER), 
-    (req, res) => advertisingController.promoteAd(req, res));
-  
-app.put('/api/advertising/:id/depromote', 
-    AuthMiddleware(UserRole.USER), 
-    (req, res) => advertisingController.depromoteAd(req, res));
-        
-app.get(
-  "/api/advertising/:id",
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.getAd(req, res)
-);
-
-app.put(
-  "/api/advertising/:id",
-  AuthMiddleware(UserRole.USER),
-  sanitizeInput,
-  (req, res) => advertisingController.updateAd(req, res)
-);
-
-app.delete(
-  "/api/advertising/:id",
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.deleteAd(req, res)
-);
+// Advertising routes
+const advertisingRoutes = setupAdvertisingRoutes(advertisingController);
+app.use(advertisingRoutes);
 
 // facebook Outh
 app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(req,res));
@@ -531,57 +439,6 @@ app.get('/api/dashboard/user', AuthMiddleware(UserRole.USER), (req,res)=>userCon
 
 app.get('/api/dashboard/admin', AuthMiddleware(UserRole.ADMIN), (req,res)=>userController.getDashoardMetricsForAdmin(req,res))
 
-// pixels
-
-// Create new pixel
-app.post(
-  '/api/pixels',
-  AuthMiddleware(UserRole.ADMIN),
-  sanitizeInput,
-  (req, res) => advertisingController.createPixelApp(req, res)
-);
-
-// Get all pixels (with pagination)
-app.get(
-  '/api/pixels',
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.getAllPixels(req, res)
-);
-
-app.get(
-  '/api/pixels/generate-code-for-all-pixels',
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.generatePixelCodeForAllPixels(req, res)
-);
-
-// Get single pixel by ID
-app.get(
-  '/api/pixels/:id',
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.getPixelById(req, res)
-);
-
-// Update pixel
-app.put(
-  '/api/pixels/:id',
-  AuthMiddleware(UserRole.ADMIN),
-  sanitizeInput,
-  (req, res) => advertisingController.updatePixel(req, res)
-);
-
-// Delete pixel
-app.delete(
-  '/api/pixels/:id',
-  AuthMiddleware(UserRole.ADMIN),
-  (req, res) => advertisingController.deletePixel(req, res)
-);
-
-// Generate pixel tracking code
-app.get(
-  '/api/pixels/:id/generate-code',
-  AuthMiddleware(UserRole.USER),
-  (req, res) => advertisingController.generatePixelCode(req, res)
-);
 
 
 
@@ -658,25 +515,25 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// app.listen(3000, () => {
-//   console.log("✅ HTTP Server running on port 3000");
+app.listen(3000, () => {
+  console.log("✅ HTTP Server running on port 3000");
+});
+
+// https.createServer(options,app).listen(3000, () => {
+//   console.log("✅ HTTPS Server running at https://octopusad.com:3000");
 // });
 
-https.createServer(options,app).listen(3000, () => {
-  console.log("✅ HTTPS Server running at https://octopusad.com:3000");
-});
+// const httpApp = express();
 
-const httpApp = express();
+// httpApp.use('*', (req, res) => {
+//   const httpsUrl = `https://octopusad.com`;
+//   console.log(`Redirecting HTTP request to: ${httpsUrl}`);
+//   res.redirect(301, httpsUrl);
+// });
 
-httpApp.use('*', (req, res) => {
-  const httpsUrl = `https://octopusad.com`;
-  console.log(`Redirecting HTTP request to: ${httpsUrl}`);
-  res.redirect(301, httpsUrl);
-});
-
-// Start HTTP server on port 80
-http.createServer(httpApp).listen(4000, () => {
-  console.log("✅ HTTP Server running on port 80 (redirecting to HTTPS)");
-});
+// // Start HTTP server on port 80
+// http.createServer(httpApp).listen(4000, () => {
+//   console.log("✅ HTTP Server running on port 80 (redirecting to HTTPS)");
+// });
 
 export default app;

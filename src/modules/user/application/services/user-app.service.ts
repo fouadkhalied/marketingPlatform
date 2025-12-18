@@ -103,9 +103,9 @@ export class UserAppService {
       }
 
       // 2. Ensure the user is verified before allowing login
-      if (!user.verified) {
-        return ErrorBuilder.build(ErrorCode.USER_NOT_VERIFIED, "Account not verified. Please check your email for the verification code.");
-      }
+      // if (!user.verified) {
+      //   return ErrorBuilder.build(ErrorCode.USER_NOT_VERIFIED, "Account not verified. Please check your email for the verification code.");
+      // }
     
       // 3. Compare the provided password with the stored hash
       const isPasswordValid = await this.jwtService.comparePassword(password, user.password, "normal");
