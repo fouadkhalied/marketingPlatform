@@ -4,6 +4,7 @@ import { UploadPhoto } from "../../../../infrastructure/shared/common/supabase/m
 import { SupabaseUploader } from "../../../../infrastructure/shared/common/supabase/module/supabaseUploader.module";
 
 // Repositories
+import { AdsPackageRepository } from "../../infrastructure/repositories/ads.package.repository";
 import { AdCrudRepository } from "../../infrastructure/repositories/ad.crud.repository";
 import { AdPhotoRepository } from "../../infrastructure/repositories/ad.photo.repository";
 import { AdListingRepository } from "../../infrastructure/repositories/ad.listing.repository";
@@ -13,6 +14,7 @@ import { SocialMediaPageRepository } from "../../infrastructure/repositories/soc
 import { PixelRepository } from "../../infrastructure/repositories/pixel.repository";
 
 // Services
+import { AdsPackageAppService } from "../../application/services/ads.package-app.service";
 import { AdCrudAppService } from "../../application/services/ad.crud-app.service";
 import { AdPhotoAppService } from "../../application/services/ad.photo-app.service";
 import { AdListingAppService } from "../../application/services/ad.listing-app.service";
@@ -22,6 +24,7 @@ import { SocialMediaAppService } from "../../application/services/social.media-a
 import { PixelAppService } from "../../application/services/pixel-app.service";
 
 // Controllers
+import { AdsPackageController } from "../controllers/ads.package.controller";
 import { AdCrudController } from "../controllers/ad.crud.controller";
 import { AdPhotoController } from "../controllers/ad.photo.controller";
 import { AdListingController } from "../controllers/ad.listing.controller";
@@ -70,6 +73,10 @@ function createPixelRepository(): PixelRepository {
     return new PixelRepository();
 }
 
+function createAdsPackageRepository(): AdsPackageRepository {
+    return new AdsPackageRepository();
+}
+
 // Service factories
 function createAdCrudAppService(): AdCrudAppService {
     const adCrudRepository = createAdCrudRepository();
@@ -108,6 +115,11 @@ function createPixelAppService(): PixelAppService {
     return new PixelAppService(pixelRepository);
 }
 
+function createAdsPackageAppService(): AdsPackageAppService {
+    const adsPackageRepository = createAdsPackageRepository();
+    return new AdsPackageAppService(adsPackageRepository);
+}
+
 // Controller factories
 function createAdCrudController(): AdCrudController {
     const adCrudService = createAdCrudAppService();
@@ -144,6 +156,11 @@ function createPixelController(): PixelController {
     return new PixelController(pixelService);
 }
 
+function createAdsPackageController(): AdsPackageController {
+    const adsPackageService = createAdsPackageAppService();
+    return new AdsPackageController(adsPackageService);
+}
+
 // Composite factory for all controllers
 export function createAllAdvertisingControllers() {
     return {
@@ -154,6 +171,7 @@ export function createAllAdvertisingControllers() {
         adPromotion: createAdPromotionController(),
         socialMedia: createSocialMediaController(),
         pixel: createPixelController(),
+        adsPackage: createAdsPackageController(),
     };
 }
 

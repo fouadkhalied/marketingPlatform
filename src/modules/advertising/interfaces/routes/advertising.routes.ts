@@ -171,9 +171,35 @@ export function setupAdvertisingRoutes(advertisingController: any) {
     (req, res) => advertisingController.pixel.updatePixel(req, res)
   );
 
-  router.delete('/api/pixels/:id', 
-    AuthMiddleware(UserRole.ADMIN), 
+  router.delete('/api/pixels/:id',
+    AuthMiddleware(UserRole.USER),
     (req, res) => advertisingController.pixel.deletePixel(req, res)
+  );
+
+  // Ads Package routes
+  router.post('/api/ads-packages',
+    AuthMiddleware(UserRole.USER),
+    (req, res) => advertisingController.adsPackage.createAdsPackage(req, res)
+  );
+
+  router.get('/api/ads-packages',
+    AuthMiddleware(UserRole.USER),
+    (req, res) => advertisingController.adsPackage.getAllAdsPackages(req, res)
+  );
+
+  router.get('/api/ads-packages/:id',
+    AuthMiddleware(UserRole.USER),
+    (req, res) => advertisingController.adsPackage.getAdsPackage(req, res)
+  );
+
+  router.put('/api/ads-packages/:id',
+    AuthMiddleware(UserRole.USER),
+    (req, res) => advertisingController.adsPackage.updateAdsPackage(req, res)
+  );
+
+  router.delete('/api/ads-packages/:id',
+    AuthMiddleware(UserRole.USER),
+    (req, res) => advertisingController.adsPackage.deleteAdsPackage(req, res)
   );
 
   return router;

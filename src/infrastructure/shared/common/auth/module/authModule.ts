@@ -130,7 +130,6 @@ export const AuthMiddleware = (allowedRole?: typeof userRoleEnum.enumValues[numb
 
       // 6. Attach user to request
       req.user = userData;
-      console.log(userData.name);
       
 
       next();

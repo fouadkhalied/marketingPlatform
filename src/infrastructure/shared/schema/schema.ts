@@ -194,6 +194,18 @@ export const freeCredits = pgTable("free_credits", {
     updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
   });
 
+  export const adsPackages = pgTable("ads_packages",{
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    name: text("email").notNull().default(""),
+    amount: integer().notNull().default(0),
+
+    createdBy: varchar("created_by").references(() => users.id),
+    updatedBy: varchar("updated_by").references(() => users.id),
+
+    createdAt: timestamp("created_at").notNull().default(sql`now()`),
+    updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+  })
+
   export const adminImpressionRatio = pgTable("admin_impression_ratio", {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
@@ -514,6 +526,8 @@ export const freeCredits = pgTable("free_credits", {
   export type Payment = typeof purchases.$inferSelect;
   export type AdUserEngagement = typeof adUserEngagement.$inferSelect;
   export type AdminImpressionRatio = typeof adminImpressionRatio.$inferSelect;
+  export type AdsPackage = typeof adsPackages.$inferSelect;
+  export type InsertAdsPackage = typeof adsPackages.$inferInsert;
   
   export type LoginData = z.infer<typeof loginSchema>;
   export type SignupData = z.infer<typeof signupSchema>;
