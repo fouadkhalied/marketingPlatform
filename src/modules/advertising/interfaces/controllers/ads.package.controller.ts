@@ -37,14 +37,14 @@ export class AdsPackageController {
         return;
       }
 
-      // if (req.user.role !== 'admin') {
-      //   const errorResponse = ErrorBuilder.build(
-      //     ErrorCode.FORBIDDEN,
-      //     "Only admin can create ads packages"
-      //   );
-      //   res.status(this.getStatusCode(errorResponse)).json(errorResponse);
-      //   return;
-      // }
+      if (req.user.role !== 'admin') {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.FORBIDDEN,
+          "Only admin can create ads packages"
+        );
+        res.status(this.getStatusCode(errorResponse)).json(errorResponse);
+        return;
+      }
 
       const result = await this.adsPackageService.createAdsPackage(req.body, req.user.id);
 
@@ -100,14 +100,14 @@ export class AdsPackageController {
         return;
       }
 
-      // if (req.user.role !== 'admin') {
-      //   const errorResponse = ErrorBuilder.build(
-      //     ErrorCode.FORBIDDEN,
-      //     "Only admin can update ads packages"
-      //   );
-      //   res.status(this.getStatusCode(errorResponse)).json(errorResponse);
-      //   return;
-      // }
+      if (req.user.role !== 'admin') {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.FORBIDDEN,
+          "Only admin can update ads packages"
+        );
+        res.status(this.getStatusCode(errorResponse)).json(errorResponse);
+        return;
+      }
 
       const result = await this.adsPackageService.updateAdsPackage(
         req.params.id,
@@ -134,14 +134,14 @@ export class AdsPackageController {
         return;
       }
 
-      // if (req.user.role !== 'admin') {
-      //   const errorResponse = ErrorBuilder.build(
-      //     ErrorCode.FORBIDDEN,
-      //     "Only admin can delete ads packages"
-      //   );
-      //   res.status(this.getStatusCode(errorResponse)).json(errorResponse);
-      //   return;
-      // }
+      if (req.user.role !== 'admin') {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.FORBIDDEN,
+          "Only admin can delete ads packages"
+        );
+        res.status(this.getStatusCode(errorResponse)).json(errorResponse);
+        return;
+      }
 
       const result = await this.adsPackageService.deleteAdsPackage(req.params.id);
 
