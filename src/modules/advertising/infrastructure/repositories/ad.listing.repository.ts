@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, like, lte, or, sql } from "drizzle-orm";
 import { IAdListingRepository } from "../../domain/repositories/ad.listing.repository.interface";
 import { db } from "../../../../infrastructure/db/connection";
 import { Ad, ads , impressionsEvents } from "../../../../infrastructure/shared/schema/schema";
@@ -229,7 +229,12 @@ export class AdListingRepository implements IAdListingRepository {
             impressionsCredit: sql`${ads.impressionsCredit} - 1`,
             totalImpressionsOnAdd: sql`${ads.totalImpressionsOnAdd} + 1`,
           })
-          .where(inArray(ads.id, adIds));
+          .where(
+            and(
+              inArray(ads.id, adIds),
+              gt(ads.impressionsCredit, 0)
+            )
+          );
 
 
 
@@ -285,7 +290,7 @@ export class AdListingRepository implements IAdListingRepository {
         eq(ads.status, "approved"),
         eq(ads.active, true),
         eq(ads.userActivation, true),
-        eq(ads.impressionsCredit, 0),
+        lte(ads.impressionsCredit, 0),
         targetCities.length > 0
           ? sql`${ads.targetCities} && ARRAY[${sql.join(
               targetCities.map((city) => sql`${city}`),
