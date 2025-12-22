@@ -16,6 +16,10 @@ export function setupAdvertisingRoutes(advertisingController: any) {
 
   // Ad Listing routes (specific paths)
   router.get("/api/advertising/listApprovedAdsForUser", 
+    (req, res) => advertisingController.adListing.listAdsFeed(req, res)
+  );
+
+  router.get("/api/advertising/listFreeAdsForUser", 
     (req, res) => advertisingController.adListing.listApprovedAdsForUser(req, res)
   );
 

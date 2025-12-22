@@ -16,7 +16,7 @@ export class ErrorBuilder {
         message,
         details: {
           httpStatus: ERROR_STATUS_MAP[code],
-          ...details
+          ...(typeof details === 'object' && details !== null ? details : { details })
         }
       }
     };

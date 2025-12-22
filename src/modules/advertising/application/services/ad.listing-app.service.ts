@@ -46,7 +46,7 @@ export class AdListingAppService {
     }
   }
 
-  async listApprovedAdsForUser(
+  async listAdsFeed(
     pagination: PaginationParams,
     locations: string[],
     title?:string,
@@ -60,7 +60,27 @@ export class AdListingAppService {
     } catch (error) {
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
-        "Unexpected error while listing ads for admin",
+        "Unexpected error while listing ads feed for user",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  async listApprovedAdsForUser(
+    pagination: PaginationParams,
+    locations: string[],
+    title?:string,
+    description?:string,
+    targetAudience?:string,
+    source?:string
+  ): Promise<ApiResponseInterface<Ad[]>> {
+    try {
+      const ads = await this.adListingRepository.listAdsFeed(pagination, locations, title, description,targetAudience,source);
+      return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
+    } catch (error) {
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Unexpected error while listing free ads for user",
         error instanceof Error ? error.message : error
       );
     }

@@ -25,4 +25,13 @@ export interface IAdListingRepository {
     targetAudience?: string,
     source?: string
   ): Promise<PaginatedResponse<Ad>>;
+
+  listAdsFeed(
+    pagination: PaginationParams,
+    locations: string[],
+    title?: string,
+    description?: string,
+    targetAudience?: string,
+    source?: string
+  ): Promise<PaginatedResponse<Ad>>;
 }
