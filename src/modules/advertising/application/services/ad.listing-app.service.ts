@@ -55,7 +55,7 @@ export class AdListingAppService {
     source?:string
   ): Promise<ApiResponseInterface<Ad[]>> {
     try {
-      const ads = await this.adListingRepository.listApprovedAdsForUser(pagination, locations, title, description,targetAudience,source);
+      const ads = await this.adListingRepository.listAdsFeed(pagination, locations, title, description,targetAudience,source);
       return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
     } catch (error) {
       return ErrorBuilder.build(
@@ -75,7 +75,7 @@ export class AdListingAppService {
     source?:string
   ): Promise<ApiResponseInterface<Ad[]>> {
     try {
-      const ads = await this.adListingRepository.listAdsFeed(pagination, locations, title, description,targetAudience,source);
+      const ads = await this.adListingRepository.listApprovedAdsForUser(pagination, locations, title, description,targetAudience,source);
       return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
     } catch (error) {
       return ErrorBuilder.build(

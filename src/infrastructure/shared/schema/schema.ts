@@ -174,6 +174,8 @@ export const freeCredits = pgTable("free_credits", {
 
     targetCities: ksaCitiesEnum("target_cities").array().notNull(), 
 
+    freeViews: integer().notNull().default(0),
+
     tiktokLink: text("tiktok_link"),
     youtubeLink: text("youtube_link"),
     youtubeVideo: text("youtube_video"),
