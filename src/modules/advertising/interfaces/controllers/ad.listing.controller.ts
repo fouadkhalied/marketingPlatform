@@ -209,7 +209,7 @@ export class AdListingController {
       }
 
       // ✅ Pass validated cities array to service
-      const result = await this.adListingService.listAdsFeed(
+      const result = await this.adListingService.listApprovedAdsForUser(
         pagination,
         citiesArray,
         typeof title === 'string' ? title : undefined,

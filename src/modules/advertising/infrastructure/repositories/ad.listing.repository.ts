@@ -317,6 +317,9 @@ export class AdListingRepository implements IAdListingRepository {
         .from(ads)
         .where(whereConditions);
 
+        
+  
+
       // ✅ Fetch paginated ads with promoted ads first
       const results = await db
         .select({
@@ -345,12 +348,23 @@ export class AdListingRepository implements IAdListingRepository {
         .from(ads)
         .where(whereConditions)
         .orderBy(
-          desc(ads.hasPromoted), // Promoted ads first (true before false)
           sql`RANDOM()`,
           desc(ads.createdAt)     // Then by creation date (newest first)
         )
         .limit(limit)
         .offset(offset);
+
+
+        if (results.length > 0) {
+          const adIds = results.map((ad) => ad.id);
+  
+          await db
+            .update(ads)
+            .set({
+              freeViews: sql`${ads.freeViews} + 1`
+            })
+            .where(inArray(ads.id, adIds));
+          }
 
 
       const totalCount = Number(count);

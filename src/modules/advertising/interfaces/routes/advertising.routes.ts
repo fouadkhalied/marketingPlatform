@@ -19,6 +19,7 @@ export function setupAdvertisingRoutes(advertisingController: any) {
     (req, res) => advertisingController.adListing.listAdsFeed(req, res)
   );
 
+  
   router.get("/api/advertising/listFreeAdsForUser", 
     (req, res) => advertisingController.adListing.listApprovedAdsForUser(req, res)
   );
