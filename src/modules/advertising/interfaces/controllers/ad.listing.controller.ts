@@ -8,9 +8,13 @@ import { UserRole } from "../../../../infrastructure/shared/common/auth/enums/us
 import { KSA_CITIES } from "../../domain/enums/ksa.enum";
 import { AdStatus } from "../../domain/enums/ads.status.enum";
 import { AdListingAppService } from "../../application/services/ad.listing-app.service";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdListingController {
-  constructor(private readonly adListingService: AdListingAppService) {}
+  constructor(
+    private readonly adListingService: AdListingAppService,
+    private readonly logger: ILogger
+  ) {}
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {

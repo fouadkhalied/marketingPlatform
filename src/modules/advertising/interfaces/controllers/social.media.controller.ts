@@ -6,9 +6,13 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { autheticatedPage } from "../../application/dto/authenticatedPage.dto";
 import { SocialMediaAppService } from "../../application/services/social.media-app.service";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class SocialMediaController {
-  constructor(private readonly socialMediaService: SocialMediaAppService) {}
+  constructor(
+    private readonly socialMediaService: SocialMediaAppService,
+    private readonly logger: ILogger
+  ) {}
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {

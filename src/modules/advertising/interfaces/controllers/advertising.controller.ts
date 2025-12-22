@@ -11,9 +11,13 @@ import { ApproveAdData } from "../../application/dto/approveAdData";
 import { KSA_CITIES } from "../../domain/enums/ksa.enum";
 import { pixel } from "../../../../infrastructure/shared/common/pixel/interface/pixelBody.interface";
 import { PixelPlatform } from "../../../../infrastructure/shared/common/pixel/interface/pixelPlatform.enum";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdvertisingController {
-  constructor(private readonly advertisingService: AdvertisingAppService) {}
+  constructor(
+    private readonly advertisingService: AdvertisingAppService,
+    private readonly logger: ILogger
+  ) {}
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {

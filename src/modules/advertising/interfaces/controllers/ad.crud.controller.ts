@@ -5,9 +5,13 @@ import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/er
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { AdCrudAppService } from "../../application/services/ad.crud-app.service";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdCrudController {
-  constructor(private readonly adCrudService: AdCrudAppService) {}
+  constructor(
+    private readonly adCrudService: AdCrudAppService,
+    private readonly logger: ILogger
+  ) {}
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {

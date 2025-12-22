@@ -4,11 +4,13 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { UploadPhoto } from "../../../../infrastructure/shared/common/supabase/module/supabase.module";
 import { IAdPhotoRepository } from "../../domain/repositories/ad.photo.repository.interface";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdPhotoAppService {
   constructor(
     private readonly adPhotoRepository: IAdPhotoRepository,
-    private readonly photoUploader: UploadPhoto
+    private readonly photoUploader: UploadPhoto,
+    private readonly logger: ILogger
   ) {}
 
   async uploadPhotoToAd(
@@ -16,8 +18,18 @@ export class AdPhotoAppService {
     adId: string
   ): Promise<ApiResponseInterface<{ photos: { url: string; index: number }[] }>> {
     try {
+      this.logger.info('Uploading photo to ad', {
+        adId,
+        photoCount: photo.length,
+        fileNames: photo.map(p => p.originalname)
+      });
+
       // upload file
       const photoUploadResult = await this.photoUploader.execute(photo);
+      this.logger.debug('Photo upload to storage completed', {
+        adId,
+        uploadedUrls: photoUploadResult.url.length
+      });
 
       // save photo URL in DB for the ad
       const updated = await this.adPhotoRepository.addPhotoToAd(
@@ -26,14 +38,20 @@ export class AdPhotoAppService {
       );
 
       if (!updated) {
+        this.logger.error('Failed to save photo URLs to database', { adId });
         return ErrorBuilder.build(
           ErrorCode.DATABASE_ERROR,
           "Failed to attach photo to ad"
         );
       }
 
+      this.logger.info('Photo uploaded and attached to ad successfully', { adId });
       return ResponseBuilder.success({ photos: photoUploadResult.url.map((url,index) => ({url:url,index:index})) });
     } catch (error) {
+      this.logger.error('Failed to upload photo to ad', {
+        adId,
+        error: error instanceof Error ? error.message : error
+      });
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Unexpected error while uploading photo",

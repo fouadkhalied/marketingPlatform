@@ -5,10 +5,12 @@ import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/er
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { Ad, createAdSchema, InsertAd } from "../../../../infrastructure/shared/schema/schema";
 import { IAdCrudRepository } from "../../domain/repositories/ad.crud.repository.interface";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdCrudAppService {
   constructor(
-    private readonly adCrudRepository: IAdCrudRepository
+    private readonly adCrudRepository: IAdCrudRepository,
+    private readonly logger: ILogger
   ) {}
 
   async createAd(
@@ -16,6 +18,8 @@ export class AdCrudAppService {
     userId: string
   ): Promise<ApiResponseInterface<{ AdId: string }>> {
     try {
+      this.logger.info('Creating new ad', { userId, adTitle: object.titleEn || object.title });
+
       const adData = {
         ...object,
         userId: userId,
@@ -23,6 +27,10 @@ export class AdCrudAppService {
 
       const validation = createAdSchema.safeParse(adData);
       if (!validation.success) {
+        this.logger.warn('Ad creation validation failed', {
+          userId,
+          validationErrors: validation.error.errors
+        });
         return ErrorBuilder.build(
           ErrorCode.VALIDATION_ERROR,
           "Validation error",
@@ -31,9 +39,15 @@ export class AdCrudAppService {
       }
 
       const adId = await this.adCrudRepository.create(adData);
+      this.logger.info('Ad created successfully', { adId, userId });
 
       return ResponseBuilder.success({ AdId: adId });
     } catch (error) {
+      this.logger.error('Failed to create ad', {
+        userId,
+        error: error instanceof Error ? error.message : error,
+        adData: object
+      });
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Unexpected error while creating ad",
@@ -55,6 +69,10 @@ export class AdCrudAppService {
 
       return ResponseBuilder.success(ad);
     } catch (error) {
+      this.logger.error('Failed to fetch ad by ID', {
+        adId: id,
+        error: error instanceof Error ? error.message : error
+      });
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Unexpected error while fetching ad",
@@ -88,7 +106,11 @@ export class AdCrudAppService {
     try {
 
       if (ad.targetCities && !Array.isArray(ad.targetCities)) {
-        console.log('❌ Wrong type received:', typeof ad.targetCities, ad.targetCities);
+        this.logger.warn('Invalid targetCities type received', {
+          receivedType: typeof ad.targetCities,
+          receivedValue: ad.targetCities,
+          adId: id
+        });
         throw new Error(`Expected targetCities to be an array but got ${typeof ad.targetCities}`);
       }
 
@@ -103,6 +125,10 @@ export class AdCrudAppService {
 
       return ResponseBuilder.success(updated);
     } catch (error) {
+      this.logger.error('Failed to update ad', {
+        adId: id,
+        error: error instanceof Error ? error.message : error
+      });
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Unexpected error while updating ad",
@@ -127,6 +153,12 @@ export class AdCrudAppService {
 
       return ResponseBuilder.success({ deleted: true });
     } catch (error) {
+      this.logger.error('Failed to delete ad', {
+        adId: id,
+        userId,
+        role,
+        error: error instanceof Error ? error.message : error
+      });
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Unexpected error while deleting ad",

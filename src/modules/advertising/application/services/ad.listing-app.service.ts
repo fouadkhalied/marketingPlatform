@@ -5,10 +5,12 @@ import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/er
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { Ad } from "../../../../infrastructure/shared/schema/schema";
 import { IAdListingRepository } from "../../domain/repositories/ad.listing.repository.interface";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdListingAppService {
   constructor(
-    private readonly adListingRepository: IAdListingRepository
+    private readonly adListingRepository: IAdListingRepository,
+    private readonly logger: ILogger
   ) {}
 
   async listAdsForAdmin(

@@ -4,10 +4,12 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { Ad } from "../../../../infrastructure/shared/schema/schema";
 import { IAdPromotionRepository } from "../../domain/repositories/ad.promotion.repository.interface";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdPromotionAppService {
   constructor(
-    private readonly adPromotionRepository: IAdPromotionRepository
+    private readonly adPromotionRepository: IAdPromotionRepository,
+    private readonly logger: ILogger
   ) {}
 
   async assignCreditToAd(

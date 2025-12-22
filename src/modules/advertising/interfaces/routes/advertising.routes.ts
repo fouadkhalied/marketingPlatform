@@ -176,6 +176,8 @@ export function setupAdvertisingRoutes(advertisingController: any) {
     (req, res) => advertisingController.pixel.deletePixel(req, res)
   );
 
+
+  
   // Ads Package routes
   router.post('/api/ads-packages',
     AuthMiddleware(UserRole.ADMIN),

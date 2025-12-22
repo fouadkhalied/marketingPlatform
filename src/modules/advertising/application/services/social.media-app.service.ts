@@ -8,11 +8,13 @@ import { FacebookPost } from "../../../user/application/dtos/facebookDto/faceboo
 import { FacebookPageService } from "../../../user/application/services/facebook-app.service";
 import { autheticatedPage } from "../dto/authenticatedPage.dto";
 import { ISocialMediaPageRepository } from "../../domain/repositories/social.media.page.repository.interface";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class SocialMediaAppService {
   constructor(
     private readonly socialMediaPageRepository: ISocialMediaPageRepository,
-    private readonly facebookService: FacebookPageService
+    private readonly facebookService: FacebookPageService,
+    private readonly logger: ILogger
   ) {}
 
   // get all user autheticated pages (facebook , instagram , snapchat)

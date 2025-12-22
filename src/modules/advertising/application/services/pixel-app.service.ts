@@ -7,10 +7,12 @@ import { pixel } from "../../../../infrastructure/shared/common/pixel/interface/
 import { PixelPlatform } from "../../../../infrastructure/shared/common/pixel/interface/pixelPlatform.enum";
 import { PixelCodeGeneratorFactory } from "../../../../infrastructure/shared/common/pixel/module/factoryPixel";
 import { IPixelRepository } from "../../domain/repositories/pixel.repository.interface";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class PixelAppService {
   constructor(
-    private readonly pixelRepository: IPixelRepository
+    private readonly pixelRepository: IPixelRepository,
+    private readonly logger: ILogger
   ) {}
 
   async createPixel(pixel: pixel): Promise<ApiResponseInterface<pixel>> {

@@ -5,10 +5,12 @@ import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/er
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { AdsPackage, InsertAdsPackage } from "../../../../infrastructure/shared/schema/schema";
 import { IAdsPackageRepository } from "../../domain/repositories/ads.package.repository.interface";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdsPackageAppService {
   constructor(
-    private readonly adsPackageRepository: IAdsPackageRepository
+    private readonly adsPackageRepository: IAdsPackageRepository,
+    private readonly logger: ILogger
   ) {}
 
   async createAdsPackage(

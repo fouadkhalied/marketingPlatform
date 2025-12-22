@@ -4,9 +4,13 @@ import { ERROR_STATUS_MAP } from "../../../../infrastructure/shared/common/error
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { AdPhotoAppService } from "../../application/services/ad.photo-app.service";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdPhotoController {
-  constructor(private readonly adPhotoService: AdPhotoAppService) {}
+  constructor(
+    private readonly adPhotoService: AdPhotoAppService,
+    private readonly logger: ILogger
+  ) {}
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {

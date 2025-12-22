@@ -6,9 +6,13 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { pixel } from "../../../../infrastructure/shared/common/pixel/interface/pixelBody.interface";
 import { PixelPlatform } from "../../../../infrastructure/shared/common/pixel/interface/pixelPlatform.enum";
 import { PixelAppService } from "../../application/services/pixel-app.service";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class PixelController {
-  constructor(private readonly pixelService: PixelAppService) {}
+  constructor(
+    private readonly pixelService: PixelAppService,
+    private readonly logger: ILogger
+  ) {}
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {

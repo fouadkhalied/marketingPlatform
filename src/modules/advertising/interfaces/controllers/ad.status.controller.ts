@@ -6,9 +6,13 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { UserRole } from "../../../../infrastructure/shared/common/auth/enums/userRole";
 import { ApproveAdData } from "../../application/dto/approveAdData";
 import { AdStatusAppService } from "../../application/services/ad.status-app.service";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdStatusController {
-  constructor(private readonly adStatusService: AdStatusAppService) {}
+  constructor(
+    private readonly adStatusService: AdStatusAppService,
+    private readonly logger: ILogger
+  ) {}
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {

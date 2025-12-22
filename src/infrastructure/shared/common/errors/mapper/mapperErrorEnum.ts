@@ -21,6 +21,8 @@ export const ERROR_STATUS_MAP: Record<ErrorCode, number> = {
   // Resource Not Found Errors (404)
   [ErrorCode.RESOURCE_NOT_FOUND]: 404,
   [ErrorCode.AD_NOT_FOUND]: 404,
+  [ErrorCode.ADS_PACKAGE_NOT_FOUND]: 404,
+  [ErrorCode.BLOG_NOT_FOUND]: 404,
   [ErrorCode.USER_NOT_FOUND]: 404,
   [ErrorCode.PHOTO_NOT_FOUND]: 404,
   [ErrorCode.PIXEL_NOT_FOUND]: 404,
@@ -42,6 +44,15 @@ export const ERROR_STATUS_MAP: Record<ErrorCode, number> = {
   // Conflict Errors (409)
   [ErrorCode.DUPLICATE_ENTRY]: 409,
   [ErrorCode.CONFLICT]: 409,
+
+  // Blog-specific Errors
+  [ErrorCode.BLOG_TITLE_EXISTS]: 409,
+  [ErrorCode.BLOG_PERMISSION_DENIED]: 403,
+  [ErrorCode.BLOG_UNPUBLISHED_LIKE]: 400,
+  [ErrorCode.BLOG_UPDATE_FAILED]: 500,
+  [ErrorCode.BLOG_DELETE_FAILED]: 500,
+  [ErrorCode.BLOG_CREATE_FAILED]: 500,
+  [ErrorCode.BLOG_FETCH_FAILED]: 500,
      
   // Client Request Errors
   [ErrorCode.PAYLOAD_TOO_LARGE]: 413,

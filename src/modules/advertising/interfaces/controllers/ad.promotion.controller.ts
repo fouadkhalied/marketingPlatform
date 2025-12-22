@@ -4,9 +4,13 @@ import { ERROR_STATUS_MAP } from "../../../../infrastructure/shared/common/error
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { AdPromotionAppService } from "../../application/services/ad.promotion-app.service";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdPromotionController {
-  constructor(private readonly adPromotionService: AdPromotionAppService) {}
+  constructor(
+    private readonly adPromotionService: AdPromotionAppService,
+    private readonly logger: ILogger
+  ) {}
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {

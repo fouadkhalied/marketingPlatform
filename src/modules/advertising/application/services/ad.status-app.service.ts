@@ -6,10 +6,12 @@ import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/er
 import { Ad } from "../../../../infrastructure/shared/schema/schema";
 import { ApproveAdData } from "../dto/approveAdData";
 import { IAdStatusRepository } from "../../domain/repositories/ad.status.repository.interface";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
 export class AdStatusAppService {
   constructor(
-    private readonly adStatusRepository: IAdStatusRepository
+    private readonly adStatusRepository: IAdStatusRepository,
+    private readonly logger: ILogger
   ) {}
 
   async approveAd(

@@ -13,6 +13,7 @@ import { FacebookPostInsights } from "../../../user/application/dtos/facebookDto
 import { FacebookPost } from "../../../user/application/dtos/facebookDto/facebookPost.dto";
 import { FacebookPageService } from "../../../user/application/services/facebook-app.service";
 import { IAdvertisingRepository } from "../../domain/repositories/advertising.repository.interface";
+import { ILogger } from "../../../../infrastructure/shared/common/logging";
 import { ApproveAdData } from "../dto/approveAdData";
 import { autheticatedPage } from "../dto/authenticatedPage.dto";
 
@@ -20,7 +21,8 @@ export class AdvertisingAppService {
   constructor(
     private readonly advertisingRepository: IAdvertisingRepository,
     private readonly facebookService: FacebookPageService,
-    private readonly photoUploader: UploadPhoto
+    private readonly photoUploader: UploadPhoto,
+    private readonly logger: ILogger
   ) {
 
   }
