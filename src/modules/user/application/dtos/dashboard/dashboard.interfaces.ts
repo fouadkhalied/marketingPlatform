@@ -56,6 +56,7 @@ export interface DashboardStats {
 
     // Analytics data
     analytics: {
+      freeViews: number;
       totalImpressions: number;
       totalClicks: number;
       clickThroughRate: number;

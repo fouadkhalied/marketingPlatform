@@ -1461,6 +1461,7 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
     return {
       // Analytics data
       analytics: {
+        freeViews: ad.freeViews,
         totalImpressions,
         totalClicks,
         clickThroughRate: Math.round(clickThroughRate * 100) / 100,
