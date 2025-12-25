@@ -21,6 +21,7 @@ export function setupAdvertisingRoutes(advertisingController: any) {
 
   
   router.get("/api/advertising/listFreeAdsForUser", 
+    AuthMiddleware(UserRole.USER),
     (req, res) => advertisingController.adListing.listApprovedAdsForUser(req, res)
   );
 

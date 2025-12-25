@@ -1,7 +1,7 @@
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { AdminImpressionRatio, Ad, CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
 import { AdsReport } from "../../application/dtos/ads-report.dto";
-import { AdAnalyticsFullDetails } from "../../application/dtos/dashboard/dashboard.interfaces";
+import { AdAnalyticsFullDetails } from "../../../dashboard/application/dtos/dashboard.interfaces";
 
 export interface userInterface {
     getUser(id: string): Promise<Partial<User & { socialMediaPages: Array<{ pageId: string; pageName: string; pageType: string; isActive: boolean }> }> | undefined>;

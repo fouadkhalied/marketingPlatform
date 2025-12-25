@@ -8,13 +8,13 @@ export interface DashboardStats {
     remainingBalance: number;
     balanceGrowth: number;
   }
-  
+
   export interface ChartData {
     date: string;
     clicks: number;
     impressions: number;
   }
-  
+
   export interface TopPerformingAd {
     id: string;
     titleEn: string;
@@ -24,7 +24,7 @@ export interface DashboardStats {
     clicks: number;
     ctr: number;
   }
-  
+
 
   export interface AdminDashboardStats {
     totalUsers: number;
@@ -36,13 +36,13 @@ export interface DashboardStats {
     totalImpressions: number;
     impressionGrowth: number;
   }
-  
+
   export interface AdminChartData {
     date: string;
     clicks: number;
     impressions: number;
   }
-  
+
   export interface RecentActivity {
     id: string;
     type: 'user_signup' | 'ad_created' | 'purchase' | 'ad_approved' | 'ad_rejected';
