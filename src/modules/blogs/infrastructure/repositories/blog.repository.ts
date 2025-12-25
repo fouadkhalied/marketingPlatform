@@ -109,6 +109,10 @@ export class BlogRepository implements IBlogRepository {
   }
 
   async update(id: string, updateData: UpdateBlogDto): Promise<IBlog | null> {
+    console.log(id);
+    
+    console.log(updateData);
+    
     return await BlogModel.findByIdAndUpdate(
       id,
       { $set: updateData },
