@@ -110,19 +110,90 @@ export class BlogRepository implements IBlogRepository {
   }
 
   async update(id: string, updateData: UpdateBlogDto): Promise<IBlog | null> {
-    console.log(id);
-    
-    console.log(updateData);
-
+    console.log('ID:', id);
+    console.log('Update Data:', updateData);
+  
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error('Invalid blog ID format');
     }
     
-    return await BlogModel.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    ).exec();
+    try {
+      // Find the document first
+      const blog = await BlogModel.findById(id);
+      
+      if (!blog) {
+        console.log('Blog not found');
+        return null;
+      }
+      
+      console.log('Before update:', blog.title);
+      
+      // Update fields manually (this preserves nested structure)
+      if (updateData.title) {
+        blog.title = {
+          ...blog.title,
+          ...updateData.title
+        };
+      }
+      
+      if (updateData.content) {
+        blog.content = {
+          ...blog.content,
+          ...updateData.content
+        };
+      }
+      
+      if (updateData.excerpt) {
+        blog.excerpt = {
+          ...blog.excerpt,
+          ...updateData.excerpt
+        };
+      }
+      
+      if (updateData.slug) {
+        blog.slug = {
+          ...blog.slug,
+          ...updateData.slug
+        };
+      }
+      
+      if (updateData.tags) {
+        blog.tags = updateData.tags;
+      }
+      
+      if (updateData.category) {
+        blog.category = {
+          ...blog.category,
+          ...updateData.category
+        };
+      }
+      
+      if (updateData.featuredImage !== undefined) {
+        blog.featuredImage = updateData.featuredImage;
+      }
+      
+      if (updateData.status) {
+        blog.status = updateData.status;
+      }
+      
+      // Mark modified (important for nested objects!)
+      blog.markModified('title');
+      blog.markModified('content');
+      blog.markModified('excerpt');
+      blog.markModified('slug');
+      blog.markModified('tags');
+      blog.markModified('category');
+      
+      // Save the document (this triggers pre-save hooks and validation)
+      const saved = await blog.save();
+      
+      console.log('After save:', saved.title);
+      
+      return saved;
+    } catch (error) {
+      console.error('Update error:', error);
+      throw error;
+    }
   }
 
   async delete(id: string): Promise<boolean> {
