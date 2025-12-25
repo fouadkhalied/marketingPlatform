@@ -33,9 +33,9 @@ export class BlogAppService {
         data: blog,
         message: 'Blog created successfully'
       };
-    } catch (error) {
+    } catch (error:any) {
       if (error instanceof ErrorBuilder) throw error;
-      throw ErrorBuilder.build(ErrorCode.BLOG_CREATE_FAILED,'Failed to create blog')
+      throw ErrorBuilder.build(ErrorCode.BLOG_CREATE_FAILED,'Failed to create blog',error.message)
     }
   }
 
