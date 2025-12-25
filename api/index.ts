@@ -22,6 +22,7 @@ import { createAuthController } from "../src/modules/auth/interfaces/factories/a
 import { connectMongoDB } from "../src/infrastructure/db/mongodb-connection";
 import { createBlogController } from "../src/modules/blogs/interfaces/factories/blog.factory";
 import { setupBlogRoutes } from "../src/modules/blogs/interfaces/routes/blog.routes";
+import { setupDashboardRoutes } from "../src/modules/dashboard/interfaces/routes/dashboard.routes";
 import passport from 'passport';
 
 const app = express();
@@ -152,7 +153,7 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   credentials: true,
   maxAge: 86400, // Cache preflight response for 24 hours
@@ -388,6 +389,10 @@ const blogController = createBlogController();
 const blogRoutes = setupBlogRoutes(blogController);
 app.use(blogRoutes);
 
+// Dashboard routes
+const dashboardRoutes = setupDashboardRoutes();
+app.use(dashboardRoutes);
+
 // facebook Outh
 app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(req,res));
 
@@ -442,10 +447,6 @@ app.get(
   (req, res) => userController.getAdAnalyticsFullDetails(req, res)
 );
 
-// dashboard
-app.get('/api/dashboard/user', AuthMiddleware(UserRole.USER), (req,res)=>userController.getDashoardMetricsForUser(req,res))
-
-app.get('/api/dashboard/admin', AuthMiddleware(UserRole.ADMIN), (req,res)=>userController.getDashoardMetricsForAdmin(req,res))
 
 
 
