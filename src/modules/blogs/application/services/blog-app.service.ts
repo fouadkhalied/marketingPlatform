@@ -10,6 +10,10 @@ export class BlogAppService {
 
   async createBlog(blogData: CreateBlogDto, author: { id: string; name: string; email: string }) {
     try {
+
+     console.log(blogData);
+     
+      
       // Check if slug already exists
       const existingBlog = await this.blogRepository.findBySlug(
         blogData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')

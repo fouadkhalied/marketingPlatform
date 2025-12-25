@@ -7,6 +7,8 @@ import { BlogPaginationDto, PaginatedBlogResponse } from '../../application/dto/
 export class BlogRepository implements IBlogRepository {
   async create(blogData: CreateBlogDto & { author: { id: string; name: string; email: string } }): Promise<IBlog> {
     const blog = new BlogModel(blogData);
+    console.log(blog);
+    
     return await blog.save();
   }
 
