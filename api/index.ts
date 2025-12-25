@@ -22,7 +22,7 @@ import { createAuthController } from "../src/modules/auth/interfaces/factories/a
 import { connectMongoDB } from "../src/infrastructure/db/mongodb-connection";
 import { createBlogController } from "../src/modules/blogs/interfaces/factories/blog.factory";
 import { setupBlogRoutes } from "../src/modules/blogs/interfaces/routes/blog.routes";
-//import { setupDashboardRoutes } from "../src/modules/dashboard/interfaces/routes/dashboard.routes";
+import { setupDashboardRoutes } from "../src/modules/dashboard/interfaces/routes/dashboard.routes";
 import passport from 'passport';
 
 const app = express();
@@ -390,8 +390,8 @@ const blogRoutes = setupBlogRoutes(blogController);
 app.use(blogRoutes);
 
 // Dashboard routes
-// const dashboardRoutes = setupDashboardRoutes();
-// app.use(dashboardRoutes);
+const dashboardRoutes = setupDashboardRoutes();
+app.use(dashboardRoutes);
 
 // facebook Outh
 app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(req,res));
@@ -446,12 +446,6 @@ app.get(
   AuthMiddleware(UserRole.USER),
   (req, res) => userController.getAdAnalyticsFullDetails(req, res)
 );
-
-
-app.get('/api/dashboard/user', AuthMiddleware(UserRole.USER), (req,res)=>userController.getDashoardMetricsForUser(req,res))
-
-app.get('/api/dashboard/admin', AuthMiddleware(UserRole.ADMIN), (req,res)=>userController.getDashoardMetricsForAdmin(req,res))
-
 
 
 

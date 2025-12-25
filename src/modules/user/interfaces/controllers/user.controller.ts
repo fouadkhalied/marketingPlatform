@@ -1031,78 +1031,7 @@ async getAdReports(req: Request, res: Response): Promise<void> {
   }
 }
 
-async getDashoardMetricsForUser(req: Request, res: Response): Promise<void> {
-  try {
 
-    if (!req.user?.id) {
-      res.status(401).json({
-        success: false,
-        message: "User must be authenticated",
-        error: {
-          code: "UNAUTHORIZED",
-          message: "User must be authenticated"
-        }
-      });
-      return;
-    }
-
-    const result = await this.userService.getUserDashboard(
-      req.user.id
-    );
-    
-    const statusCode = this.getStatusCode(result);
-    res.status(statusCode).json(result);
-  } catch (err: any) {
-    console.error('Error updating profile:', err);
-    
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update profile',
-      error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to update profile',
-        details: err.message
-      }
-    });
-  }
-}
-
-
-async getDashoardMetricsForAdmin(req: Request, res: Response): Promise<void> {
-  try {
-
-    if (!req.user?.id) {
-      res.status(401).json({
-        success: false,
-        message: "User must be authenticated",
-        error: {
-          code: "UNAUTHORIZED",
-          message: "User must be authenticated"
-        }
-      });
-      return;
-    }
-
-    const result = await this.userService.getAdminDashboard(
-    
-    );
-    
-    const statusCode = this.getStatusCode(result);
-    res.status(statusCode).json(result);
-  } catch (err: any) {
-    console.error('Error updating profile:', err);
-    
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update profile',
-      error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to update profile',
-        details: err.message
-      }
-    });
-  }
-}
 
 async addCretidToUserByAdmin(req: Request, res: Response): Promise<void> {
   try {

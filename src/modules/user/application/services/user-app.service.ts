@@ -6,7 +6,7 @@ import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/er
 import { OTPResult } from "../../../../infrastructure/shared/common/otp/interfaces/optResult";
 import { OTPService } from "../../../../infrastructure/shared/common/otp/module/otp.module";
 import { AdminImpressionRatio, Ad, CreateUser, User } from "../../../../infrastructure/shared/schema/schema";
-import { AdAnalyticsFullDetails } from "../dtos/dashboard/dashboard.interfaces";
+import { AdAnalyticsFullDetails } from "../../../dashboard/application/dtos/dashboard.interfaces";
 import { UserRepositoryImpl } from "../../infrastructure/repositories/user.repository.impl";
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { FacebookPageService } from "./facebook-app.service";
@@ -545,34 +545,6 @@ async getFreeCredits(): Promise<ApiResponseInterface<number>> {
 }
 
 
-async getUserDashboard(userId: string) : Promise<ApiResponseInterface<any>> {
-  const stats = await this.userRepository.getDashboardStats(userId, 7);
-  const chartData = await this.userRepository.getChartData(userId, 7);
-  const topAds = await this.userRepository.getTopPerformingAds(userId, 3);
-  const activity = await this.userRepository.getRecentActivity(userId, 10);
-
-  return ResponseBuilder.success({
-    stats,
-    chartData,
-    topAds,
-    activity
-  });
-}
-
-// In your admin service layer
-async getAdminDashboard(days: number = 7):Promise<ApiResponseInterface<any>> {
-  const stats = await this.userRepository.getAdminDashboardStats(days);
-  const chartData = await this.userRepository.getAdminChartData(days);
-  const recentActivity = await this.userRepository.getAdminRecentActivity(10);
-  const systemOverview = await this.userRepository.getSystemOverview();
-
-  return ResponseBuilder.success( {
-    stats,
-    chartData,
-    recentActivity,
-    systemOverview
-  });
-}
 
 
 async addCretidToUserByAdmin(id:string, credit:number, userId: string):Promise<ApiResponseInterface<boolean>> {
