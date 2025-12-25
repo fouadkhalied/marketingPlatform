@@ -153,7 +153,7 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST","PATCH", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   credentials: true,
   maxAge: 86400, // Cache preflight response for 24 hours
@@ -389,9 +389,9 @@ const blogController = createBlogController();
 const blogRoutes = setupBlogRoutes(blogController);
 app.use(blogRoutes);
 
-// // Dashboard routes
-// const dashboardRoutes = setupDashboardRoutes();
-// app.use(dashboardRoutes);
+// Dashboard routes
+const dashboardRoutes = setupDashboardRoutes();
+app.use(dashboardRoutes);
 
 // facebook Outh
 app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(req,res));
