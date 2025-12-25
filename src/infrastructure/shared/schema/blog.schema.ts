@@ -123,30 +123,28 @@ const BlogSchema = new Schema<IBlog>({
   timestamps: true
 });
 
-// Indexes for performance - FIXED
+// Indexes for performance
 BlogSchema.index({ slug: 1 });
 BlogSchema.index({ status: 1, publishedAt: -1 });
-BlogSchema.index({ 'author.id': 1 }); // ✅ Fixed: Index on nested field
+BlogSchema.index({ 'author.id': 1 });
 BlogSchema.index({ category: 1 });
 BlogSchema.index({ tags: 1 });
 
-// Pre-save middleware to generate slug from title
-BlogSchema.pre('save', function(next) {
-  if (this.isModified('title') && !this.slug) {
+// Pre-save middleware to generate slug from title - FIXED
+BlogSchema.pre('save', async function() {
+  if (!this.slug && this.title) {
     this.slug = this.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
   }
-  next();
 });
 
-// Update publishedAt when status changes to published
-BlogSchema.pre('save', function(next) {
+// Update publishedAt when status changes to published - FIXED
+BlogSchema.pre('save', async function() {
   if (this.isModified('status') && this.status === 'published' && !this.publishedAt) {
     this.publishedAt = new Date();
   }
-  next();
 });
 
 export const BlogModel = mongoose.model<IBlog>('Blog', BlogSchema);
