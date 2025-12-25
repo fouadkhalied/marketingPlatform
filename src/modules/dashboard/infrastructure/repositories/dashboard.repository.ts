@@ -1,6 +1,6 @@
 import { and, eq, gte, lte, inArray, sql, desc, asc } from "drizzle-orm";
 import { db } from "../../../../infrastructure/db/connection";
-import { ads, users, impressionsEvents, clicksEvents } from "../../../../infrastructure/shared/schema/schema";
+import { ads, users, impressionsEvents, clicksEvents, purchases } from "../../../../infrastructure/shared/schema/schema";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { AdminChartData, AdminDashboardStats, ChartData, DashboardStats, RecentActivity, TopPerformingAd } from "../../application/dtos/dashboard.interfaces";
@@ -11,29 +11,29 @@ export class DashboardRepository implements IDashboardRepository {
     try {
       const currentPeriodStart = new Date();
       currentPeriodStart.setDate(currentPeriodStart.getDate() - days);
-
+      
       const previousPeriodStart = new Date();
       previousPeriodStart.setDate(previousPeriodStart.getDate() - (days * 2));
-
+      
       const previousPeriodEnd = new Date(currentPeriodStart);
-
+  
       // Get user's ads
       const userAds = await db
         .select({ id: ads.id })
         .from(ads)
         .where(eq(ads.userId, userId));
-
+  
       const adIds = userAds.map(ad => ad.id);
-
+  
          // Get user balance
          const [userBalance] = await db
-         .select({
+         .select({ 
            balance: users.balance,
-           freeViewsCredits: users.freeViewsCredits
+           freeViewsCredits: users.freeViewsCredits 
          })
          .from(users)
          .where(eq(users.id, userId));
-
+  
       if (adIds.length === 0) {
         return {
           totalImpressions: 0,
@@ -46,7 +46,7 @@ export class DashboardRepository implements IDashboardRepository {
           balanceGrowth: 0,
         };
       }
-
+  
       // Current period impressions - FIXED: Use inArray instead of ANY
       const currentImpressions = await db
         .select({ count: sql<number>`count(*)` })
@@ -57,7 +57,7 @@ export class DashboardRepository implements IDashboardRepository {
             gte(impressionsEvents.createdAt, currentPeriodStart)
           )
         );
-
+  
       // Previous period impressions - FIXED: Use inArray instead of ANY
       const previousImpressions = await db
         .select({ count: sql<number>`count(*)` })
@@ -69,7 +69,7 @@ export class DashboardRepository implements IDashboardRepository {
             lte(impressionsEvents.createdAt, previousPeriodEnd)
           )
         );
-
+  
       // Current period clicks - FIXED: Use inArray instead of ANY
       const currentClicks = await db
         .select({ count: sql<number>`count(*)` })
@@ -80,7 +80,7 @@ export class DashboardRepository implements IDashboardRepository {
             gte(clicksEvents.createdAt, currentPeriodStart)
           )
         );
-
+  
       // Previous period clicks - FIXED: Use inArray instead of ANY
       const previousClicks = await db
         .select({ count: sql<number>`count(*)` })
@@ -92,36 +92,36 @@ export class DashboardRepository implements IDashboardRepository {
             lte(clicksEvents.createdAt, previousPeriodEnd)
           )
         );
-
+  
       const totalImpressions = Number(currentImpressions[0]?.count || 0);
       const prevImpressions = Number(previousImpressions[0]?.count || 0);
       const totalClicks = Number(currentClicks[0]?.count || 0);
       const prevClicks = Number(previousClicks[0]?.count || 0);
-
+  
       // Calculate growth percentages
-      const impressionGrowth = prevImpressions > 0
-        ? ((totalImpressions - prevImpressions) / prevImpressions) * 100
+      const impressionGrowth = prevImpressions > 0 
+        ? ((totalImpressions - prevImpressions) / prevImpressions) * 100 
         : 0;
-
-      const clickGrowth = prevClicks > 0
-        ? ((totalClicks - prevClicks) / prevClicks) * 100
+  
+      const clickGrowth = prevClicks > 0 
+        ? ((totalClicks - prevClicks) / prevClicks) * 100 
         : 0;
-
+  
       // Calculate CTR
-      const currentCTR = totalImpressions > 0
-        ? (totalClicks / totalImpressions) * 100
+      const currentCTR = totalImpressions > 0 
+        ? (totalClicks / totalImpressions) * 100 
         : 0;
-
-      const previousCTR = prevImpressions > 0
-        ? (prevClicks / prevImpressions) * 100
+  
+      const previousCTR = prevImpressions > 0 
+        ? (prevClicks / prevImpressions) * 100 
         : 0;
-
-      const ctrGrowth = previousCTR > 0
-        ? ((currentCTR - previousCTR) / previousCTR) * 100
+  
+      const ctrGrowth = previousCTR > 0 
+        ? ((currentCTR - previousCTR) / previousCTR) * 100 
         : 0;
-
+  
       const remainingBalance = (userBalance?.balance || 0);
-
+  
       return {
         totalImpressions,
         impressionGrowth: Math.round(impressionGrowth * 10) / 10,
@@ -140,36 +140,34 @@ export class DashboardRepository implements IDashboardRepository {
       );
     }
   }
-
+  
+  /**
+   * Get chart data for impressions and clicks over time
+   */
   async getChartData(userId: string, days: number = 7): Promise<ChartData[]> {
     try {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
-
+  
       // Get user's ads
       const userAds = await db
         .select({ id: ads.id })
         .from(ads)
         .where(eq(ads.userId, userId));
-
+  
       const adIds = userAds.map(ad => ad.id);
-
+  
       if (adIds.length === 0) {
         return [];
       }
-
-      // Get daily impressions and clicks for the last N days
-      const dailyData = await db
+  
+      // Get daily impressions - FIXED: Use inArray instead of ANY
+      const dailyImpressions = await db
         .select({
           date: sql<string>`DATE(${impressionsEvents.createdAt})`,
-          impressions: sql<number>`COUNT(DISTINCT ${impressionsEvents.id})`,
-          clicks: sql<number>`COUNT(DISTINCT ${clicksEvents.id})`
+          count: sql<number>`count(*)`,
         })
         .from(impressionsEvents)
-        .leftJoin(clicksEvents, and(
-          eq(impressionsEvents.adId, clicksEvents.adId),
-          sql`DATE(${impressionsEvents.createdAt}) = DATE(${clicksEvents.createdAt})`
-        ))
         .where(
           and(
             inArray(impressionsEvents.adId, adIds),
@@ -177,13 +175,47 @@ export class DashboardRepository implements IDashboardRepository {
           )
         )
         .groupBy(sql`DATE(${impressionsEvents.createdAt})`)
-        .orderBy(asc(sql`DATE(${impressionsEvents.createdAt})`));
-
-      return dailyData.map(row => ({
-        date: row.date,
-        clicks: Number(row.clicks || 0),
-        impressions: Number(row.impressions || 0)
-      }));
+        .orderBy(sql`DATE(${impressionsEvents.createdAt})`);
+  
+      // Get daily clicks - FIXED: Use inArray instead of ANY
+      const dailyClicks = await db
+        .select({
+          date: sql<string>`DATE(${clicksEvents.createdAt})`,
+          count: sql<number>`count(*)`,
+        })
+        .from(clicksEvents)
+        .where(
+          and(
+            inArray(clicksEvents.adId, adIds),
+            gte(clicksEvents.createdAt, startDate)
+          )
+        )
+        .groupBy(sql`DATE(${clicksEvents.createdAt})`)
+        .orderBy(sql`DATE(${clicksEvents.createdAt})`);
+  
+      // Merge impressions and clicks data
+      const impressionMap = new Map(
+        dailyImpressions.map(d => [d.date, Number(d.count)])
+      );
+      const clickMap = new Map(
+        dailyClicks.map(d => [d.date, Number(d.count)])
+      );
+  
+      // Create array of all dates in range
+      const chartData: ChartData[] = [];
+      for (let i = 0; i < days; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - (days - 1 - i));
+        const dateStr = date.toISOString().split('T')[0];
+  
+        chartData.push({
+          date: dateStr,
+          impressions: impressionMap.get(dateStr) || 0,
+          clicks: clickMap.get(dateStr) || 0,
+        });
+      }
+  
+      return chartData;
     } catch (error) {
       throw ErrorBuilder.build(
         ErrorCode.DATABASE_ERROR,
@@ -192,71 +224,139 @@ export class DashboardRepository implements IDashboardRepository {
       );
     }
   }
-
-  async getTopPerformingAds(userId: string, limit: number = 5): Promise<TopPerformingAd[]> {
+  
+  /**
+   * Get top performing ads for the user
+   */async getTopPerformingAds(userId: string, limit: number = 5): Promise<TopPerformingAd[]> {
     try {
-      // Get user's ads with performance metrics
-      const adsWithPerformance = await db
+      // Subquery for impressions count per ad
+      const impressionsSub = db
+        .select({
+          adId: impressionsEvents.adId,
+          impressions: sql<number>`COUNT(*)`.as('impressions'),
+        })
+        .from(impressionsEvents)
+        .groupBy(impressionsEvents.adId)
+        .as('impr_sub');
+  
+      // Subquery for clicks count per ad
+      const clicksSub = db
+        .select({
+          adId: clicksEvents.adId,
+          clicks: sql<number>`COUNT(*)`.as('clicks'),
+        })
+        .from(clicksEvents)
+        .groupBy(clicksEvents.adId)
+        .as('click_sub');
+  
+      // Join ads with aggregated subqueries
+      const topAds = await db
         .select({
           id: ads.id,
           titleEn: ads.titleEn,
           titleAr: ads.titleAr,
           imageUrl: ads.imageUrl,
-          impressions: sql<number>`COUNT(DISTINCT ${impressionsEvents.id})`,
-          clicks: sql<number>`COUNT(DISTINCT ${clicksEvents.id})`
+          impressions: sql<number>`COALESCE("impr_sub"."impressions", 0)`.as('impressions'),
+          clicks: sql<number>`COALESCE("click_sub"."clicks", 0)`.as('clicks'),
         })
         .from(ads)
-        .leftJoin(impressionsEvents, eq(ads.id, impressionsEvents.adId))
-        .leftJoin(clicksEvents, eq(ads.id, clicksEvents.adId))
+        .leftJoin(impressionsSub, eq(impressionsSub.adId, ads.id))
+        .leftJoin(clicksSub, eq(clicksSub.adId, ads.id))
         .where(eq(ads.userId, userId))
-        .groupBy(ads.id, ads.titleEn, ads.titleAr, ads.imageUrl)
-        .orderBy(desc(sql<number>`COUNT(DISTINCT ${impressionsEvents.id})`))
+        // ✅ order by clicks DESC (replace with impressions or CTR if desired)
+        .orderBy(desc(sql`COALESCE("click_sub"."clicks", 0)`))
         .limit(limit);
-
-      return adsWithPerformance.map(ad => ({
-        id: ad.id,
-        titleEn: ad.titleEn || '',
-        titleAr: ad.titleAr || '',
-        imageUrl: ad.imageUrl,
-        impressions: Number(ad.impressions || 0),
-        clicks: Number(ad.clicks || 0),
-        ctr: Number(ad.impressions || 0) > 0
-          ? (Number(ad.clicks || 0) / Number(ad.impressions || 0)) * 100
-          : 0
-      }));
+  
+      // Compute CTR
+      return topAds.map(ad => {
+        const impressions = Number(ad.impressions) || 0;
+        const clicks = Number(ad.clicks) || 0;
+        const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+  
+        return {
+          id: ad.id,
+          titleEn: ad.titleEn,
+          titleAr: ad.titleAr,
+          imageUrl: ad.imageUrl,
+          impressions,
+          clicks,
+          ctr: Math.round(ctr * 100) / 100,
+        };
+      });
     } catch (error) {
       throw ErrorBuilder.build(
         ErrorCode.DATABASE_ERROR,
-        "Failed to fetch top performing ads",
+        'Failed to fetch top performing ads',
         error instanceof Error ? error.message : error
       );
     }
   }
-
-  async getRecentActivity(userId: string, limit: number = 10): Promise<RecentActivity[]> {
+  
+  
+  
+  /**
+   * Get recent activity for the user
+   */
+  async getRecentActivity(userId: string, limit: number = 10) :Promise<RecentActivity[]> {
     try {
-      // Get recent activity for the user
-      // This is a simplified implementation - you might want to create a dedicated activity log table
-      const recentAds = await db
-        .select({
-          id: ads.id,
-          type: sql<string>`'ad_created'`,
-          description: sql<string>`CONCAT('Created ad: ', ${ads.titleEn})`,
-          createdAt: ads.createdAt,
-          userId: ads.userId
-        })
+      // Get user's ads
+      const userAds = await db
+        .select({ id: ads.id, titleEn: ads.titleEn, titleAr: ads.titleAr })
         .from(ads)
-        .where(eq(ads.userId, userId))
-        .orderBy(desc(ads.createdAt))
+        .where(eq(ads.userId, userId));
+  
+      const adIds = userAds.map(ad => ad.id);
+      const adMap = new Map(userAds.map(ad => [ad.id, ad]));
+  
+      if (adIds.length === 0) {
+        return [];
+      }
+  
+      // Get recent impressions - FIXED: Use inArray instead of ANY
+      const recentImpressions = await db
+        .select({
+          id: impressionsEvents.id,
+          adId: impressionsEvents.adId,
+          type: sql<string>`'impression'`,
+          source: impressionsEvents.source,
+          createdAt: impressionsEvents.createdAt,
+        })
+        .from(impressionsEvents)
+        .where(inArray(impressionsEvents.adId, adIds))
+        .orderBy(desc(impressionsEvents.createdAt))
         .limit(limit);
+  
+      // Get recent clicks - FIXED: Use inArray instead of ANY
+      const recentClicks = await db
+        .select({
+          id: clicksEvents.id,
+          adId: clicksEvents.adId,
+          type: sql<string>`'click'`,
+          createdAt: clicksEvents.createdAt,
+        })
+        .from(clicksEvents)
+        .where(inArray(clicksEvents.adId, adIds))
+        .orderBy(desc(clicksEvents.createdAt))
+        .limit(limit);
+  
+      // Combine and sort by date
+      const activities: RecentActivity[] = [...recentImpressions, ...recentClicks]
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit)
+        .map(activity => {
+          const ad = adMap.get(activity.adId);
+          const adTitle = ad?.titleEn || 'Unknown Ad';
 
-      return recentAds.map(activity => ({
-        id: activity.id,
-        type: activity.type as any,
-        description: activity.description,
-        userId: activity.userId,
-        createdAt: activity.createdAt
-      }));
+          return {
+            id: activity.id,
+            type: activity.type === 'impression' ? 'ad_created' as const : 'purchase' as const,
+            description: `${activity.type === 'impression' ? 'Impression on' : 'Click on'} "${adTitle}"`,
+            userId: userId,
+            createdAt: activity.createdAt
+          };
+        });
+  
+      return activities;
     } catch (error) {
       throw ErrorBuilder.build(
         ErrorCode.DATABASE_ERROR,
@@ -265,24 +365,27 @@ export class DashboardRepository implements IDashboardRepository {
       );
     }
   }
-
   async getAdminDashboardStats(days: number = 7): Promise<AdminDashboardStats> {
     try {
       const currentPeriodStart = new Date();
       currentPeriodStart.setDate(currentPeriodStart.getDate() - days);
-
+      
       const previousPeriodStart = new Date();
       previousPeriodStart.setDate(previousPeriodStart.getDate() - (days * 2));
-
+      
       const previousPeriodEnd = new Date(currentPeriodStart);
-
-      // Get user stats
-      const [currentUsers] = await db
+  
+      // ===== TOTAL USERS =====
+      const [totalUsersResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users);
+  
+      const [currentPeriodUsers] = await db
         .select({ count: sql<number>`count(*)` })
         .from(users)
         .where(gte(users.createdAt, currentPeriodStart));
-
-      const [previousUsers] = await db
+  
+      const [previousPeriodUsers] = await db
         .select({ count: sql<number>`count(*)` })
         .from(users)
         .where(
@@ -291,42 +394,78 @@ export class DashboardRepository implements IDashboardRepository {
             lte(users.createdAt, previousPeriodEnd)
           )
         );
-
-      const [totalUsers] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(users);
-
-      // Get revenue stats (simplified - you might have a payments table)
-      const totalRevenue = 0; // Placeholder
-      const revenueGrowth = 0; // Placeholder
-
-      // Get ads stats
-      const [currentAds] = await db
+  
+      // ===== TOTAL REVENUE =====
+      const [totalRevenueResult] = await db
+        .select({ 
+          total: sql<number>`COALESCE(SUM(CAST(${purchases.amount} AS DECIMAL)), 0)` 
+        })
+        .from(purchases)
+        .where(eq(purchases.status, "completed"));
+  
+      const [currentPeriodRevenue] = await db
+        .select({ 
+          total: sql<number>`COALESCE(SUM(CAST(${purchases.amount} AS DECIMAL)), 0)` 
+        })
+        .from(purchases)
+        .where(
+          and(
+            eq(purchases.status, "completed"),
+            gte(purchases.createdAt, currentPeriodStart)
+          )
+        );
+  
+      const [previousPeriodRevenue] = await db
+        .select({ 
+          total: sql<number>`COALESCE(SUM(CAST(${purchases.amount} AS DECIMAL)), 0)` 
+        })
+        .from(purchases)
+        .where(
+          and(
+            eq(purchases.status, "completed"),
+            gte(purchases.createdAt, previousPeriodStart),
+            lte(purchases.createdAt, previousPeriodEnd)
+          )
+        );
+  
+      // ===== ACTIVE ADS =====
+      const [activeAdsResult] = await db
         .select({ count: sql<number>`count(*)` })
         .from(ads)
-        .where(gte(ads.createdAt, currentPeriodStart));
-
-      const [previousAds] = await db
+        .where(eq(ads.active, true));
+  
+      const [currentPeriodAds] = await db
         .select({ count: sql<number>`count(*)` })
         .from(ads)
         .where(
           and(
+            eq(ads.active, true),
+            gte(ads.createdAt, currentPeriodStart)
+          )
+        );
+  
+      const [previousPeriodAds] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ads)
+        .where(
+          and(
+            eq(ads.active, true),
             gte(ads.createdAt, previousPeriodStart),
             lte(ads.createdAt, previousPeriodEnd)
           )
         );
-
-      const [totalAds] = await db
+  
+      // ===== TOTAL IMPRESSIONS =====
+      const [totalImpressionsResult] = await db
         .select({ count: sql<number>`count(*)` })
-        .from(ads);
-
-      // Get impression stats
-      const [currentImpressions] = await db
+        .from(impressionsEvents);
+  
+      const [currentPeriodImpressions] = await db
         .select({ count: sql<number>`count(*)` })
         .from(impressionsEvents)
         .where(gte(impressionsEvents.createdAt, currentPeriodStart));
-
-      const [previousImpressions] = await db
+  
+      const [previousPeriodImpressions] = await db
         .select({ count: sql<number>`count(*)` })
         .from(impressionsEvents)
         .where(
@@ -335,28 +474,39 @@ export class DashboardRepository implements IDashboardRepository {
             lte(impressionsEvents.createdAt, previousPeriodEnd)
           )
         );
-
-      const userGrowth = Number(previousUsers?.count || 0) > 0
-        ? ((Number(currentUsers?.count || 0) - Number(previousUsers?.count || 0)) / Number(previousUsers?.count || 0)) * 100
+  
+      // Calculate totals and growth
+      const totalUsers = Number(totalUsersResult.count || 0);
+      const currentUsers = Number(currentPeriodUsers.count || 0);
+      const prevUsers = Number(previousPeriodUsers.count || 0);
+      const userGrowth = prevUsers > 0 ? ((currentUsers - prevUsers) / prevUsers) * 100 : 0;
+  
+      const totalRevenue = Number(totalRevenueResult.total || 0);
+      const currentRevenue = Number(currentPeriodRevenue.total || 0);
+      const prevRevenue = Number(previousPeriodRevenue.total || 0);
+      const revenueGrowth = prevRevenue > 0 ? ((currentRevenue - prevRevenue) / prevRevenue) * 100 : 0;
+  
+      const activeAds = Number(activeAdsResult.count || 0);
+      const currentAds = Number(currentPeriodAds.count || 0);
+      const prevAds = Number(previousPeriodAds.count || 0);
+      const adsGrowth = prevAds > 0 ? ((currentAds - prevAds) / prevAds) * 100 : 0;
+  
+      const totalImpressions = Number(totalImpressionsResult.count || 0);
+      const currentImpressions = Number(currentPeriodImpressions.count || 0);
+      const prevImpressions = Number(previousPeriodImpressions.count || 0);
+      const impressionGrowth = prevImpressions > 0 
+        ? ((currentImpressions - prevImpressions) / prevImpressions) * 100 
         : 0;
-
-      const adsGrowth = Number(previousAds?.count || 0) > 0
-        ? ((Number(currentAds?.count || 0) - Number(previousAds?.count || 0)) / Number(previousAds?.count || 0)) * 100
-        : 0;
-
-      const impressionGrowth = Number(previousImpressions?.count || 0) > 0
-        ? ((Number(currentImpressions?.count || 0) - Number(previousImpressions?.count || 0)) / Number(previousImpressions?.count || 0)) * 100
-        : 0;
-
+  
       return {
-        totalUsers: Number(totalUsers?.count || 0),
+        totalUsers,
         userGrowth: Math.round(userGrowth * 10) / 10,
         totalRevenue,
         revenueGrowth: Math.round(revenueGrowth * 10) / 10,
-        activeAds: Number(totalAds?.count || 0),
+        activeAds,
         adsGrowth: Math.round(adsGrowth * 10) / 10,
-        totalImpressions: Number(currentImpressions?.count || 0),
-        impressionGrowth: Math.round(impressionGrowth * 10) / 10
+        totalImpressions,
+        impressionGrowth: Math.round(impressionGrowth * 10) / 10,
       };
     } catch (error) {
       throw ErrorBuilder.build(
@@ -366,33 +516,60 @@ export class DashboardRepository implements IDashboardRepository {
       );
     }
   }
-
-  async getAdminChartData(days: number = 7): Promise<AdminChartData[]> {
+  
+  /**
+   * Get system-wide chart data for impressions and clicks
+   */
+  async getAdminChartData(months: number = 6): Promise<AdminChartData[]> {
     try {
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-
-      // Get daily impressions and clicks for admin view
-      const dailyData = await db
+      startDate.setMonth(startDate.getMonth() - months);
+  
+      // Get monthly impressions for all ads
+      const monthlyImpressions = await db
         .select({
-          date: sql<string>`DATE(${impressionsEvents.createdAt})`,
-          impressions: sql<number>`COUNT(DISTINCT ${impressionsEvents.id})`,
-          clicks: sql<number>`COUNT(DISTINCT ${clicksEvents.id})`
+          month: sql<string>`TO_CHAR(${impressionsEvents.createdAt}, 'YYYY-MM')`,
+          count: sql<number>`COUNT(*)`,
         })
         .from(impressionsEvents)
-        .leftJoin(clicksEvents, and(
-          eq(impressionsEvents.adId, clicksEvents.adId),
-          sql`DATE(${impressionsEvents.createdAt}) = DATE(${clicksEvents.createdAt})`
-        ))
         .where(gte(impressionsEvents.createdAt, startDate))
-        .groupBy(sql`DATE(${impressionsEvents.createdAt})`)
-        .orderBy(asc(sql`DATE(${impressionsEvents.createdAt})`));
-
-      return dailyData.map(row => ({
-        date: row.date,
-        clicks: Number(row.clicks || 0),
-        impressions: Number(row.impressions || 0)
-      }));
+        .groupBy(sql`TO_CHAR(${impressionsEvents.createdAt}, 'YYYY-MM')`)
+        .orderBy(sql`TO_CHAR(${impressionsEvents.createdAt}, 'YYYY-MM')`);
+  
+      // Get monthly clicks for all ads
+      const monthlyClicks = await db
+        .select({
+          month: sql<string>`TO_CHAR(${clicksEvents.createdAt}, 'YYYY-MM')`,
+          count: sql<number>`COUNT(*)`,
+        })
+        .from(clicksEvents)
+        .where(gte(clicksEvents.createdAt, startDate))
+        .groupBy(sql`TO_CHAR(${clicksEvents.createdAt}, 'YYYY-MM')`)
+        .orderBy(sql`TO_CHAR(${clicksEvents.createdAt}, 'YYYY-MM')`);
+  
+      // Merge data
+      const impressionMap = new Map(
+        monthlyImpressions.map(d => [d.month, Number(d.count)])
+      );
+      const clickMap = new Map(
+        monthlyClicks.map(d => [d.month, Number(d.count)])
+      );
+  
+      // Create array for all months in range
+      const chartData: AdminChartData[] = [];
+      const now = new Date();
+      for (let i = months - 1; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthStr = date.toISOString().slice(0, 7); // YYYY-MM
+  
+        chartData.push({
+          date: monthStr,
+          impressions: impressionMap.get(monthStr) || 0,
+          clicks: clickMap.get(monthStr) || 0,
+        });
+      }
+  
+      return chartData;
     } catch (error) {
       throw ErrorBuilder.build(
         ErrorCode.DATABASE_ERROR,
@@ -401,50 +578,95 @@ export class DashboardRepository implements IDashboardRepository {
       );
     }
   }
-
+  
+  
+  /**
+   * Get recent system activity for admin
+   */
   async getAdminRecentActivity(limit: number = 10): Promise<RecentActivity[]> {
     try {
-      // Get recent system activity for admin
+      const activities: RecentActivity[] = [];
+  
+      // Get recent user signups
+      const recentUsers = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .orderBy(desc(users.createdAt))
+        .limit(limit);
+  
+      recentUsers.forEach(user => {
+        activities.push({
+          id: user.id,
+          type: 'user_signup',
+          description: `New user registered: ${user.username}`,
+          userId: user.id,
+          username: user.username,
+          createdAt: user.createdAt,
+        });
+      });
+  
+      // Get recent ads
       const recentAds = await db
         .select({
           id: ads.id,
-          type: sql<string>`'ad_created'`,
-          description: sql<string>`CONCAT('New ad created: ', ${ads.titleEn})`,
-          createdAt: ads.createdAt,
+          titleEn: ads.titleEn,
+          status: ads.status,
           userId: ads.userId,
-          username: users.username
+          createdAt: ads.createdAt,
         })
         .from(ads)
         .leftJoin(users, eq(ads.userId, users.id))
         .orderBy(desc(ads.createdAt))
         .limit(limit);
-
-      const recentUsers = await db
+  
+      recentAds.forEach(ad => {
+        const typeMap = {
+          'approved': 'ad_approved' as const,
+          'rejected': 'ad_rejected' as const,
+          'pending': 'ad_created' as const,
+        };
+  
+        activities.push({
+          id: ad.id,
+          type: typeMap[ad.status] || 'ad_created',
+          description: `Ad "${ad.titleEn}" ${ad.status}`,
+          userId: ad.userId,
+          createdAt: ad.createdAt,
+        });
+      });
+  
+      // Get recent purchases
+      const recentPurchases = await db
         .select({
-          id: users.id,
-          type: sql<string>`'user_signup'`,
-          description: sql<string>`CONCAT('New user registered: ', ${users.username})`,
-          createdAt: users.createdAt,
-          userId: users.id,
-          username: users.username
+          id: purchases.id,
+          amount: purchases.amount,
+          userId: purchases.userId,
+          createdAt: purchases.createdAt,
         })
-        .from(users)
-        .orderBy(desc(users.createdAt))
+        .from(purchases)
+        .leftJoin(users, eq(purchases.userId, users.id))
+        .where(eq(purchases.status, "completed"))
+        .orderBy(desc(purchases.createdAt))
         .limit(limit);
-
-      // Combine and sort activities
-      const allActivities = [...recentAds, ...recentUsers]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  
+      recentPurchases.forEach(purchase => {
+        activities.push({
+          id: purchase.id,
+          type: 'purchase',
+          description: `Purchase completed: $${purchase.amount}`,
+          userId: purchase.userId,
+          createdAt: purchase.createdAt,
+        });
+      });
+  
+      // Sort all activities by date and limit
+      return activities
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit);
-
-      return allActivities.map(activity => ({
-        id: activity.id,
-        type: activity.type as any,
-        description: activity.description,
-        userId: activity.userId,
-        username: activity.username,
-        createdAt: activity.createdAt
-      }));
     } catch (error) {
       throw ErrorBuilder.build(
         ErrorCode.DATABASE_ERROR,
@@ -453,31 +675,63 @@ export class DashboardRepository implements IDashboardRepository {
       );
     }
   }
-
-  async getSystemOverview(): Promise<any> {
+  
+  /**
+   * Get system statistics overview
+   */
+  async getSystemOverview() {
     try {
-      // Get basic system overview stats
+      // Total users count
       const [totalUsers] = await db
         .select({ count: sql<number>`count(*)` })
         .from(users);
-
+  
+      // Total ads count
       const [totalAds] = await db
         .select({ count: sql<number>`count(*)` })
         .from(ads);
-
+  
+      // Pending ads count
+      const [pendingAds] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ads)
+        .where(eq(ads.status, "pending"));
+  
+      // Active ads count
+      const [activeAds] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ads)
+        .where(eq(ads.active, true));
+  
+      // Total impressions
       const [totalImpressions] = await db
         .select({ count: sql<number>`count(*)` })
         .from(impressionsEvents);
-
+  
+      // Total clicks
       const [totalClicks] = await db
         .select({ count: sql<number>`count(*)` })
         .from(clicksEvents);
-
+  
+      // Total revenue
+      const [totalRevenue] = await db
+        .select({ 
+          total: sql<number>`COALESCE(SUM(CAST(${purchases.amount} AS DECIMAL)), 0)` 
+        })
+        .from(purchases)
+        .where(eq(purchases.status, "completed"));
+  
       return {
-        totalUsers: Number(totalUsers?.count || 0),
-        totalAds: Number(totalAds?.count || 0),
-        totalImpressions: Number(totalImpressions?.count || 0),
-        totalClicks: Number(totalClicks?.count || 0)
+        totalUsers: Number(totalUsers.count || 0),
+        totalAds: Number(totalAds.count || 0),
+        pendingAds: Number(pendingAds.count || 0),
+        activeAds: Number(activeAds.count || 0),
+        totalImpressions: Number(totalImpressions.count || 0),
+        totalClicks: Number(totalClicks.count || 0),
+        totalRevenue: Number(totalRevenue.total || 0),
+        ctr: Number(totalImpressions.count) > 0 
+          ? (Number(totalClicks.count) / Number(totalImpressions.count)) * 100 
+          : 0,
       };
     } catch (error) {
       throw ErrorBuilder.build(
