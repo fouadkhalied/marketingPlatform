@@ -389,9 +389,9 @@ const blogController = createBlogController();
 const blogRoutes = setupBlogRoutes(blogController);
 app.use(blogRoutes);
 
-// Dashboard routes
-const dashboardRoutes = setupDashboardRoutes();
-app.use(dashboardRoutes);
+// // Dashboard routes
+// const dashboardRoutes = setupDashboardRoutes();
+// app.use(dashboardRoutes);
 
 // facebook Outh
 app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(req,res));
