@@ -123,10 +123,10 @@ const BlogSchema = new Schema<IBlog>({
   timestamps: true
 });
 
-// Indexes for performance
+// Indexes for performance - FIXED
 BlogSchema.index({ slug: 1 });
 BlogSchema.index({ status: 1, publishedAt: -1 });
-BlogSchema.index({ author: 1 });
+BlogSchema.index({ 'author.id': 1 }); // ✅ Fixed: Index on nested field
 BlogSchema.index({ category: 1 });
 BlogSchema.index({ tags: 1 });
 
