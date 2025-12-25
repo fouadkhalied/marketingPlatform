@@ -59,7 +59,7 @@ export function setupBlogRoutes(blogController: IBlogController) {
   router.post('/api/blogs', AuthMiddleware(UserRole.ADMIN), (req, res) => blogController.createBlog(req, res));
 
   // Update blog (admin only)
-  router.put('/api/blogs/:id', AuthMiddleware(UserRole.ADMIN), (req, res) => blogController.updateBlog(req, res));
+  router.patch('/api/blogs/:id', AuthMiddleware(UserRole.ADMIN), (req, res) => blogController.updateBlog(req, res));
 
   // Delete blog (admin only)
   router.delete('/api/blogs/:id', AuthMiddleware(UserRole.ADMIN), (req, res) => blogController.deleteBlog(req, res));

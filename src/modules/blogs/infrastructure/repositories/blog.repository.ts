@@ -3,6 +3,7 @@ import { BlogModel, IBlog } from '../../../../infrastructure/shared/schema/blog.
 import { CreateBlogDto } from '../../application/dto/create-blog.dto';
 import { UpdateBlogDto } from '../../application/dto/update-blog.dto';
 import { BlogPaginationDto, PaginatedBlogResponse } from '../../application/dto/blog-pagination.dto';
+import mongoose from 'mongoose';
 
 export class BlogRepository implements IBlogRepository {
   async create(blogData: CreateBlogDto & { author: { id: string; name: string; email: string } }): Promise<IBlog> {
@@ -112,6 +113,10 @@ export class BlogRepository implements IBlogRepository {
     console.log(id);
     
     console.log(updateData);
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error('Invalid blog ID format');
+    }
     
     return await BlogModel.findByIdAndUpdate(
       id,
