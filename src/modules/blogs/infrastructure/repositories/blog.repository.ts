@@ -64,6 +64,12 @@ export class BlogRepository implements IBlogRepository {
       BlogModel.countDocuments(query).exec()
     ]);
 
+    console.log(query);
+
+    console.log(blogs);
+    
+    
+
     const totalPages = Math.ceil(total / limit);
 
     return {
