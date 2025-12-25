@@ -17,7 +17,13 @@ export class BlogRepository implements IBlogRepository {
   }
 
   async findBySlug(slug: string): Promise<IBlog | null> {
-    return await BlogModel.findOne({ slug }).exec();
+    // Search in both English and Arabic slugs
+    return await BlogModel.findOne({
+      $or: [
+        { 'slug.en': slug },
+        { 'slug.ar': slug }
+      ]
+    }).exec();
   }
 
   async findAll(params: BlogPaginationDto): Promise<PaginatedBlogResponse> {
@@ -37,14 +43,34 @@ export class BlogRepository implements IBlogRepository {
     const query: any = {};
 
     if (status) query.status = status;
-    if (category) query.category = category;
+    
+    // Handle bilingual category search
+    if (category) {
+      query.$or = [
+        { 'category.en': category },
+        { 'category.ar': category }
+      ];
+    }
+    
     if (author) query['author.id'] = author;
-    if (tag) query.tags = { $in: [tag] };
+    
+    // Handle bilingual tag search
+    if (tag) {
+      query.$or = [
+        { 'tags.en': tag },
+        { 'tags.ar': tag }
+      ];
+    }
+    
+    // Handle bilingual text search
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } },
-        { excerpt: { $regex: search, $options: 'i' } }
+        { 'title.en': { $regex: search, $options: 'i' } },
+        { 'title.ar': { $regex: search, $options: 'i' } },
+        { 'content.en': { $regex: search, $options: 'i' } },
+        { 'content.ar': { $regex: search, $options: 'i' } },
+        { 'excerpt.en': { $regex: search, $options: 'i' } },
+        { 'excerpt.ar': { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -65,10 +91,7 @@ export class BlogRepository implements IBlogRepository {
     ]);
 
     console.log(query);
-
     console.log(blogs);
-    
-    
 
     const totalPages = Math.ceil(total / limit);
 
