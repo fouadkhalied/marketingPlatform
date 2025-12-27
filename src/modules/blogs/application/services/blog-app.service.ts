@@ -4,9 +4,13 @@ import { UpdateBlogDto } from '../dto/update-blog.dto';
 import { BlogPaginationDto } from '../dto/blog-pagination.dto';
 import { ErrorBuilder } from '../../../../infrastructure/shared/common/errors/errorBuilder';
 import { ErrorCode } from '../../../../infrastructure/shared/common/errors/enums/basic.error.enum';
+import { UploadPhoto } from '../../../../infrastructure/shared/common/supabase/module/supabase.module';
 
 export class BlogAppService {
-  constructor(private readonly blogRepository: IBlogRepository) {}
+  constructor(
+    private readonly blogRepository: IBlogRepository,
+    private readonly photoUploader?: UploadPhoto
+  ) {}
 
   async createBlog(blogData: CreateBlogDto, author: { id: string; name: string; email: string }) {
     try {
@@ -145,11 +149,30 @@ export class BlogAppService {
         throw ErrorBuilder.build(ErrorCode.BLOG_PERMISSION_DENIED, 'You do not have permission to delete this blog');
       }
 
+      // Delete associated photo from storage if it exists
+      if (blog.featuredImage && this.photoUploader) {
+        try {
+          console.log('Blog service: Deleting photo from storage', { blogId: id, photoUrl: blog.featuredImage });
+          await this.photoUploader.deletePhoto(blog.featuredImage);
+          console.log('Blog service: Photo deleted from storage successfully', { blogId: id });
+        } catch (photoError) {
+          console.error('Blog service: Failed to delete photo from storage', {
+            blogId: id,
+            photoUrl: blog.featuredImage,
+            error: photoError instanceof Error ? photoError.message : photoError
+          });
+          // Don't fail the blog deletion if photo deletion fails
+          // Just log the error and continue
+        }
+      }
+
       const deleted = await this.blogRepository.delete(id);
 
       if (!deleted) {
         throw ErrorBuilder.build(ErrorCode.BLOG_DELETE_FAILED, 'Failed to delete blog');
       }
+
+      console.log('Blog service: Blog deleted successfully', { blogId: id, userId, hadPhoto: !!blog.featuredImage });
 
       return {
         success: true,

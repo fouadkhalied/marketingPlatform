@@ -19,7 +19,11 @@ export function createBlogPhotoRepository(): BlogPhotoRepository {
 
 // Service Factories
 export function createBlogAppService(): BlogAppService {
-  return new BlogAppService(createBlogRepository());
+  const blogRepository = createBlogRepository();
+  const supabaseUploader = new SupabaseUploader(BucketType.BLOG);
+  const photoUploader = new UploadPhoto(supabaseUploader, BucketType.BLOG);
+
+  return new BlogAppService(blogRepository, photoUploader);
 }
 
 export function createBlogPhotoAppService(): BlogPhotoAppService {
@@ -58,16 +62,18 @@ export function createBlogComponents() {
 
 // Combined Factory for all blog components including photo management
 export function createBlogComponentsWithPhoto() {
+  // Shared components for both blog and photo services
+  const supabaseUploader = new SupabaseUploader(BucketType.BLOG);
+  const photoUploader = new UploadPhoto(supabaseUploader, BucketType.BLOG);
+  const logger = createLogger();
+
   // Blog components
   const blogRepository = createBlogRepository();
-  const blogService = new BlogAppService(blogRepository);
+  const blogService = new BlogAppService(blogRepository, photoUploader);
   const blogController = new BlogController(blogService);
 
   // Photo components
   const photoRepository = createBlogPhotoRepository();
-  const logger = createLogger();
-  const supabaseUploader = new SupabaseUploader(BucketType.BLOG);
-  const photoUploader = new UploadPhoto(supabaseUploader, BucketType.BLOG);
   const photoService = new BlogPhotoAppService(photoRepository, photoUploader, logger);
   const photoController = new BlogPhotoController(photoService, logger);
 
