@@ -68,12 +68,38 @@ export class BlogPhotoAppService {
     role: string
   ): Promise<ApiResponseInterface<{ photos: { url: string; index: number }[] }>> {
     try {
-      // upload file
-      await this.photoUploader.deletePhoto(photoUrl)
+      this.logger.info('Blog photo update service: Starting update process', {
+        blogId,
+        userId,
+        role,
+        oldPhotoUrl: photoUrl,
+        newFileName: photo[0]?.originalname,
+        fileSize: photo[0]?.size
+      });
+
+      // Delete old photo from storage
+      this.logger.debug('Blog photo update service: Deleting old photo', { blogId, photoUrl });
+      await this.photoUploader.deletePhoto(photoUrl);
+
+      // Upload new photo
+      this.logger.debug('Blog photo update service: Uploading new photo', { blogId, fileName: photo[0]?.originalname });
       const photoUploadResult = await this.photoUploader.execute(photo);
 
+      this.logger.debug('Blog photo update service: Photo uploaded to storage', {
+        blogId,
+        uploadedUrls: photoUploadResult.url.length,
+        newUrl: photoUploadResult.url[0]
+      });
 
-      // save photo URL in DB for the blog
+      // Update photo URL in database
+      this.logger.debug('Blog photo update service: Updating database', {
+        blogId,
+        userId,
+        oldPhotoUrl: photoUrl,
+        newPhotoUrl: photoUploadResult.url[0],
+        role
+      });
+
       const updated = await this.blogPhotoRepository.updatePhotoFromBlog(
         blogId,
         userId,
@@ -83,14 +109,33 @@ export class BlogPhotoAppService {
       );
 
       if (!updated) {
+        this.logger.error('Blog photo update service: Failed to update photo in database', {
+          blogId,
+          userId,
+          oldPhotoUrl: photoUrl,
+          newPhotoUrl: photoUploadResult.url[0]
+        });
         return ErrorBuilder.build(
           ErrorCode.DATABASE_ERROR,
           "Failed to attach photo to blog"
         );
       }
 
+      this.logger.info('Blog photo update service: Successfully updated blog photo', {
+        blogId,
+        userId,
+        oldPhotoUrl: photoUrl,
+        newPhotoUrl: photoUploadResult.url[0]
+      });
+
       return ResponseBuilder.success({ photos: photoUploadResult.url.map((url,index) => ({url:url,index:index})) });
     } catch (error) {
+      this.logger.error('Blog photo update service: Unexpected error during photo update', {
+        blogId,
+        userId,
+        oldPhotoUrl: photoUrl,
+        error: error instanceof Error ? error.message : error
+      });
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
         "Unexpected error while uploading photo",

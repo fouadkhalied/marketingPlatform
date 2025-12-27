@@ -76,7 +76,16 @@ export class BlogPhotoController {
 
   async updatePhotoFromBlog(req: Request, res: Response): Promise<void> {
     try {
+      this.logger.info('Blog photo update request', {
+        blogId: req.params.id,
+        userId: req.user?.id,
+        userRole: req.user?.role,
+        fileCount: (req.files as Express.Multer.File[])?.length || 0,
+        oldPhotoUrl: req.query.photoUrl
+      });
+
       if (!req.user?.id || !req.user?.role) {
+        this.logger.warn('Blog photo update: User not authenticated', { blogId: req.params.id });
         res.status(401).json({ error: "User not authenticated" });
         return;
       }
@@ -84,6 +93,7 @@ export class BlogPhotoController {
       const files = req.files as Express.Multer.File[];
 
       if (!files || files.length === 0) {
+        this.logger.warn('Blog photo update: No files uploaded', { blogId: req.params.id, userId: req.user.id });
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
           "No files uploaded"
@@ -95,6 +105,11 @@ export class BlogPhotoController {
       }
 
       if (files.length !== 1) {
+        this.logger.warn('Blog photo update: Multiple files uploaded', {
+          blogId: req.params.id,
+          userId: req.user.id,
+          fileCount: files.length
+        });
         const errorResponse = ErrorBuilder.build(
           ErrorCode.VALIDATION_ERROR,
           "One file must be uploaded only"
@@ -108,6 +123,7 @@ export class BlogPhotoController {
       const id = req.params.id; // make sure your route has :id
 
       if (!id) {
+        this.logger.warn('Blog photo update: Blog ID missing', { userId: req.user.id });
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
           "Blog ID is required"
@@ -120,6 +136,7 @@ export class BlogPhotoController {
 
       const photoUrl = req.query.photoUrl as string;
       if (!photoUrl) {
+        this.logger.warn('Blog photo update: Old photo URL missing', { blogId: id, userId: req.user.id });
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
           "photoUrl to update is required"
@@ -130,8 +147,22 @@ export class BlogPhotoController {
         return;
       }
 
+      this.logger.info('Blog photo update: Calling service', {
+        blogId: id,
+        userId: req.user.id,
+        oldPhotoUrl: photoUrl,
+        newFileName: files[0].originalname
+      });
+
       // call service
       const response = await this.blogPhotoService.updatePhotoFromBlog(files,id,req.user.id,photoUrl,req.user.role);
+
+      this.logger.info('Blog photo update: Service response', {
+        blogId: id,
+        userId: req.user.id,
+        success: response.success,
+        hasError: !!response.error
+      });
 
       res.status(response.success ? 200 : 400).json(response);
     } catch (error) {
