@@ -30,11 +30,16 @@ export class BlogPhotoController {
 
   async uploadPhotoToBlog(req: Request, res: Response): Promise<void> {
     try {
-      console.log("proccessing files");
-      
+      this.logger.info('Blog photo upload request', {
+        blogId: req.params.id,
+        fileCount: (req.files as Express.Multer.File[])?.length || 0,
+        fileNames: (req.files as Express.Multer.File[])?.map(f => f.originalname) || []
+      });
+
       const files = req.files as Express.Multer.File[];
 
       if (!files || files.length === 0) {
+        this.logger.warn('Blog photo upload: No files uploaded', { blogId: req.params.id });
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
           "No files uploaded"
@@ -48,6 +53,7 @@ export class BlogPhotoController {
       const id = req.params.id; // make sure your route has :id
 
       if (!id) {
+        this.logger.warn('Blog photo upload: Blog ID missing');
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
           "Blog ID is required"
@@ -58,8 +64,21 @@ export class BlogPhotoController {
         return;
       }
 
+      this.logger.info('Blog photo upload: Calling service', {
+        blogId: id,
+        fileCount: files.length,
+        fileNames: files.map(f => f.originalname)
+      });
+
       // call service
       const response = await this.blogPhotoService.uploadPhotoToBlog(files, id);
+
+      this.logger.info('Blog photo upload: Service response', {
+        blogId: id,
+        success: response.success,
+        hasError: !!response.error,
+        uploadedUrls: response.success ? (response.data as any)?.photos?.length || 0 : 0
+      });
 
       res.status(response.success ? 200 : 400).json(response);
     } catch (error) {
@@ -179,14 +198,21 @@ export class BlogPhotoController {
 
   async deletePhotoFromBlog(req: Request, res: Response): Promise<void> {
     try {
+      this.logger.info('Blog photo delete request', {
+        blogId: req.params.id,
+        userId: req.user?.id,
+        photoUrl: req.query.photoUrl
+      });
 
       if (!req.user?.id) {
+        this.logger.warn('Blog photo delete: User not authenticated', { blogId: req.params.id });
         res.status(401).json({ error: "User not authenticated" });
         return;
       }
 
       const id = req.params.id; // make sure your route has :id
       if (!id) {
+        this.logger.warn('Blog photo delete: Blog ID missing', { userId: req.user.id });
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
           "Blog ID is required"
@@ -198,9 +224,9 @@ export class BlogPhotoController {
       }
 
       const photoUrl = req.query.photoUrl as string;
-      console.log(photoUrl);
 
       if (!photoUrl) {
+        this.logger.warn('Blog photo delete: Photo URL missing', { blogId: id, userId: req.user.id });
         const errorResponse = ErrorBuilder.build(
           ErrorCode.MISSING_REQUIRED_FIELD,
           "photoUrl to delete is required"
@@ -211,8 +237,21 @@ export class BlogPhotoController {
         return;
       }
 
+      this.logger.info('Blog photo delete: Calling service', {
+        blogId: id,
+        userId: req.user.id,
+        photoUrl
+      });
+
       // call service
       const response = await this.blogPhotoService.deletePhotoFromBlog(id, req.user.id, photoUrl);
+
+      this.logger.info('Blog photo delete: Service response', {
+        blogId: id,
+        userId: req.user.id,
+        success: response.success,
+        hasError: !!response.error
+      });
 
       res.status(response.success ? 200 : 400).json(response);
     } catch (error) {
