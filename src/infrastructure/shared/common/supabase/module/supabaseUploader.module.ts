@@ -35,12 +35,26 @@ export class SupabaseUploader implements IUploader {
   
 
   async delete(url: string): Promise<boolean> {
+    let filePath = '';
     try {
-    
-      const urlPath = new URL(url).pathname;
-      const filePath = urlPath.replace(`/${this.bucketName}/`, '');
+      console.log('SupabaseUploader: Starting delete operation', { url, bucketName: this.bucketName });
 
-      console.log(filePath);
+      const urlObj = new URL(url);
+      const urlPath = urlObj.pathname;
+
+      // Extract filename from URL path
+      // URL format: /storage/{bucketName}/{fileName}
+      // We want to extract just the {fileName} part
+      const pathParts = urlPath.split('/');
+      filePath = pathParts[pathParts.length - 1]; // Get the last part (filename)
+
+      console.log('SupabaseUploader: Extracted file path', {
+        fullUrl: url,
+        urlPath,
+        bucketName: this.bucketName,
+        pathParts,
+        extractedFilePath: filePath
+      });
       
 
       // Check if file exists first
@@ -70,8 +84,15 @@ export class SupabaseUploader implements IUploader {
       
 
       await this.minioClient.send(command);
+      console.log('SupabaseUploader: Photo deleted successfully', { bucketName: this.bucketName, filePath });
       return true;
     } catch (error: any) {
+      console.error('SupabaseUploader: Error deleting photo', {
+        bucketName: this.bucketName,
+        filePath,
+        error: error.message,
+        errorName: error.name
+      });
       throw new Error(`error in deleting photo: ${error.message}`);
     }
   }

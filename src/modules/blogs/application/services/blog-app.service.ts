@@ -150,20 +150,33 @@ export class BlogAppService {
       }
 
       // Delete associated photo from storage if it exists
-      if (blog.featuredImage && this.photoUploader) {
-        try {
-          console.log('Blog service: Deleting photo from storage', { blogId: id, photoUrl: blog.featuredImage });
-          await this.photoUploader.deletePhoto(blog.featuredImage);
-          console.log('Blog service: Photo deleted from storage successfully', { blogId: id });
-        } catch (photoError) {
-          console.error('Blog service: Failed to delete photo from storage', {
-            blogId: id,
-            photoUrl: blog.featuredImage,
-            error: photoError instanceof Error ? photoError.message : photoError
-          });
-          // Don't fail the blog deletion if photo deletion fails
-          // Just log the error and continue
+      if (blog.featuredImage) {
+        console.log('Blog service: Blog has featured image, attempting deletion', {
+          blogId: id,
+          photoUrl: blog.featuredImage,
+          hasPhotoUploader: !!this.photoUploader
+        });
+
+        if (!this.photoUploader) {
+          console.error('Blog service: Photo uploader not available for blog deletion', { blogId: id });
+        } else {
+          try {
+            console.log('Blog service: Deleting photo from storage', { blogId: id, photoUrl: blog.featuredImage });
+            const deleteResult = await this.photoUploader.deletePhoto(blog.featuredImage);
+            console.log('Blog service: Photo delete result', { blogId: id, deleteResult, photoUrl: blog.featuredImage });
+          } catch (photoError) {
+            console.error('Blog service: Failed to delete photo from storage', {
+              blogId: id,
+              photoUrl: blog.featuredImage,
+              error: photoError instanceof Error ? photoError.message : photoError,
+              errorStack: photoError instanceof Error ? photoError.stack : 'No stack'
+            });
+            // Don't fail the blog deletion if photo deletion fails
+            // Just log the error and continue
+          }
         }
+      } else {
+        console.log('Blog service: Blog has no featured image, skipping photo deletion', { blogId: id });
       }
 
       const deleted = await this.blogRepository.delete(id);
