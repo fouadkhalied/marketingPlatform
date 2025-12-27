@@ -2,6 +2,7 @@ import express from 'express';
 import { AuthMiddleware } from '../../../../infrastructure/shared/common/auth/module/authModule';
 import { UserRole } from '../../../../infrastructure/shared/common/auth/enums/userRole';
 import { BlogController } from '../controllers/blog.controller';
+import { BlogPhotoController } from '../controllers/blog.photo.controller';
 
 export interface IBlogController {
   createBlog(req: express.Request, res: express.Response): Promise<void>;
@@ -16,7 +17,13 @@ export interface IBlogController {
   getBlogsByTag(req: express.Request, res: express.Response): Promise<void>;
 }
 
-export function setupBlogRoutes(blogController: IBlogController) {
+export interface IBlogPhotoController {
+  uploadPhotoToBlog(req: express.Request, res: express.Response): Promise<void>;
+  updatePhotoFromBlog(req: express.Request, res: express.Response): Promise<void>;
+  deletePhotoFromBlog(req: express.Request, res: express.Response): Promise<void>;
+}
+
+export function setupBlogRoutes(blogController: IBlogController, blogPhotoController?: IBlogPhotoController) {
   const router = express.Router();
 
   // ============================================
@@ -63,6 +70,21 @@ export function setupBlogRoutes(blogController: IBlogController) {
 
   // Delete blog (admin only)
   router.delete('/api/blogs/:id', AuthMiddleware(UserRole.ADMIN), (req, res) => blogController.deleteBlog(req, res));
+
+  // ============================================
+  // PHOTO ROUTES (Requires photo controller)
+  // ============================================
+
+  if (blogPhotoController) {
+    // Upload photo to blog (admin only)
+    router.post('/api/blogs/:id/photo', AuthMiddleware(UserRole.ADMIN), (req, res) => blogPhotoController.uploadPhotoToBlog(req, res));
+
+    // Update photo from blog (admin only)
+    router.patch('/api/blogs/:id/photo', AuthMiddleware(UserRole.ADMIN), (req, res) => blogPhotoController.updatePhotoFromBlog(req, res));
+
+    // Delete photo from blog (admin only)
+    router.delete('/api/blogs/:id/photo', AuthMiddleware(UserRole.ADMIN), (req, res) => blogPhotoController.deletePhotoFromBlog(req, res));
+  }
 
   return router;
 }

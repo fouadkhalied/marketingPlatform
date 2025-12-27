@@ -20,7 +20,7 @@ import { createAllAdvertisingControllers } from "../src/modules/advertising/inte
 import { setupAdvertisingRoutes } from "../src/modules/advertising/interfaces/routes/advertising.routes";
 import { createAuthController } from "../src/modules/auth/interfaces/factories/auth.controller.factory";
 import { connectMongoDB } from "../src/infrastructure/db/mongodb-connection";
-import { createBlogController } from "../src/modules/blogs/interfaces/factories/blog.factory";
+import { createBlogComponentsWithPhoto } from "../src/modules/blogs/interfaces/factories/blog.factory";
 import { setupBlogRoutes } from "../src/modules/blogs/interfaces/routes/blog.routes";
 import { setupDashboardRoutes } from "../src/modules/dashboard/interfaces/routes/dashboard.routes";
 import passport from 'passport';
@@ -384,9 +384,9 @@ app.get('/api/payment/getPurchaseHistoryForAdmin',AuthMiddleware(UserRole.ADMIN)
 const advertisingRoutes = setupAdvertisingRoutes(advertisingController);
 app.use(advertisingRoutes);
 
-// Blog routes
-const blogController = createBlogController();
-const blogRoutes = setupBlogRoutes(blogController);
+// Blog routes with photo support
+const blogComponents = createBlogComponentsWithPhoto();
+const blogRoutes = setupBlogRoutes(blogComponents.controllers.blog, blogComponents.controllers.photo);
 app.use(blogRoutes);
 
 // Dashboard routes

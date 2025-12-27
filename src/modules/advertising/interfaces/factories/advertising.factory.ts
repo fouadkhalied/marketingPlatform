@@ -1,6 +1,6 @@
 ﻿import { FacebookPageService } from "../../../user/application/services/facebook-app.service";
 import { FacebookPageRepositoryImpl } from "../../../user/infrastructure/repositories/facebook.repository.impl";
-import { UploadPhoto } from "../../../../infrastructure/shared/common/supabase/module/supabase.module";
+import { UploadPhoto, BucketType } from "../../../../infrastructure/shared/common/supabase/module/supabase.module";
 import { SupabaseUploader } from "../../../../infrastructure/shared/common/supabase/module/supabaseUploader.module";
 import { createLogger, ILogger } from "../../../../infrastructure/shared/common/logging";
 
@@ -40,8 +40,8 @@ function createSharedDependencies() {
     const facebookRepo = new FacebookPageRepositoryImpl();
     const facebookService = new FacebookPageService(facebookRepo);
 
-    const supabaseUploader = new SupabaseUploader();
-    const photoUploader = new UploadPhoto(supabaseUploader);
+    const supabaseUploader = new SupabaseUploader(BucketType.AD);
+    const photoUploader = new UploadPhoto(supabaseUploader, BucketType.AD);
 
     return { logger, facebookService, photoUploader };
 }

@@ -1,19 +1,19 @@
 // infrastructure/storage/MinioUploader.ts
-
 import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { PhotosInterface } from "../interfaces/photo.interface";
 import { IUploader } from "../interfaces/photoUploader.interface";
 import { minioClient } from '../config/supbase.config';
+import { BucketType } from "./supabase.module";
 
 export class SupabaseUploader implements IUploader {
   private minioClient: S3Client;
   private bucketName: string;
   private minioPublicUrl: string;
 
-  constructor() {
+  constructor(bucketType: BucketType = BucketType.AD) {
     this.minioClient = minioClient
-    this.bucketName = 'supabase-storage';
-    this.minioPublicUrl = 'https://octopusad.com/storage/supabase-storage';
+    this.bucketName = bucketType === BucketType.BLOG ? 'blogs' : 'supabase-storage';
+    this.minioPublicUrl = `https://octopusad.com/storage/${this.bucketName}`;
   }
 
   async upload(file: PhotosInterface): Promise<boolean> {

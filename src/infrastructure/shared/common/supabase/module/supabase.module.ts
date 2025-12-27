@@ -3,11 +3,17 @@ import { IUploader } from "../interfaces/photoUploader.interface";
 import { PhotoUploadResult } from "../interfaces/photoUploadResult.interface";
 import { Photo } from "../valueObject/photo.vo";
 
+export enum BucketType {
+  AD = 'ad',
+  BLOG = 'blog'
+}
+
 export class UploadPhoto {
   constructor(
-    private readonly uploader: IUploader
+    private readonly uploader: IUploader,
+    private readonly bucketType: BucketType = BucketType.AD
   ) {
-    
+
   }
 
   async execute(
@@ -49,12 +55,4 @@ export class UploadPhoto {
     }
   }
 
-//   private async save(propertyId: number, coverUrl: string, photosUrl: string[]): Promise<void> {
-//     await this.repo.savePropertyCoverPhoto(propertyId, coverUrl);
-//     await this.repo.savePropertyPhotos(propertyId, photosUrl);
-//   }
-
-//   async validate(propertyId: number, userId: number): Promise<boolean> {
-//     return this.repo.findPropertyIDandUserID(propertyId, userId);
-//   }
 }
