@@ -40,6 +40,9 @@ export class SupabaseUploader implements IUploader {
       const urlPath = new URL(url).pathname;
       const filePath = urlPath.replace(`/${this.bucketName}/`, '');
 
+      console.log(filePath);
+      
+
       // Check if file exists first
       try {
         const headResult = await this.minioClient.send(new HeadObjectCommand({
