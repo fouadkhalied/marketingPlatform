@@ -20,7 +20,7 @@ import { createAllAdvertisingControllers } from "../src/modules/advertising/inte
 import { setupAdvertisingRoutes } from "../src/modules/advertising/interfaces/routes/advertising.routes";
 import { createAuthController } from "../src/modules/auth/interfaces/factories/auth.controller.factory";
 import { connectMongoDB } from "../src/infrastructure/db/mongodb-connection";
-import { createBlogController } from "../src/modules/blogs/interfaces/factories/blog.factory";
+import { createBlogComponentsWithPhoto } from "../src/modules/blogs/interfaces/factories/blog.factory";
 import { setupBlogRoutes } from "../src/modules/blogs/interfaces/routes/blog.routes";
 import passport from 'passport';
 
@@ -384,8 +384,8 @@ const advertisingRoutes = setupAdvertisingRoutes(advertisingController);
 app.use(advertisingRoutes);
 
 // Blog routes
-const blogController = createBlogController();
-const blogRoutes = setupBlogRoutes(blogController);
+const blogComponents = createBlogComponentsWithPhoto();
+const blogRoutes = setupBlogRoutes(blogComponents.controllers.blog, blogComponents.controllers.photo);
 app.use(blogRoutes);
 
 // facebook Outh
@@ -441,11 +441,6 @@ app.get(
   AuthMiddleware(UserRole.USER),
   (req, res) => userController.getAdAnalyticsFullDetails(req, res)
 );
-
-// dashboard
-app.get('/api/dashboard/user', AuthMiddleware(UserRole.USER), (req,res)=>userController.getDashoardMetricsForUser(req,res))
-
-app.get('/api/dashboard/admin', AuthMiddleware(UserRole.ADMIN), (req,res)=>userController.getDashoardMetricsForAdmin(req,res))
 
 
 
@@ -539,7 +534,7 @@ process.on('SIGINT', () => {
 //   }
 // }
 
-app.listen(3000,()=>console.log("test server running on port 3000"))
+app.listen(5000,()=>console.log("test server running on port 3000"))
 
 // startServer();
 

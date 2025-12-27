@@ -30,6 +30,8 @@ export class BlogPhotoController {
 
   async uploadPhotoToBlog(req: Request, res: Response): Promise<void> {
     try {
+      console.log("proccessing files");
+      
       const files = req.files as Express.Multer.File[];
 
       if (!files || files.length === 0) {
