@@ -1,8 +1,8 @@
 import express from 'express';
 import { AuthMiddleware } from '../../../../infrastructure/shared/common/auth/module/authModule';
 import { UserRole } from '../../../../infrastructure/shared/common/auth/enums/userRole';
-import { BlogController } from '../controllers/blog.controller';
-import { BlogPhotoController } from '../controllers/blog.photo.controller';
+import multer from 'multer';
+const upload = multer();
 
 export interface IBlogController {
   createBlog(req: express.Request, res: express.Response): Promise<void>;
@@ -77,7 +77,7 @@ export function setupBlogRoutes(blogController: IBlogController, blogPhotoContro
 
   if (blogPhotoController) {
     // Upload photo to blog (admin only)
-    router.post('/api/blogs/:id/photo', AuthMiddleware(UserRole.ADMIN), (req, res) => blogPhotoController.uploadPhotoToBlog(req, res));
+    router.post('/api/blogs/:id/photo', upload.array("photo"),AuthMiddleware(UserRole.ADMIN), (req, res) => blogPhotoController.uploadPhotoToBlog(req, res));
 
     // Update photo from blog (admin only)
     router.patch('/api/blogs/:id/photo', AuthMiddleware(UserRole.ADMIN), (req, res) => blogPhotoController.updatePhotoFromBlog(req, res));
