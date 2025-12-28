@@ -348,6 +348,13 @@ export const freeCredits = pgTable("free_credits", {
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   });
+
+  // user emails
+  export const userEmail = pgTable('user_email', {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    email: varchar("email").notNull().unique(),
+    createdAt: timestamp("created_at").defaultNow(),
+  });
   
   // Relations
   export const usersRelations = relations(users, ({ many }) => ({

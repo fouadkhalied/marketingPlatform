@@ -569,6 +569,35 @@ async getAdAnalyticsFullDetails(adId: string): Promise<ApiResponseInterface<AdAn
       error.message || "Failed to retrieve ad analytics details"
     );
   }
-}
 
+  async addUserEmail(email: string): Promise<ApiResponseInterface<boolean>> {
+    try {
+      console.log('User service: Adding user email', { email });
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        console.warn('User service: Invalid email format', { email });
+        return ErrorBuilder.build(
+          ErrorCode.VALIDATION_ERROR,
+          "Invalid email format"
+        );
+      }
+
+      const result = await this.userRepository.addUserEmail(email);
+
+      console.log('User service: User email added successfully', { email, result });
+      return ResponseBuilder.success(result);
+    } catch (error) {
+      console.error('User service: Failed to add user email', {
+        email,
+        error: error instanceof Error ? error.message : error
+      });
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Failed to add user email",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
 }

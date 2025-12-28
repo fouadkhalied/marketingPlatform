@@ -430,9 +430,12 @@ app.put('/api/users/update-free-credits', AuthMiddleware(UserRole.ADMIN), (req,r
 // get free credits
 app.get('/api/users/get-free-credits', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.getFreeCredits(req,res));
 
-// profile 
+// profile
 app.get('/api/users/profile', AuthMiddleware(UserRole.USER), (req,res) => userController.getProfile(req,res));
 app.put('/api/users/profile', AuthMiddleware(UserRole.USER), (req,res) => userController.updateProfile(req,res));
+
+// add user email
+app.post('/api/users/email', (req, res) => userController.addUserEmail(req, res));
 
 // click on ad
 app.put(

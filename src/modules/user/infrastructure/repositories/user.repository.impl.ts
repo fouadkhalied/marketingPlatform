@@ -3,12 +3,13 @@ import { userInterface } from "../../domain/repositories/user.repository";
 
 import { eq, desc, sql, and, gte, lte, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { adminImpressionRatio, Ad, AdminImpressionRatio, ads, adsReport, clicksEvents, CreateUser, freeCredits, impressionsEvents, middleEastCountries, purchases, socialMediaPages, User, users } from "../../../../infrastructure/shared/schema/schema";
+import { adminImpressionRatio, Ad, AdminImpressionRatio, ads, adsReport, clicksEvents, CreateUser, freeCredits, impressionsEvents, middleEastCountries, purchases, socialMediaPages, User, users, userEmail } from "../../../../infrastructure/shared/schema/schema";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
-import { AdAnalyticsFullDetails } from "../../../dashboard/application/dtos/dashboard.interfaces";
+import { AdminDashboardStats, AdminChartData, RecentActivity, AdAnalyticsFullDetails } from "../../../dashboard/application/dtos/dashboard.interfaces";
 import { AdsReport } from "../../application/dtos/ads-report.dto";
+import { ChartData } from "../../../advertising/application/dtos/analytics.dto";
 
 export class UserRepositoryImpl implements userInterface {
     async hashPassword(password: string): Promise<string> {
@@ -1152,5 +1153,27 @@ async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | 
     );
   }
 }
-}
 
+async addUserEmail(email: string): Promise<boolean> {
+  try {
+    console.log('User repository: Adding user email', { email });
+
+    await db.insert(userEmail).values({
+      email: email.toLowerCase().trim()
+    });
+
+    console.log('User repository: User email added successfully', { email });
+    return true;
+  } catch (error: any) {
+    console.error('User repository: Failed to add user email', {
+      email,
+      error: error instanceof Error ? error.message : error
+    });
+    throw ErrorBuilder.build(
+      ErrorCode.DATABASE_ERROR,
+      "Failed to add user email",
+      error instanceof Error ? error.message : error
+    );
+  }
+}
+}

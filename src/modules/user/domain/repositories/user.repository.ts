@@ -26,4 +26,5 @@ export interface userInterface {
     updateFreeCredits(credits: number): Promise<boolean>;
     getFreeCredits(): Promise<number>;
     getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | undefined>;
+    addUserEmail(email: string): Promise<boolean>;
 }
