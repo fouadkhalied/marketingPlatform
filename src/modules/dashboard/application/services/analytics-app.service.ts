@@ -12,15 +12,20 @@ export class AnalyticsAppService {
     private readonly logger: ILogger
   ) {}
 
-  async getAdAnalyticsFullDetails(adId: string, userId: string): Promise<ApiResponseInterface<AdAnalyticsFullDetails>> {
+  async getAdAnalyticsFullDetails(adId: string, userId: string, userRole?: string): Promise<ApiResponseInterface<AdAnalyticsFullDetails>> {
     try {
-      this.logger.info('Analytics service: Fetching ad analytics', { adId, userId });
+      this.logger.info('Analytics service: Fetching ad analytics', { adId, userId, userRole });
 
-      // Check ownership first
-      const hasAccess = await this.analyticsRepository.checkAdOwnership(adId, userId);
-      if (!hasAccess) {
-        this.logger.warn('Analytics service: Ad not found or access denied', { adId, userId });
-        return ErrorBuilder.build(ErrorCode.AD_NOT_FOUND, "Ad not found or access denied");
+      // Skip ownership check for admin users
+      if (userRole !== 'admin') {
+        // Check ownership first
+        const hasAccess = await this.analyticsRepository.checkAdOwnership(adId, userId);
+        if (!hasAccess) {
+          this.logger.warn('Analytics service: Ad not found or access denied', { adId, userId });
+          return ErrorBuilder.build(ErrorCode.AD_NOT_FOUND, "Ad not found or access denied");
+        }
+      } else {
+        this.logger.info('Analytics service: Admin user bypassing ownership check', { adId, userId });
       }
 
       // Now fetch analytics
@@ -36,6 +41,7 @@ export class AnalyticsAppService {
       this.logger.error('Analytics service: Failed to fetch ad analytics', {
         adId,
         userId,
+        userRole,
         error: error instanceof Error ? error.message : error
       });
       return ErrorBuilder.build(

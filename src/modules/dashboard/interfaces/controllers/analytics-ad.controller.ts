@@ -20,8 +20,9 @@ export class AnalyticsAdController {
 
       const { adId } = req.params;
       const userId = req.user.id;
+      const userRole = req.user.role;
 
-      console.log('Analytics controller: Requesting ad analytics', { adId, userId });
+      console.log('Analytics controller: Requesting ad analytics', { adId, userId, userRole });
 
       // Validate adId
       if (!adId) {
@@ -33,7 +34,7 @@ export class AnalyticsAdController {
         return;
       }
 
-      const result = await this.analyticsService.getAdAnalyticsFullDetails(adId, userId);
+      const result = await this.analyticsService.getAdAnalyticsFullDetails(adId, userId, userRole);
       const statusCode = this.getStatusCode(result);
 
       console.log('Analytics controller: Analytics request completed', { adId, userId, success: result.success, statusCode });
