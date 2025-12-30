@@ -7,6 +7,29 @@ import { AdAnalyticsFullDetails, ChartData } from "../../../advertising/applicat
 import { IAnalyticsRepository } from "../../../advertising/domain/repositories/analytics.repository.interface";
 
 export class AnalyticsRepository implements IAnalyticsRepository {
+
+  async checkAdOwnership(adId: string, userId: string): Promise<boolean> {
+    try {
+      const [ad] = await db
+        .select()
+        .from(ads)
+        .where(and(eq(ads.id, adId), eq(ads.userId, userId)));
+
+      return !!ad;
+    } catch (error) {
+      console.error('Analytics repository: Error checking ad ownership', {
+        adId,
+        userId,
+        error: error instanceof Error ? error.message : error
+      });
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Failed to verify ad ownership",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
   async getAdAnalyticsFullDetails(adId: string): Promise<AdAnalyticsFullDetails | undefined> {
     try {
       // Get basic ad details
@@ -16,6 +39,7 @@ export class AnalyticsRepository implements IAnalyticsRepository {
         .where(eq(ads.id, adId));
 
       if (!ad) {
+        console.log('Analytics repository: Ad not found', { adId });
         return undefined;
       }
 

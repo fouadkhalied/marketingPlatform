@@ -8,13 +8,43 @@ export class AnalyticsAdController {
 
   async getAdAnalyticsFullDetails(req: Request, res: Response): Promise<void> {
     try {
+      // Check if user is authenticated
+      if (!req.user?.id) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.UNAUTHORIZED,
+          "User must be authenticated"
+        );
+        res.status(401).json(errorResponse);
+        return;
+      }
+
       const { adId } = req.params;
-      const result = await this.analyticsService.getAdAnalyticsFullDetails(adId);
+      const userId = req.user.id;
+
+      console.log('Analytics controller: Requesting ad analytics', { adId, userId });
+
+      // Validate adId
+      if (!adId) {
+        const errorResponse = ErrorBuilder.build(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          "Ad ID is required"
+        );
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      const result = await this.analyticsService.getAdAnalyticsFullDetails(adId, userId);
       const statusCode = this.getStatusCode(result);
+
+      console.log('Analytics controller: Analytics request completed', { adId, userId, success: result.success, statusCode });
 
       res.status(statusCode).json(result);
     } catch (err: any) {
-      console.error('Error getting ad analytics full details:', err);
+      console.error('Analytics controller: Error getting ad analytics full details:', {
+        adId: req.params.adId,
+        userId: req.user?.id,
+        error: err.message
+      });
 
       const errorResponse = ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
