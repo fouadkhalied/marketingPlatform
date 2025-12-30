@@ -443,14 +443,6 @@ app.put(
   (req, res) => userController.createAdClick(req, res)
 );
 
-// get full ad analytics details by id
-app.get(
-  "/api/users/ad/:adId/analytics-full-details",
-  AuthMiddleware(UserRole.USER),
-  (req, res) => userController.getAdAnalyticsFullDetails(req, res)
-);
-
-
 
 // SEO
 app.post(

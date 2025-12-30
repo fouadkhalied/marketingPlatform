@@ -553,24 +553,6 @@ async addCretidToUserByAdmin(id:string, credit:number, userId: string):Promise<A
   return ResponseBuilder.success(result);
 }
 
-async getAdAnalyticsFullDetails(adId: string): Promise<ApiResponseInterface<AdAnalyticsFullDetails>> {
-  try {
-    const adDetails = await this.userRepository.getAdAnalyticsFullDetails(adId);
-    if (!adDetails) {
-      return ErrorBuilder.build(ErrorCode.AD_NOT_FOUND, "Ad not found");
-    }
-    return ResponseBuilder.success(adDetails, "Ad analytics details retrieved successfully");
-  } catch (error: any) {
-    if (error.code && error.message) {
-      return error;
-    }
-    return ErrorBuilder.build(
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      error.message || "Failed to retrieve ad analytics details"
-    );
-  }
-}
-
 
 async addUserEmail(email: string): Promise<ApiResponseInterface<boolean>> {
   try {

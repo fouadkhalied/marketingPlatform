@@ -76,7 +76,7 @@ export interface CheckVerificationRequest extends Request {
 
 export class UserController {
   constructor(
-    private readonly userService: UserAppService ,
+    private readonly userService: UserAppService,
     private readonly seoService: SeoAppService 
   ) {}
 
@@ -1239,26 +1239,7 @@ async deleteSeoVariable(req: Request, res: Response): Promise<void> {
   }
 }
 
-  // Get full ad analytics details by ID
-  async getAdAnalyticsFullDetails(req: Request, res: Response): Promise<void> {
-    try {
-      const { adId } = req.params;
-      const result = await this.userService.getAdAnalyticsFullDetails(adId);
-      const statusCode = this.getStatusCode(result);
-
-      res.status(statusCode).json(result);
-    } catch (err: any) {
-      console.error('Error getting ad analytics full details:', err);
-
-      const errorResponse = ErrorBuilder.build(
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        "Failed to get ad analytics full details",
-        err.message
-      );
-
-      res.status(500).json(errorResponse);
-    }
-  }
+ 
 
   async addUserEmail(req: Request, res: Response): Promise<void> {
     try {
