@@ -11,11 +11,9 @@ import fs from "fs";
 import https from "https";
 import http from "http";
 
-import { createUserController } from "../src/modules/user/interfaces/factories/user.factories";
 import { createPaymentController } from "../src/modules/payment/interfaces/factories/payment.factory";
 import { AuthMiddleware } from "../src/infrastructure/shared/common/auth/module/authModule";
 import { UserRole } from "../src/infrastructure/shared/common/auth/enums/userRole";
-import { CheckVerificationRequest } from "../src/modules/user/interfaces/controllers/user.controller";
 import { createAllAdvertisingControllers } from "../src/modules/advertising/interfaces/factories/advertising.factory";
 import { setupAdvertisingRoutes } from "../src/modules/advertising/interfaces/routes/advertising.routes";
 import { createAuthController } from "../src/modules/auth/interfaces/factories/auth.controller.factory";
@@ -23,6 +21,8 @@ import { connectMongoDB } from "../src/infrastructure/db/mongodb-connection";
 import { createBlogComponentsWithPhoto } from "../src/modules/blogs/interfaces/factories/blog.factory";
 import { setupBlogRoutes } from "../src/modules/blogs/interfaces/routes/blog.routes";
 import { setupDashboardRoutes } from "../src/modules/dashboard/interfaces/routes/dashboard.routes";
+import { createAllUserControllers } from "../src/modules/user/interfaces/factories/user.factory";
+import { setupUserRoutes } from "../src/modules/user/interfaces/routes/user.routes";
 import passport from 'passport';
 
 const app = express();
@@ -254,7 +254,7 @@ const sanitizeInput = (req: express.Request, res: express.Response, next: expres
 const authController = createAuthController();
 authController.setGoogleStrategy();
 
-const userController = createUserController();
+const userControllers = createAllUserControllers();
 const paymentController = createPaymentController();
 const advertisingController = createAllAdvertisingControllers();
 
@@ -276,42 +276,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Auth routes with rate limiting and input sanitization
-app.post('/api/auth/register', 
-  registrationLimiter,
-  sanitizeInput,
-  (req, res) => userController.createUser(req, res)
-);
-
-app.post('/api/auth/verify', 
-  authLimiter,
-  (req, res) => userController.verifyUser(req, res)
-);
-
-app.post('/api/auth/resend-otp', 
-  authLimiter,
-  (req, res) => userController.resendVerificationOTP(req, res)
-);
-
-app.get('/api/auth/verification-status',
-  (req, res) => userController.checkVerificationStatus(req as CheckVerificationRequest, res)
-);
-
-app.post('/api/auth/login', 
-  authLimiter,
-  sanitizeInput,
-  (req, res) => userController.login(req, res)
-);
-
-app.post('/api/auth/password-reset-email', 
-  passwordResetLimiter,
-  (req, res) => userController.sendPasswordResetEmail(req, res)
-);
-
-app.post('/api/auth/password-reset', 
-  passwordResetLimiter,
-  (req, res) => userController.updatePassword(req, res)
-);
 
 
 // google auth routes
@@ -366,19 +330,23 @@ app.get(
 // Payment routes
 app.post('/webhook', (req, res) => paymentController.webhook(req, res));
 
-app.get('/webhook', (req,res) => paymentController.handleRedirect(req,res))
+app.get('/webhook', (req,res) => paymentController.handleRedirect(req,res));
 
-app.post('/api/payment/createSessionUrl', 
+app.post('/api/payment/createSessionUrl',
   AuthMiddleware(UserRole.USER),
   (req, res) => paymentController.createSession(req, res)
 );
 
 app.get('/api/payment/history',AuthMiddleware(UserRole.USER),
-(req, res) => paymentController.getPurchaseHistory(req, res))
+(req, res) => paymentController.getPurchaseHistory(req, res));
 
 app.get('/api/payment/getPurchaseHistoryForAdmin',AuthMiddleware(UserRole.ADMIN),
-(req, res) => paymentController.getPurchaseHistoryForAdmin(req, res))
+(req, res) => paymentController.getPurchaseHistoryForAdmin(req, res));
 
+
+// User routes
+const userRoutes = setupUserRoutes(userControllers);
+app.use(userRoutes);
 
 // Advertising routes
 const advertisingRoutes = setupAdvertisingRoutes(advertisingController);
@@ -393,93 +361,7 @@ app.use(blogRoutes);
 const dashboardRoutes = setupDashboardRoutes();
 app.use(dashboardRoutes);
 
-// facebook Outh
-app.get('/api/auth/facebook/callback',(req,res) => userController.facebookOAuth(req,res));
 
-app.get('/api/auth/facebook/generateAuthUrl', AuthMiddleware(UserRole.USER), (req,res) => userController.generateFacebookAuthUrl(req,res));
-
-// get users 
-app.get('/api/users', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.getUsers(req,res));
-
-app.get('/api/user/userDetails/:id',AuthMiddleware(UserRole.USER),(req,res) => userController.getUser(req,res));
-
-// delete user
-app.delete('/api/users/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.deleteUser(req,res));
-
-// promote user to admin 
-app.put('/api/users/promote/:id',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.makeUserAdmin(req,res));
-
-// add credit to user balance by admin 
-app.put('/api/users/addCredit/:userId',AuthMiddleware(UserRole.ADMIN),(req,res) => userController.addCretidToUserByAdmin(req,res));
-
-// Get all available impression ratios 
-app.get('/api/users/impression-ratios', (req, res) => userController.getAvailableImpressionRatios(req, res));
-
-// Update impression ratio (admin only)
-app.put('/api/users/impression-ratios/:id', AuthMiddleware(UserRole.ADMIN), (req, res) => userController.updateImpressionRatio(req, res));
-
-// create ad report
-app.post('/api/users/ad-report', (req,res) => userController.createAdReport(req,res));
-
-// get ad reports
-app.get('/api/users/ad-reports', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.getAdReports(req,res));
-
-// update free credits
-app.put('/api/users/update-free-credits', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.updateFreeCredits(req,res));
-
-// get free credits
-app.get('/api/users/get-free-credits', AuthMiddleware(UserRole.ADMIN), (req,res) => userController.getFreeCredits(req,res));
-
-// profile
-app.get('/api/users/profile', AuthMiddleware(UserRole.USER), (req,res) => userController.getProfile(req,res));
-app.put('/api/users/profile', AuthMiddleware(UserRole.USER), (req,res) => userController.updateProfile(req,res));
-
-// add user email
-app.post('/api/users/email', (req, res) => userController.addUserEmail(req, res));
-
-// click on ad
-app.put(
-  "/api/users/ad/:id/click",
-  (req, res) => userController.createAdClick(req, res)
-);
-
-
-// SEO
-app.post(
-  "/api/seo",
-  AuthMiddleware(UserRole.ADMIN),
-  sanitizeInput,
-  (req, res) => userController.createSeoVariable(req, res)
-);
-
-// Get all SEO variables
-app.get(
-  "/api/seo",
-  AuthMiddleware(UserRole.USER),
-  (req, res) => userController.getAllSeoVariables(req, res)
-);
-
-// Get SEO variable by ID
-app.get(
-  "/api/seo/:id",
-  AuthMiddleware(UserRole.USER),
-  (req, res) => userController.getSeoVariableById(req, res)
-);
-
-// Update SEO variable
-app.put(
-  "/api/seo/:id",
-  AuthMiddleware(UserRole.ADMIN),
-  sanitizeInput,
-  (req, res) => userController.updateSeoVariable(req, res)
-);
-
-// Delete SEO variable
-app.delete(
-  "/api/seo/:id",
-  AuthMiddleware(UserRole.ADMIN),
-  (req, res) => userController.deleteSeoVariable(req, res)
-);
 
 // ============================================
 // 10. ERROR HANDLING
