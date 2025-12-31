@@ -12,7 +12,7 @@ BACKUP_DIR="/tmp/db_backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="$BACKUP_DIR/${DB_NAME}_${DATE}.sql.gz"
 GDRIVE_DIR="gdrive:DatabaseBackups"
-RETENTION_DAYS=30
+RETENTION_DAYS=2
 
 # Create backup directory
 mkdir -p $BACKUP_DIR
