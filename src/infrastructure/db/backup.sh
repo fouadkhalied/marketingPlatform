@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Load environment variables from .env file
+# Load environment variables from .env file (for PGPASSWORD)
 if [ -f ~/marketingPlatform/.env ]; then
     export $(cat ~/marketingPlatform/.env | grep -v '^#' | xargs)
 fi
 
-# Configuration (now uses environment variables)
-DB_USER="${DB_USER:-myuser}"
-DB_NAME="${DB_NAME:-marketingplatformdatabase}"
+# Configuration (HARDCODED values - no quotes needed for variables)
+DB_USER="myuser"                        # ← Remove ${}
+DB_NAME="marketingplatformdatabase"     # ← Remove ${}
 BACKUP_DIR="/tmp/db_backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="$BACKUP_DIR/${DB_NAME}_${DATE}.sql.gz"
@@ -17,7 +17,7 @@ RETENTION_DAYS=30
 # Create backup directory
 mkdir -p $BACKUP_DIR
 
-# Dump database (PGPASSWORD is already exported)
+# Dump database (PGPASSWORD is already exported from .env)
 pg_dump -h localhost -U $DB_USER $DB_NAME | gzip > $BACKUP_FILE
 
 if [ $? -ne 0 ]; then
