@@ -48,8 +48,6 @@ export interface IAdReport {
     getAdReports(pagination: PaginationParams): Promise<PaginatedResponse<AdsReport>>;
 }
 
-
-
 // Impression ratio management (Admin operations)
 export interface IImpressionRatio {
     getAvaialbeImpressionRatios(): Promise<AdminImpressionRatio[]>;
