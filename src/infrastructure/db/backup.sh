@@ -6,7 +6,7 @@ if [ -f ~/marketingPlatform/.env ]; then
 fi
 
 # Configuration (now uses environment variables)
-DB_USER="${DB_USER:-postgres}"
+DB_USER="${DB_USER:-myuser}"
 DB_NAME="${DB_NAME:-marketingplatformdatabase}"
 BACKUP_DIR="/tmp/db_backups"
 DATE=$(date +%Y%m%d_%H%M%S)
