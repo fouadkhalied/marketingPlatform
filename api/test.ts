@@ -1,5 +1,5 @@
 // api/index.ts
-import express from 'express';
+import express, { Request } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -24,33 +24,35 @@ import { setupDashboardRoutes } from "../src/modules/dashboard/interfaces/routes
 import { createAllUserControllers } from "../src/modules/user/interfaces/factories/user.factory";
 import { setupUserRoutes } from "../src/modules/user/interfaces/routes/user.routes";
 import passport from 'passport';
+import { createDefaultNotificationService } from "../src/infrastructure/shared/notification/factories/notification.factory";
 
 const app = express();
+const upload = multer();
 
 // ============================================
 // 1. SECURITY HEADERS & HELMET
 // ============================================
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false, // Adjust based on your needs
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  }
-}));
+// app.use(helmet({
+//   contentSecurityPolicy: {
+//     directives: {
+//       defaultSrc: ["'self'"],
+//       styleSrc: ["'self'", "'unsafe-inline'"],
+//       scriptSrc: ["'self'"],
+//       imgSrc: ["'self'", "data:", "https:"],
+//       connectSrc: ["'self'"],
+//       fontSrc: ["'self'"],
+//       objectSrc: ["'none'"],
+//       mediaSrc: ["'self'"],
+//       frameSrc: ["'none'"],
+//     },
+//   },
+//   crossOriginEmbedderPolicy: false, // Adjust based on your needs
+//   hsts: {
+//     maxAge: 31536000,
+//     includeSubDomains: true,
+//     preload: true
+//   }
+// }));
 
 app.use(passport.initialize());
 
@@ -123,33 +125,12 @@ app.use(hpp({
 // ============================================
 app.use(compression());
 
-// CORS with security considerations
 app.use(cors({
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      "http://localhost:3000",
-      "http://localhost:3001", 
-      "http://localhost:3002",
-      "http://localhost:3003",
-      "http://localhost:5000",
-      "http://octopusad.com",
-      "https://octopusad.com",
-      "https://octopusad.com/"
-    ];
-    
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ["GET", "POST","PATCH", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  origin: '*',
   credentials: true,
-  maxAge: 86400, // Cache preflight response for 24 hours
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type']
 }));
 
 // ============================================
@@ -192,15 +173,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Security headers middleware
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.removeHeader('X-Powered-By');
-  next();
-});
+// // Security headers middleware
+// app.use((req, res, next) => {
+//   res.setHeader('X-Content-Type-Options', 'nosniff');
+//   res.setHeader('X-Frame-Options', 'DENY');
+//   res.setHeader('X-XSS-Protection', '1; mode=block');
+//   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+//   res.removeHeader('X-Powered-By');
+//   next();
+// });
 
 
 
@@ -355,6 +336,51 @@ const dashboardRoutes = setupDashboardRoutes();
 app.use(dashboardRoutes);
 
 
+// notifications routes
+const { sseChannel } = createDefaultNotificationService();
+
+// SSE endpoint - frontend connects here
+if (sseChannel) {
+  app.get('/api/notifications/stream', AuthMiddleware(UserRole.USER), (req ,res) => {
+    sseChannel.addClient(req, res);
+  });
+}
+
+// Test endpoint - trigger a notification
+app.post('/api/notifications/send', AuthMiddleware(UserRole.USER), async (req, res) => {
+  try {
+      if (!sseChannel) {
+          return res.status(503).json({ error: 'SSE channel not available' });
+      }
+      
+      await sseChannel.send({
+          userId: req.body.userId,
+          title: req.body.title,
+          message: req.body.message,
+          module: req.body.module,
+          type: req.body.type,
+          timestamp: req.body.timestamp
+      });
+      
+      res.json({ success: true });
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to send notification' });
+  }
+});
+
+// app.post('/broadcast', AuthMiddleware(UserRole.ADMIN), async (req, res) => {
+//   try {
+//       await sseChannel.broadcast({
+//           title: req.body.title,
+//           message: req.body.body,
+//           data: req.body.data
+//       });
+      
+//       res.json({ success: true });
+//   } catch (error) {
+//       res.status(500).json({ error: 'Failed to broadcast' });
+//   }
+// });
 
 // ============================================
 // 10. ERROR HANDLING
@@ -395,9 +421,6 @@ process.on('SIGINT', () => {
 // Initialize MongoDB connection and start server
 async function startServer() {
   try {
-    // Connect to MongoDB
-    //await connectMongoDB();
-
     // Start HTTPS server
     app.listen(3000, () => {
       console.log("✅ HTTPS Server running at https://octopusad.com:3000");
@@ -409,7 +432,5 @@ async function startServer() {
 }
 
 startServer();
-
-
 
 export default app;

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSE Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        #status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .notification {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .notification h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .notification p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .notification small {
+            color: #999;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #serverUrl {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔔 SSE Notification Test</h1>
+    
+    <div>
+        <label>Server URL:</label>
+        <input type="text" id="serverUrl" value="http://localhost:3000" />
+    </div>
+    
+    <div id="status" style="background: #fff3cd; color: #856404;">
+        ⏳ Not connected
+    </div>
+    
+    <div>
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+        <button onclick="sendTestNotification()">Send Test Notification</button>
+        <button onclick="clearNotifications()">Clear</button>
+    </div>
+    
+    <h2>Notifications:</h2>
+    <div id="notifications"></div>
+
+    <script>
+        // Your JWT token
+        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlNDFlOWExNS1kMDFmLTQxODItYTQ1Ni1kYWU1NGE5MzM3NjIiLCJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tMjIyMjIxMjMiLCJyb2xlIjoidXNlciIsImFvdXRoIjoibm9ybWFsIiwiaWF0IjoxNzY3MDY3OTYxLCJleHAiOjE3Njk2NTk5NjF9.RMjLbxLMtT77-XWKnVWFQdTRghTHL2kLgPRjCJXn7Dk';
+        
+        // Decode JWT to get userId
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userId = payload.userId;
+        
+        console.log('🔑 Decoded userId:', userId);
+        console.log('📋 Full payload:', payload);
+        
+        let eventSource = null;
+        let reconnectTimer = null;
+        
+        // Since browser EventSource doesn't support headers, we use fetch with streaming
+        async function connect() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            
+            if (eventSource) {
+                try { eventSource.abort(); } catch(e) {}
+            }
+            
+            const url = `${serverUrl}/api/notifications/stream`;
+            console.log('🔌 Connecting to:', url);
+            console.log('🔑 Using Authorization: Bearer', token.substring(0, 20) + '...');
+            
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                console.log('✅ Connected');
+                document.getElementById('status').innerHTML = `✅ Connected (User: ${userId})`;
+                document.getElementById('status').style.background = '#d4edda';
+                document.getElementById('status').style.color = '#155724';
+                
+                // Read the stream
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                eventSource = { abort: () => reader.cancel() };
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Process complete messages
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop(); // Keep incomplete message in buffer
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.substring(6);
+                            try {
+                                const parsed = JSON.parse(data);
+                                console.log('📬 Received:', parsed);
+                                displayNotification(parsed);
+                            } catch (e) {
+                                console.log('Heartbeat or invalid JSON:', data);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Connection error:', error);
+                document.getElementById('status').innerHTML = '❌ Disconnected: ' + error.message;
+                document.getElementById('status').style.background = '#f8d7da';
+                document.getElementById('status').style.color = '#721c24';
+                
+                // Auto-reconnect after 3 seconds
+                reconnectTimer = setTimeout(() => connect(), 3000);
+            }
+        }
+        
+        function disconnect() {
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+            }
+            if (eventSource) {
+                try { eventSource.abort(); } catch(e) {}
+                eventSource = null;
+            }
+            document.getElementById('status').innerHTML = '⏹️ Disconnected';
+            document.getElementById('status').style.background = '#fff3cd';
+            document.getElementById('status').style.color = '#856404';
+            console.log('⏹️ Disconnected');
+        }
+        
+        function displayNotification(data) {
+            const notifDiv = document.createElement('div');
+            notifDiv.className = 'notification';
+            
+            notifDiv.innerHTML = `
+                <h3>${data.title || 'System Message'}</h3>
+                <p>${data.body || JSON.stringify(data, null, 2)}</p>
+                <small>⏰ ${data.timestamp || new Date().toISOString()}</small>
+                ${data.id ? `<br><small>🆔 ${data.id}</small>` : ''}
+            `;
+            
+            document.getElementById('notifications').prepend(notifDiv);
+        }
+        
+        function clearNotifications() {
+            document.getElementById('notifications').innerHTML = '';
+        }
+        
+        async function sendTestNotification() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            
+            try {
+                const response = await fetch(`${serverUrl}/api/notifications/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        title: 'Test Notification',
+                        body: `This is a test notification sent at ${new Date().toLocaleTimeString()}`,
+                        data: {
+                            type: 'test',
+                            timestamp: Date.now()
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('📤 Send result:', result);
+                
+                if (result.success) {
+                    alert('✅ Notification sent! Check the page above.');
+                } else {
+                    alert('❌ Failed to send: ' + JSON.stringify(result));
+                }
+            } catch (error) {
+                console.error('❌ Send error:', error);
+                alert('❌ Error sending notification: ' + error.message);
+            }
+        }
+        
+        // Auto-connect on page load
+        window.onload = () => {
+            connect();
+        };
+        
+        // Cleanup on page unload
+        window.onbeforeunload = () => {
+            disconnect();
+        };
+    </script>
+</body>
+</html>

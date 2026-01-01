@@ -33,6 +33,7 @@ import { AdStatusController } from "../controllers/ad.status.controller";
 import { AdPromotionController } from "../controllers/ad.promotion.controller";
 import { SocialMediaController } from "../controllers/social.media.controller";
 import { PixelController } from "../controllers/pixel.controller";
+import { createDefaultNotificationService } from "../../../../infrastructure/shared/notification/factories/notification.factory";
 
 // Factory functions for shared dependencies
 function createSharedDependencies() {
@@ -98,7 +99,8 @@ function createAdListingAppService(logger: ILogger): AdListingAppService {
 
 function createAdStatusAppService(logger: ILogger): AdStatusAppService {
     const adStatusRepository = createAdStatusRepository();
-    return new AdStatusAppService(adStatusRepository, logger);
+    const { notificationService } = createDefaultNotificationService();
+    return new AdStatusAppService(adStatusRepository, logger, notificationService);
 }
 
 function createAdPromotionAppService(logger: ILogger): AdPromotionAppService {

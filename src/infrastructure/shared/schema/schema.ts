@@ -355,13 +355,42 @@ export const freeCredits = pgTable("free_credits", {
     email: varchar("email").notNull().unique(),
     createdAt: timestamp("created_at").defaultNow(),
   });
+
+  // notifications
+  export const notificationModuleEnum = pgEnum("notification_module", ["AD", "PAYMENT", "CREDIT", "USER"]);
+  export const notificationTypeEnum = pgEnum("notification_type", [
+    "AD_APPROVED", "AD_REJECTED", "AD_ACTIVATED", "AD_DEACTIVATED",
+    "PAYMENT_SUCCESS", "PAYMENT_FAILED", "PAYMENT_PENDING", "PAYMENT_REFUNDED",
+    "CREDIT_ADDED", "CREDIT_DEDUCTED", "CREDIT_LOW_BALANCE"
+  ]);
+
+  export const notifications = pgTable('notifications', {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    module: notificationModuleEnum("module").notNull(),
+    type: notificationTypeEnum("type").notNull(),
+    title: jsonb("title").notNull(), // {en: string, ar: string}
+    message: jsonb("message").notNull(), // {en: string, ar: string}
+    metadata: jsonb("metadata"),
+    read: boolean("read").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().default(sql`now()`),
+    updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+  });
   
   // Relations
   export const usersRelations = relations(users, ({ many }) => ({
     ads: many(ads),
     purchases: many(purchases),
     auditLogs: many(auditLogs),
-    adminImpressionRatio: many(adminImpressionRatio)
+    adminImpressionRatio: many(adminImpressionRatio),
+    notifications: many(notifications)
+  }));
+
+  export const notificationsRelations = relations(notifications, ({ one }) => ({
+    user: one(users, {
+      fields: [notifications.userId],
+      references: [users.id],
+    })
   }));
   
   export const adsRelations = relations(ads, ({ one, many }) => ({
@@ -537,6 +566,8 @@ export const freeCredits = pgTable("free_credits", {
   export type AdminImpressionRatio = typeof adminImpressionRatio.$inferSelect;
   export type AdsPackage = typeof adsPackages.$inferSelect;
   export type InsertAdsPackage = typeof adsPackages.$inferInsert;
+  export type Notification = typeof notifications.$inferSelect;
+  export type InsertNotification = typeof notifications.$inferInsert;
   
   export type LoginData = z.infer<typeof loginSchema>;
   export type SignupData = z.infer<typeof signupSchema>;

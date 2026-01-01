@@ -25,9 +25,16 @@ export class PaymentService {
             const paymentDto: newPaymentDto = req.body;
             const userId = req.user!.id.toString();
 
-            const user = await this.paymentRepo.findUserById(userId)
+            const user = await this.paymentRepo.findUserById(userId);
 
-            const session = await this.paymobHandler.createCheckoutSession(user,{
+            if (!user) {
+                return ErrorBuilder.build(
+                    ErrorCode.USER_NOT_FOUND,
+                    "User not found"
+                );
+            }
+
+            const session = await this.paymobHandler.createCheckoutSession(user, {
                 amount: paymentDto.amount,
                 currency: paymentDto.currency,
                 customerEmail: req.user!.email,

@@ -1,5 +1,5 @@
 // api/index.ts
-import express from 'express';
+import express, { Request } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -24,6 +24,7 @@ import { setupDashboardRoutes } from "../src/modules/dashboard/interfaces/routes
 import { createAllUserControllers } from "../src/modules/user/interfaces/factories/user.factory";
 import { setupUserRoutes } from "../src/modules/user/interfaces/routes/user.routes";
 import passport from 'passport';
+import { createDefaultNotificationService } from "../src/infrastructure/shared/notification/factories/notification.factory";
 
 const app = express();
 const upload = multer();
@@ -362,6 +363,51 @@ const dashboardRoutes = setupDashboardRoutes();
 app.use(dashboardRoutes);
 
 
+// notifications routes
+const { sseChannel } = createDefaultNotificationService();
+
+// SSE endpoint - frontend connects here
+if (sseChannel) {
+  app.get('/api/notifications/stream', AuthMiddleware(UserRole.USER), async (req ,res) => {
+    await sseChannel.addClient(req, res);
+  });
+}
+
+// Test endpoint - trigger a notification
+app.post('/api/notifications/send', AuthMiddleware(UserRole.USER), async (req, res) => {
+  try {
+      if (!sseChannel) {
+          return res.status(503).json({ error: 'SSE channel not available' });
+      }
+      
+      await sseChannel.send({
+          userId: req.body.userId,
+          title: req.body.title,
+          message: req.body.message,
+          module: req.body.module,
+          type: req.body.type,
+          timestamp: req.body.timestamp
+      });
+      
+      res.json({ success: true });
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to send notification' });
+  }
+});
+
+// app.post('/broadcast', AuthMiddleware(UserRole.ADMIN), async (req, res) => {
+//   try {
+//       await sseChannel.broadcast({
+//           title: req.body.title,
+//           message: req.body.body,
+//           data: req.body.data
+//       });
+      
+//       res.json({ success: true });
+//   } catch (error) {
+//       res.status(500).json({ error: 'Failed to broadcast' });
+//   }
+// });
 
 // ============================================
 // 10. ERROR HANDLING

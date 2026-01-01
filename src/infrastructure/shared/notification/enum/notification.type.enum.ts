@@ -1,0 +1,19 @@
+export enum NotificationType {
+    // Ad notifications
+    AD_APPROVED = "AD_APPROVED",
+    AD_REJECTED = "AD_REJECTED",
+    AD_ACTIVATED = "AD_ACTIVATED",
+    AD_DEACTIVATED = "AD_DEACTIVATED",
+    
+    // Payment notifications
+    PAYMENT_SUCCESS = "PAYMENT_SUCCESS",
+    PAYMENT_FAILED = "PAYMENT_FAILED",
+    PAYMENT_PENDING = "PAYMENT_PENDING",
+    PAYMENT_REFUNDED = "PAYMENT_REFUNDED",
+    
+    // Credit notifications
+    CREDIT_ADDED = "CREDIT_ADDED",
+    CREDIT_DEDUCTED = "CREDIT_DEDUCTED",
+    CREDIT_LOW_BALANCE = "CREDIT_LOW_BALANCE",
+  }
+  
