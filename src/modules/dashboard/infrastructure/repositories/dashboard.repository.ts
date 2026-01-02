@@ -277,7 +277,7 @@ export class DashboardRepository implements IDashboardRepository {
           id: ad.id,
           titleEn: ad.titleEn,
           titleAr: ad.titleAr,
-          imageUrl: ad.imageUrl,
+          imageUrl: ad.imageUrl[0],
           impressions,
           clicks,
           ctr: Math.round(ctr * 100) / 100,
