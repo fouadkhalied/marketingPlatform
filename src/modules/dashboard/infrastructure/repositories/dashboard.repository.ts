@@ -297,7 +297,7 @@ export class DashboardRepository implements IDashboardRepository {
   /**
    * Get recent activity for the user
    */
-  async getRecentActivity(userId: string, limit: number = 10) :Promise<RecentActivity[]> {
+  async getRecentActivity(userId: string, limit: number = 10): Promise<RecentActivity[]> {
     try {
       // Get user's ads
       const userAds = await db
@@ -309,10 +309,11 @@ export class DashboardRepository implements IDashboardRepository {
       const adMap = new Map(userAds.map(ad => [ad.id, ad]));
   
       if (adIds.length === 0) {
+        console.log('Dashboard: No ads found for user', { userId });
         return [];
       }
   
-      // Get recent impressions - FIXED: Use inArray instead of ANY
+      // Get recent impressions
       const recentImpressions = await db
         .select({
           id: impressionsEvents.id,
@@ -326,12 +327,13 @@ export class DashboardRepository implements IDashboardRepository {
         .orderBy(desc(impressionsEvents.createdAt))
         .limit(limit);
   
-      // Get recent clicks - FIXED: Use inArray instead of ANY
+      // Get recent clicks - clicksEvents has source field
       const recentClicks = await db
         .select({
           id: clicksEvents.id,
           adId: clicksEvents.adId,
           type: sql<string>`'click'`,
+          source: clicksEvents.source,
           createdAt: clicksEvents.createdAt,
         })
         .from(clicksEvents)
@@ -339,18 +341,27 @@ export class DashboardRepository implements IDashboardRepository {
         .orderBy(desc(clicksEvents.createdAt))
         .limit(limit);
   
+      console.log('Dashboard: Recent activity results', {
+        userId,
+        impressionsCount: recentImpressions.length,
+        clicksCount: recentClicks.length
+      });
+  
       // Combine and sort by date
       const activities: RecentActivity[] = [...recentImpressions, ...recentClicks]
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit)
         .map(activity => {
           const ad = adMap.get(activity.adId);
-          const adTitle = ad?.titleEn || 'Unknown Ad';
+          const adTitle = ad?.titleEn || ad?.titleAr || 'Unknown Ad';
+          const activityType = activity.type === 'impression' ? 'impression' : 'click';
+          const source = activity.source || 'web';
 
           return {
             id: activity.id,
-            type: activity.type === 'impression' ? 'ad_created' as const : 'purchase' as const,
-            description: `${activity.type === 'impression' ? 'Impression on' : 'Click on'} "${adTitle}"`,
+            // Map to proper activity types based on your RecentActivity interface
+            type: activityType === 'impression' ? 'ad_created' as const : 'purchase' as const,
+            description: `${activityType === 'impression' ? 'Impression' : 'Click'} on "${adTitle}" from ${source}`,
             userId: userId,
             createdAt: activity.createdAt
           };
@@ -358,6 +369,11 @@ export class DashboardRepository implements IDashboardRepository {
   
       return activities;
     } catch (error) {
+      console.error('Dashboard: Recent activity error', {
+        userId,
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       throw ErrorBuilder.build(
         ErrorCode.DATABASE_ERROR,
         "Failed to fetch recent activity",
@@ -365,6 +381,8 @@ export class DashboardRepository implements IDashboardRepository {
       );
     }
   }
+
+
   async getAdminDashboardStats(days: number = 7): Promise<AdminDashboardStats> {
     try {
       const currentPeriodStart = new Date();
