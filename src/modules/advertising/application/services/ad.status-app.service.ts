@@ -18,7 +18,9 @@ export class AdStatusAppService {
     private readonly adStatusRepository: IAdStatusRepository,
     private readonly logger: ILogger,
     private readonly notificationService: NotificationService
-  ) {}
+  ) {
+    
+  }
 
   async approveAd(
     id: string,

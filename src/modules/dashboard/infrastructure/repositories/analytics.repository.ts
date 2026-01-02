@@ -47,9 +47,9 @@ export class AnalyticsRepository implements IAnalyticsRepository {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // Get total impressions for this ad
-      const [impressionsResult] = await db
-        .select({ count: sql<number>`count(*)` })
+      // Get total impressions for this ad - Fixed: Handle potential string/bigint return
+      const impressionsResult = await db
+        .select({ count: sql<string>`CAST(count(*) AS TEXT)` })
         .from(impressionsEvents)
         .where(
           and(
@@ -58,9 +58,9 @@ export class AnalyticsRepository implements IAnalyticsRepository {
           )
         );
 
-      // Get total clicks for this ad
-      const [clicksResult] = await db
-        .select({ count: sql<number>`count(*)` })
+      // Get total clicks for this ad - Fixed: Handle potential string/bigint return
+      const clicksResult = await db
+        .select({ count: sql<string>`CAST(count(*) AS TEXT)` })
         .from(clicksEvents)
         .where(
           and(
@@ -73,7 +73,7 @@ export class AnalyticsRepository implements IAnalyticsRepository {
       const dailyImpressions = await db
         .select({
           date: sql<string>`DATE(${impressionsEvents.createdAt})`,
-          count: sql<number>`count(*)`,
+          count: sql<string>`CAST(count(*) AS TEXT)`,
         })
         .from(impressionsEvents)
         .where(
@@ -88,7 +88,7 @@ export class AnalyticsRepository implements IAnalyticsRepository {
       const dailyClicks = await db
         .select({
           date: sql<string>`DATE(${clicksEvents.createdAt})`,
-          count: sql<number>`count(*)`,
+          count: sql<string>`CAST(count(*) AS TEXT)`,
         })
         .from(clicksEvents)
         .where(
@@ -107,7 +107,7 @@ export class AnalyticsRepository implements IAnalyticsRepository {
       const sourceAnalyticsQuery = await db
         .select({
           source: impressionsEvents.source,
-          views: sql<number>`count(*)`,
+          views: sql<string>`CAST(count(*) AS TEXT)`,
         })
         .from(impressionsEvents)
         .where(
@@ -128,15 +128,17 @@ export class AnalyticsRepository implements IAnalyticsRepository {
       }));
 
       // Get current impression pricing ratio
-      const [currentRatio] = await db
+      const currentRatioResult = await db
         .select({
           impressionsPerUnit: adminImpressionRatio.impressionsPerUnit,
           currency: adminImpressionRatio.currency,
         })
         .from(adminImpressionRatio)
         .where(eq(adminImpressionRatio.promoted, ad.hasPromoted))
-        .orderBy(sql`desc(${adminImpressionRatio.createdAt})`)
+        .orderBy(sql`${adminImpressionRatio.createdAt} DESC`)
         .limit(1);
+
+      const currentRatio = currentRatioResult[0] || null;
 
       // Calculate growth metrics (compare last 15 days vs previous 15 days)
       const fifteenDaysAgo = new Date();
@@ -145,8 +147,8 @@ export class AnalyticsRepository implements IAnalyticsRepository {
       const thirtyDaysAgoFromFifteen = new Date(fifteenDaysAgo);
       thirtyDaysAgoFromFifteen.setDate(thirtyDaysAgoFromFifteen.getDate() - 15);
 
-      const [currentImpressions] = await db
-        .select({ count: sql<number>`count(*)` })
+      const currentImpressionsResult = await db
+        .select({ count: sql<string>`CAST(count(*) AS TEXT)` })
         .from(impressionsEvents)
         .where(
           and(
@@ -155,8 +157,8 @@ export class AnalyticsRepository implements IAnalyticsRepository {
           )
         );
 
-      const [previousImpressions] = await db
-        .select({ count: sql<number>`count(*)` })
+      const previousImpressionsResult = await db
+        .select({ count: sql<string>`CAST(count(*) AS TEXT)` })
         .from(impressionsEvents)
         .where(
           and(
@@ -166,8 +168,8 @@ export class AnalyticsRepository implements IAnalyticsRepository {
           )
         );
 
-      const [currentClicks] = await db
-        .select({ count: sql<number>`count(*)` })
+      const currentClicksResult = await db
+        .select({ count: sql<string>`CAST(count(*) AS TEXT)` })
         .from(clicksEvents)
         .where(
           and(
@@ -176,8 +178,8 @@ export class AnalyticsRepository implements IAnalyticsRepository {
           )
         );
 
-      const [previousClicks] = await db
-        .select({ count: sql<number>`count(*)` })
+      const previousClicksResult = await db
+        .select({ count: sql<string>`CAST(count(*) AS TEXT)` })
         .from(clicksEvents)
         .where(
           and(
@@ -209,13 +211,13 @@ export class AnalyticsRepository implements IAnalyticsRepository {
         });
       }
 
-      // Calculate metrics
-      const totalImpressions = Number(impressionsResult?.count || 0);
-      const totalClicks = Number(clicksResult?.count || 0);
-      const currentImpressionsCount = Number(currentImpressions?.count || 0);
-      const previousImpressionsCount = Number(previousImpressions?.count || 0);
-      const currentClicksCount = Number(currentClicks?.count || 0);
-      const previousClicksCount = Number(previousClicks?.count || 0);
+      // Calculate metrics - Fixed: Safe access with fallbacks
+      const totalImpressions = Number(impressionsResult[0]?.count || 0);
+      const totalClicks = Number(clicksResult[0]?.count || 0);
+      const currentImpressionsCount = Number(currentImpressionsResult[0]?.count || 0);
+      const previousImpressionsCount = Number(previousImpressionsResult[0]?.count || 0);
+      const currentClicksCount = Number(currentClicksResult[0]?.count || 0);
+      const previousClicksCount = Number(previousClicksResult[0]?.count || 0);
 
       const clickThroughRate = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
 
@@ -248,12 +250,12 @@ export class AnalyticsRepository implements IAnalyticsRepository {
       return {
         // Analytics data
         analytics: {
-          freeViews: ad.freeViews,
+          freeViews: ad.freeViews || 0,
           totalImpressions,
           totalClicks,
           clickThroughRate: Math.round(clickThroughRate * 100) / 100,
-          websiteClicks: ad.websiteClicks,
-          likesCount: ad.likesCount,
+          websiteClicks: ad.websiteClicks || 0,
+          likesCount: ad.likesCount || 0,
           performance: {
             dailyBreakdown: chartData,
             growthMetrics: {
@@ -267,19 +269,24 @@ export class AnalyticsRepository implements IAnalyticsRepository {
             views: item.views,
           })),
           financials: {
-            totalBudgetImpressions: ad.impressionsCredit, // Total impressions allocated
-            usedImpressions: totalImpressions, // Impressions used so far
-            remainingImpressions: Math.max(0, ad.impressionsCredit - totalImpressions), // Impressions left
+            totalBudgetImpressions: ad.impressionsCredit || 0,
+            usedImpressions: totalImpressions,
+            remainingImpressions: Math.max(0, (ad.impressionsCredit || 0) - totalImpressions),
 
             // Optional: Show monetary value
             costPerImpression: Math.round(costPerImpression * 10000) / 10000,
             totalCostSpent: Math.round((totalImpressions * costPerImpression) * 100) / 100,
-            totalBudgetCost: Math.round((ad.impressionsCredit * costPerImpression) * 100) / 100,
+            totalBudgetCost: Math.round(((ad.impressionsCredit || 0) * costPerImpression) * 100) / 100,
             currency: currency,
           }
         },
       };
     } catch (error) {
+      console.error('Analytics repository: Error in getAdAnalyticsFullDetails', {
+        adId,
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       throw ErrorBuilder.build(
         ErrorCode.DATABASE_ERROR,
         "Failed to fetch ad analytics details",
