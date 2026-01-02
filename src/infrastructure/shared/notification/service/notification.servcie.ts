@@ -15,6 +15,7 @@ export class NotificationService {
     registerChannel(channel: NotificationChannel): void {
       this.channels.push(channel);
       this.logger.info(`Notification channel registered: ${channel.name}`);
+      console.log(`✅ Registered channel: ${channel.name}`);
     }
   
     /**
@@ -22,20 +23,32 @@ export class NotificationService {
      * Can accept either a NotificationPayload or a NotificationBuilder
      */
     notify(notification: NotificationPayload | NotificationBuilder): void {
+      console.log('🔔 notify() called');
+      
       const payload = notification instanceof NotificationBuilder 
         ? notification.build() 
         : notification;
   
+      console.log('📤 Notification payload prepared:', {
+        userId: payload.userId,
+        module: payload.module,
+        type: payload.type
+      });
+
       this.sendNotification(payload).catch((error) => {
         this.logger.error("Notification failed", {
           payload,
           error: error instanceof Error ? error.message : error,
         });
+        console.error("❌ Notification failed:", error);
       });
     }
   
     private async sendNotification(payload: NotificationPayload): Promise<void> {
       try {
+        console.log('📨 sendNotification() started for user:', payload.userId);
+        console.log('📋 Active channels:', this.channels.map(c => c.name));
+
         this.logger.info("Sending notification", { 
           userId: payload.userId,
           module: payload.module,
@@ -53,35 +66,32 @@ export class NotificationService {
             metadata: payload.metadata || {},
             read: false,
           });
+          
           this.logger.info("Notification saved to database", {
             userId: payload.userId,
             type: payload.type,
             notificationId: savedNotification.id
           });
-          console.log("✅ Notification created successfully:", {
-            id: savedNotification.id,
-            userId: savedNotification.userId,
-            module: savedNotification.module,
-            type: savedNotification.type,
-            title: savedNotification.title,
-            message: savedNotification.message,
-            metadata: savedNotification.metadata,
-            read: savedNotification.read,
-            createdAt: savedNotification.createdAt
-          });
+          
+          console.log("✅ Notification saved to DB:", savedNotification.id);
         } catch (error) {
           this.logger.error("Failed to save notification to database", {
             userId: payload.userId,
             type: payload.type,
             error: error instanceof Error ? error.message : error,
           });
-          console.error("❌ Failed to save notification:", error);
+          console.error("❌ Failed to save notification to DB:", error);
           // Continue even if database save fails
         }
 
         // Send notification through all channels
+        console.log(`📡 Sending through ${this.channels.length} channel(s)...`);
+        
         const results = await Promise.allSettled(
-          this.channels.map((channel) => channel.send(payload))
+          this.channels.map((channel) => {
+            console.log(`  → Sending to channel: ${channel.name}`);
+            return channel.send(payload);
+          })
         );
 
         results.forEach((result, index) => {
@@ -90,6 +100,9 @@ export class NotificationService {
               error: result.reason,
               payload,
             });
+            console.error(`❌ Channel ${this.channels[index].name} failed:`, result.reason);
+          } else {
+            console.log(`✅ Channel ${this.channels[index].name} succeeded`);
           }
         });
 
@@ -97,12 +110,15 @@ export class NotificationService {
           userId: payload.userId,
           type: payload.type 
         });
+        
+        console.log('✅ sendNotification() completed successfully');
       } catch (error) {
         this.logger.error("Error in notification pipeline", {
           payload,
           error: error instanceof Error ? error.message : error,
         });
+        console.error("❌ Error in notification pipeline:", error);
         throw error;
       }
     }
-  }
+}

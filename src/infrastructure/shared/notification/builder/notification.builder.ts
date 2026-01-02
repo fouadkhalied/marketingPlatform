@@ -49,6 +49,8 @@ export class NotificationBuilder {
           !this.payload.title || !this.payload.message) {
         throw new Error("Missing required notification fields");
       }
+      this.payload.read = false;
+      this.payload.fromDatabase = false;
       return this.payload as NotificationPayload;
     }
   }

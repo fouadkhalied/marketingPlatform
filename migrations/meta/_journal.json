@@ -15,6 +15,13 @@
       "when": 1764475859616,
       "tag": "0001_past_black_bolt",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1767300042857,
+      "tag": "0002_tan_mimic",
+      "breakpoints": true
     }
   ]
 }

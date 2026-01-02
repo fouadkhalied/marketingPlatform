@@ -9,4 +9,6 @@ export interface NotificationPayload {
     message: {en: string, ar: string};
     metadata?: Record<string, any>;
     timestamp: Date;
+    read?: boolean;
+    fromDatabase?: boolean
   }

@@ -1,6 +1,6 @@
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { db } from "../../../db/connection";
-import { notifications, Notification ,InsertNotification} from "../../schema/schema";
+import { notifications, Notification, InsertNotification } from "../../schema/schema";
 import { INotificationRepository } from "./notification.repository.interface";
 
 export class NotificationRepositoryImpl implements INotificationRepository {
@@ -74,8 +74,41 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     return updated || null;
   }
 
+  /**
+   * Mark multiple notifications as read by their IDs
+   * @param ids Array of notification IDs to mark as read
+   * @param userId Optional: verify notifications belong to this user
+   * @returns Number of notifications marked as read
+   */
+  async markManyAsRead(ids: string[], userId?: string): Promise<number> {
+    if (ids.length === 0) {
+      return 0;
+    }
+
+    const conditions = [inArray(notifications.id, ids)];
+    
+    // Optional: Only mark as read if notifications belong to the user
+    if (userId) {
+      conditions.push(eq(notifications.userId, userId));
+    }
+
+    const result = await db
+      .update(notifications)
+      .set({ 
+        read: true,
+        updatedAt: new Date()
+      })
+      .where(and(...conditions));
+
+    console.log(`✅ Marked ${result.rowCount} notifications as read`);
+    return result.rowCount || 0;
+  }
+
+  /**
+   * Mark all unread notifications as read for a user
+   */
   async markAllAsRead(userId: string): Promise<void> {
-    await db
+    const result = await db
       .update(notifications)
       .set({ 
         read: true,
@@ -87,6 +120,8 @@ export class NotificationRepositoryImpl implements INotificationRepository {
           eq(notifications.read, false)
         )
       );
+    
+    console.log(`✅ Marked all (${result.rowCount}) notifications as read for user ${userId}`);
   }
 
   async getUnreadCount(userId: string): Promise<number> {
@@ -118,5 +153,29 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
     return result.rowCount!;
   }
-}
 
+  /**
+   * Delete multiple notifications by their IDs
+   * @param ids Array of notification IDs to delete
+   * @param userId Optional: only delete if notifications belong to this user
+   * @returns Number of notifications deleted
+   */
+  async deleteMany(ids: string[], userId?: string): Promise<number> {
+    if (ids.length === 0) {
+      return 0;
+    }
+
+    const conditions = [inArray(notifications.id, ids)];
+    
+    if (userId) {
+      conditions.push(eq(notifications.userId, userId));
+    }
+
+    const result = await db
+      .delete(notifications)
+      .where(and(...conditions));
+
+    console.log(`🗑️ Deleted ${result.rowCount} notifications`);
+    return result.rowCount || 0;
+  }
+}

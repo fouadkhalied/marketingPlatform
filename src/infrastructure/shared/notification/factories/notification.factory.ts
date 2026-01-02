@@ -49,6 +49,12 @@ export function createNotificationService(
     logger.info("Email notification channel registered");
   }
 
+  console.log("✅ NotificationService factory created:", {
+    hasNotificationService: !!notificationService,
+    hasSseChannel: !!sseChannel,
+    serviceType: notificationService?.constructor?.name
+  });
+
   return {
     notificationService,
     sseChannel,

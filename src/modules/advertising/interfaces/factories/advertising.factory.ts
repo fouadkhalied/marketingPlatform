@@ -3,6 +3,7 @@ import { FacebookPageRepositoryImpl } from "../../../user/infrastructure/reposit
 import { UploadPhoto, BucketType } from "../../../../infrastructure/shared/common/supabase/module/supabase.module";
 import { SupabaseUploader } from "../../../../infrastructure/shared/common/supabase/module/supabaseUploader.module";
 import { createLogger, ILogger } from "../../../../infrastructure/shared/common/logging";
+import { NotificationService } from "../../../../infrastructure/shared/notification/service/notification.servcie";
 
 // Repositories
 import { AdsPackageRepository } from "../../infrastructure/repositories/ads.package.repository";
@@ -33,7 +34,6 @@ import { AdStatusController } from "../controllers/ad.status.controller";
 import { AdPromotionController } from "../controllers/ad.promotion.controller";
 import { SocialMediaController } from "../controllers/social.media.controller";
 import { PixelController } from "../controllers/pixel.controller";
-import { createDefaultNotificationService } from "../../../../infrastructure/shared/notification/factories/notification.factory";
 
 // Factory functions for shared dependencies
 function createSharedDependencies() {
@@ -97,9 +97,15 @@ function createAdListingAppService(logger: ILogger): AdListingAppService {
     return new AdListingAppService(adListingRepository, logger);
 }
 
-function createAdStatusAppService(logger: ILogger): AdStatusAppService {
+// FIXED: Accept notification service as parameter instead of creating new instance
+function createAdStatusAppService(
+    logger: ILogger, 
+    notificationService: NotificationService
+): AdStatusAppService {
+    if (!notificationService) {
+        throw new Error("NotificationService is required for AdStatusAppService");
+    }
     const adStatusRepository = createAdStatusRepository();
-    const { notificationService } = createDefaultNotificationService();
     return new AdStatusAppService(adStatusRepository, logger, notificationService);
 }
 
@@ -140,8 +146,12 @@ function createAdListingController(logger: ILogger): AdListingController {
     return new AdListingController(adListingService, logger);
 }
 
-function createAdStatusController(logger: ILogger): AdStatusController {
-    const adStatusService = createAdStatusAppService(logger);
+// FIXED: Pass notification service to controller factory
+function createAdStatusController(
+    logger: ILogger, 
+    notificationService: NotificationService
+): AdStatusController {
+    const adStatusService = createAdStatusAppService(logger, notificationService);
     return new AdStatusController(adStatusService, logger);
 }
 
@@ -165,59 +175,24 @@ function createAdsPackageController(logger: ILogger): AdsPackageController {
     return new AdsPackageController(adsPackageService, logger);
 }
 
-// Composite factory for all controllers
-export function createAllAdvertisingControllers() {
+// FIXED: Accept notification service as parameter
+export function createAllAdvertisingControllers(
+    notificationService: NotificationService
+) {
+    if (!notificationService) {
+        throw new Error("NotificationService is required but was not provided");
+    }
+
     const { logger } = createSharedDependencies();
 
     return {
         adCrud: createAdCrudController(logger),
         adPhoto: createAdPhotoController(logger),
         adListing: createAdListingController(logger),
-        adStatus: createAdStatusController(logger),
+        adStatus: createAdStatusController(logger, notificationService), // ← Pass it here
         adPromotion: createAdPromotionController(logger),
         socialMedia: createSocialMediaController(logger),
         pixel: createPixelController(logger),
         adsPackage: createAdsPackageController(logger),
     };
 }
-
-// // Legacy factory for backward compatibility
-// export function createAdvertisingController() {
-
-//     const { facebookService, photoUploader } = createSharedDependencies();
-
-//     // Create all repositories
-//     const repositories = {
-//         adCrud: createAdCrudRepository(),
-//         adPhoto: createAdPhotoRepository(),
-//         adListing: createAdListingRepository(),
-//         adStatus: createAdStatusRepository(),
-//         adPromotion: createAdPromotionRepository(),
-//         socialMedia: createSocialMediaPageRepository(),
-//         pixel: createPixelRepository(),
-//     };
-
-//     // Create services
-//     const services = {
-//         adCrud: new AdCrudAppService(repositories.adCrud),
-//         adPhoto: new AdPhotoAppService(repositories.adPhoto, photoUploader),
-//         adListing: new AdListingAppService(repositories.adListing),
-//         adStatus: new AdStatusAppService(repositories.adStatus),
-//         adPromotion: new AdPromotionAppService(repositories.adPromotion),
-//         socialMedia: new SocialMediaAppService(repositories.socialMedia, facebookService),
-//         pixel: new PixelAppService(repositories.pixel),
-//     };
-
-//     // Create controllers
-//     const controllers = {
-//         adCrud: new AdCrudController(services.adCrud),
-//         adPhoto: new AdPhotoController(services.adPhoto),
-//         adListing: new AdListingController(services.adListing),
-//         adStatus: new AdStatusController(services.adStatus),
-//         adPromotion: new AdPromotionController(services.adPromotion),
-//         socialMedia: new SocialMediaController(services.socialMedia),
-//         pixel: new PixelController(services.pixel),
-//     };
-
-//     return controllers;
-// }

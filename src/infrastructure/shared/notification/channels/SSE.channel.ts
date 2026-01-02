@@ -5,11 +5,10 @@ import { INotificationRepository } from "../repositories/notification.repository
 
 export class SSENotificationChannel implements NotificationChannel {
   name = "sse";
-  private connections = new Map<string, Response[]>(); // userId -> Response[]
+  private connections = new Map<string, Response[]>();
 
   constructor(private readonly notificationRepo: INotificationRepository) {}
   
-  // Call this from your Express route
   async addClient(req: Request, res: Response): Promise<void> {
     const userId = req.user?.id;
     
@@ -17,42 +16,51 @@ export class SSENotificationChannel implements NotificationChannel {
       throw new Error("User ID is required");
     }
 
-    // Initialize array if first connection
     if (!this.connections.has(userId)) {
         this.connections.set(userId, []);
     }
     
-    // Add this connection
     this.connections.get(userId)!.push(res);
     
-    // Set SSE headers
+    // Set SSE headers with additional headers to prevent buffering
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-transform',
         'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no' // Disable nginx buffering
+        'X-Accel-Buffering': 'no',
+        'Transfer-Encoding': 'chunked'
     });
     
-    // Send initial connection message
-    res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
+    // Flush headers immediately
+    res.flushHeaders();
     
-    // Send unread notifications if repository is available
+    // Send initial connection message with proper SSE format
+    this.sendSSEMessage(res, {
+      event: 'connected',
+      data: { type: 'connected', message: 'Successfully connected to notification stream' }
+    });
+    
+    // Send unread notifications
     if (this.notificationRepo) {
-        console.log('sending unread notifications');
-        
-      await this.sendUnreadNotifications(userId, res);
+        console.log('📬 Fetching unread notifications for user:', userId);
+        await this.sendUnreadNotifications(userId, res);
     }
     
     // Keep connection alive with heartbeat
     const heartbeat = setInterval(() => {
-        res.write(`:heartbeat\n\n`);
-    }, 30000); // Every 30 seconds
+        try {
+            res.write(`:heartbeat ${Date.now()}\n\n`);
+        } catch (error) {
+            console.error('Heartbeat failed:', error);
+            clearInterval(heartbeat);
+        }
+    }, 30000);
     
     // Cleanup when client disconnects
     res.on('close', () => {
         clearInterval(heartbeat);
         this.removeClient(userId, res);
-        console.log(`Client disconnected: ${userId}`);
+        console.log(`❌ Client disconnected: ${userId}`);
     });
     
     console.log(`✅ Client connected: ${userId} (total: ${this.connections.get(userId)!.length})`);
@@ -67,7 +75,6 @@ export class SSENotificationChannel implements NotificationChannel {
           userConnections.splice(index, 1);
       }
       
-      // Remove user entry if no more connections
       if (userConnections.length === 0) {
           this.connections.delete(userId);
       }
@@ -77,17 +84,18 @@ export class SSENotificationChannel implements NotificationChannel {
       const userConnections = this.connections.get(payload.userId);
       
       if (!userConnections || userConnections.length === 0) {
-          console.log(`📭 User ${payload.userId} not connected, skipping`);
+          console.log(`📭 User ${payload.userId} not connected, skipping real-time notification`);
           return;
       }
       
-      const data = `data: ${JSON.stringify(payload)}\n\n`;
-      
-      // Send to all user's active connections
       let successCount = 0;
       userConnections.forEach(res => {
           try {
-              res.write(data);
+              this.sendSSEMessage(res, {
+                  event: 'notification',
+                  id: Date.now().toString(),
+                  data: payload
+              });
               successCount++;
           } catch (error) {
               console.error('Failed to send to connection:', error);
@@ -97,17 +105,34 @@ export class SSENotificationChannel implements NotificationChannel {
       console.log(`📱 Notification sent to user ${payload.userId} (${successCount}/${userConnections.length} connections)`);
   }
   
-  // Helper: Check if user is online
+  private sendSSEMessage(res: Response, { event, id, data }: { event?: string; id?: string; data: any }): void {
+      try {
+          if (id) {
+              res.write(`id: ${id}\n`);
+          }
+          if (event) {
+              res.write(`event: ${event}\n`);
+          }
+          res.write(`data: ${JSON.stringify(data)}\n\n`);
+          
+          // Force flush to ensure immediate delivery
+          if (typeof (res as any).flush === 'function') {
+              (res as any).flush();
+          }
+      } catch (error) {
+          console.error('Error writing SSE message:', error);
+          throw error;
+      }
+  }
+  
   isUserOnline(userId: string): boolean {
       return this.connections.has(userId) && this.connections.get(userId)!.length > 0;
   }
   
-  // Helper: Get online users count
   getOnlineUsersCount(): number {
       return this.connections.size;
   }
   
-  // Helper: Broadcast to all connected users
   async broadcast(payload: Omit<NotificationPayload, 'userId'>): Promise<void> {
       const onlineUsers = Array.from(this.connections.keys());
       
@@ -119,35 +144,77 @@ export class SSENotificationChannel implements NotificationChannel {
   }
 
   private async sendUnreadNotifications(userId: string, res: Response): Promise<void> {
-  
-
     try {
-      const unreadNotifications = await this.notificationRepo.findByUserId(userId);
+      // Fetch unread notifications
+      const unreadNotifications = await this.notificationRepo.findUnread(userId);
+      const unreadCount = unreadNotifications.length;
       
-      if (unreadNotifications && unreadNotifications.length > 0) {
-        console.log(`📬 Sending ${unreadNotifications.length} unread notifications to ${userId}`);
-        console.log(unreadNotifications);
+      console.log(`📬 Found ${unreadCount} unread notifications for ${userId}`);
+      
+      let notificationsToSend = [...unreadNotifications];
+      
+      // If we have less than 5 unread, fetch some read ones to fill up to 5
+      if (unreadCount < 5) {
+        const neededCount = 5 - unreadCount;
+        console.log(`📚 Fetching ${neededCount} recent read notifications to fill up to 5`);
         
+        const allNotifications = await this.notificationRepo.findByUserId(userId, 50, 0);
+        const recentReadOnes = allNotifications.filter(n => n.read);
         
-        for (const notification of unreadNotifications) {
-          const data = `data: ${JSON.stringify({
+        notificationsToSend = [...unreadNotifications, ...recentReadOnes.slice(0, neededCount)];
+      } else {
+        // If more than 5 unread, just take the first 5
+        notificationsToSend = unreadNotifications.slice(0, 5);
+      }
+      
+      if (notificationsToSend.length > 0) {
+        const actualUnreadCount = notificationsToSend.filter(n => !n.read).length;
+        console.log(`📤 Sending ${notificationsToSend.length} notifications (${actualUnreadCount} unread + ${notificationsToSend.length - actualUnreadCount} read)`);
+        
+        // Collect IDs of unread notifications to mark as read in batch
+        const unreadIds = notificationsToSend
+          .filter(n => !n.read)
+          .map(n => n.id);
+        
+        // Send all notifications via SSE
+        for (const notification of notificationsToSend) {
+          this.sendSSEMessage(res, {
+            event: 'notification',
             id: notification.id,
-            userId: notification.userId,
-            title: notification.title,
-            message: notification.message,
-            module: notification.module,
-            type: notification.type,
-            metadata: notification.metadata,
-            timestamp: notification.createdAt,
-            read: notification.read,
-            fromDatabase: true // Flag to indicate this is from DB
-          })}\n\n`;
+            data: {
+              id: notification.id,
+              userId: notification.userId,
+              title: notification.title,
+              message: notification.message,
+              module: notification.module,
+              type: notification.type,
+              metadata: notification.metadata,
+              timestamp: notification.createdAt,
+              read: notification.read,
+              fromDatabase: true
+            }
+          });
           
-          res.write(data);
+          await new Promise(resolve => setTimeout(resolve, 10));
         }
+        
+        // Mark all unread notifications as read in ONE batch operation
+        if (unreadIds.length > 0) {
+          try {
+            const markedCount = await this.notificationRepo.markManyAsRead(unreadIds, userId);
+            console.log(`✅ Batch marked ${markedCount} notifications as read`);
+          } catch (error) {
+            console.error('❌ Failed to batch mark notifications as read:', error);
+          }
+        }
+        
+        console.log(`✅ Successfully sent ${notificationsToSend.length} notifications to ${userId}`);
+      } else {
+        console.log(`📪 No notifications to send for ${userId}`);
       }
     } catch (error) {
-      console.error('Error fetching unread notifications:', error);
+      console.error('❌ Error fetching/sending notifications:', error);
     }
   }
 }
+

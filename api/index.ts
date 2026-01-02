@@ -251,13 +251,25 @@ const sanitizeInput = (req: express.Request, res: express.Response, next: expres
 // ============================================
 // 8. CONTROLLER SETUP
 // ============================================
+const notificationResult = createDefaultNotificationService();
+const { notificationService, sseChannel } = notificationResult;
+
+if (!notificationService) {
+  console.error("❌ Failed to create NotificationService", notificationResult);
+  throw new Error("NotificationService initialization failed");
+}
+
+console.log("✅ NotificationService created successfully:", {
+  hasNotificationService: !!notificationService,
+  hasSseChannel: !!sseChannel
+});
 
 const authController = createAuthController();
 authController.setGoogleStrategy();
 
 const userControllers = createAllUserControllers();
 const paymentController = createPaymentController();
-const advertisingController = createAllAdvertisingControllers();
+const advertisingController = createAllAdvertisingControllers(notificationService);
 
 
 // Apply global rate limiting and security
@@ -364,7 +376,6 @@ app.use(dashboardRoutes);
 
 
 // notifications routes
-const { sseChannel } = createDefaultNotificationService();
 
 // SSE endpoint - frontend connects here
 if (sseChannel) {
