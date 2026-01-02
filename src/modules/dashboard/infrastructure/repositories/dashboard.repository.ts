@@ -359,7 +359,8 @@ export class DashboardRepository implements IDashboardRepository {
 
           return {
             id: activity.id,
-            title: adTitle,
+            adTitle: adTitle,
+            source: source,
             type: activityType === 'impression' ? 'impression' as const : 'click' as const,
             description: `${activityType === 'impression' ? 'Impression' : 'Click'} on "${adTitle}" from ${source}`,
             userId: userId,
