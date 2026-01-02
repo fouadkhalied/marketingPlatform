@@ -360,7 +360,7 @@ export class DashboardRepository implements IDashboardRepository {
           return {
             id: activity.id,
             // Map to proper activity types based on your RecentActivity interface
-            type: activityType === 'impression' ? 'ad_created' as const : 'purchase' as const,
+            type: activityType === 'impression' ? 'impression' as const : 'click' as const,
             description: `${activityType === 'impression' ? 'Impression' : 'Click'} on "${adTitle}" from ${source}`,
             userId: userId,
             createdAt: activity.createdAt

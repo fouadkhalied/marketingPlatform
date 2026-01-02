@@ -45,7 +45,7 @@ export interface DashboardStats {
 
   export interface RecentActivity {
     id: string;
-    type: 'user_signup' | 'ad_created' | 'purchase' | 'ad_approved' | 'ad_rejected';
+    type: 'user_signup' | 'ad_created' | 'purchase' | 'ad_approved' | 'ad_rejected' | 'click' | 'impression';
     description: string;
     userId?: string;
     username?: string | null;
