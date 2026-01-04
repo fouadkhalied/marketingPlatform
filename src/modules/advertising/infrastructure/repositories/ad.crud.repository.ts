@@ -145,7 +145,7 @@ export class AdCrudRepository implements IAdCrudRepository {
     }
   }
 
-  async delete(id: string, userId: string, role: string): Promise<boolean> {
+  async delete(id: string, userId: string, role: string): Promise<{id: string; photoUrl: string[];} | null> {
     try {
       return await db.transaction(async (tx) => {
         // 1. First, get the ad details to calculate refund
@@ -164,7 +164,7 @@ export class AdCrudRepository implements IAdCrudRepository {
           );
   
         if (!adToDelete) {
-          return false;
+          return null; // Changed from false to null
         }
   
         // 2. Get the conversion ratio based on promotion status
@@ -213,12 +213,13 @@ export class AdCrudRepository implements IAdCrudRepository {
         const result = await tx
           .delete(ads)
           .where(eq(ads.id, id))
-          .returning({ id: ads.id });
+          .returning({ id: ads.id, photoUrl: ads.imageUrl });
   
-        return result.length > 0;
+        // Return the first element or null if no result
+        return result[0] ?? null;
       });
     } catch (error) {
-      console.error('Delete ad error:', error); // Add logging
+      console.error('Delete ad error:', error);
       throw ErrorBuilder.build(
         ErrorCode.DATABASE_ERROR,
         "Failed to delete ad",

@@ -6,6 +6,7 @@ import { PaginationParams } from "../../../../infrastructure/shared/common/pagin
 import { Ad, createAdSchema, InsertAd } from "../../../../infrastructure/shared/schema/schema";
 import { IAdCrudRepository } from "../../domain/repositories/ad.crud.repository.interface";
 import { ILogger } from "../../../../infrastructure/shared/common/logging";
+import { AdPhotoAppService } from "./ad.photo-app.service";
 
 export class AdCrudAppService {
   constructor(
@@ -138,7 +139,7 @@ export class AdCrudAppService {
   }
 
 
-  async deleteAd(id: string, userId : string, role :string): Promise<ApiResponseInterface<{ deleted: boolean }>> {
+  async deleteAd(id: string, userId : string, role :string): Promise<ApiResponseInterface<{ photoUrl: string | undefined }>> {
     try {
 
 
@@ -151,7 +152,7 @@ export class AdCrudAppService {
         );
       }
 
-      return ResponseBuilder.success({ deleted: true });
+      return ResponseBuilder.success({ photoUrl: deleted.photoUrl[0] ? deleted.photoUrl[0] : undefined});
     } catch (error) {
       this.logger.error('Failed to delete ad', {
         adId: id,

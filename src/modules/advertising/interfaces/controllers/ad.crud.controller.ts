@@ -6,10 +6,12 @@ import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums
 import { PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
 import { AdCrudAppService } from "../../application/services/ad.crud-app.service";
 import { ILogger } from "../../../../infrastructure/shared/common/logging";
+import { AdPhotoAppService } from "../../application/services/ad.photo-app.service";
 
 export class AdCrudController {
   constructor(
     private readonly adCrudService: AdCrudAppService,
+    private readonly adPhoto: AdPhotoAppService,
     private readonly logger: ILogger
   ) {}
 
@@ -144,6 +146,18 @@ export class AdCrudController {
       }
 
       const result = await this.adCrudService.deleteAd(req.params.id, req.user.id, req.user.role);
+
+      if (result.data?.photoUrl) {
+        try {
+          await this.adPhoto.deletePhotoFromAd(req.params.id, req.user.id, result.data.photoUrl);
+        } catch (photoError) {
+          this.logger.error('Failed to delete photo after ad deletion', {
+            adId: req.params.id,
+            photoUrl: result.data.photoUrl,
+            error: photoError
+          });
+        }
+      }
 
       const statusCode = this.getStatusCode(result);
       res.status(statusCode).json(result);
