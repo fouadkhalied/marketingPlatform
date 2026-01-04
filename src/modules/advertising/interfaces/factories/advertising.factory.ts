@@ -133,7 +133,8 @@ function createAdsPackageAppService(logger: ILogger): AdsPackageAppService {
 // Controller factories
 function createAdCrudController(logger: ILogger): AdCrudController {
     const adCrudService = createAdCrudAppService(logger);
-    return new AdCrudController(adCrudService, logger);
+    const adPhotoService = createAdPhotoAppService(logger);
+    return new AdCrudController(adCrudService,adPhotoService ,logger);
 }
 
 function createAdPhotoController(logger: ILogger): AdPhotoController {
