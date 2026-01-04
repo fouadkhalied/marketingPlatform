@@ -162,11 +162,11 @@ export class AdCrudRepository implements IAdCrudRepository {
               ? eq(ads.id, id)
               : and(eq(ads.id, id), eq(ads.userId, userId))
           );
-
+  
         if (!adToDelete) {
           return false;
         }
-
+  
         // 2. Get the conversion ratio based on promotion status
         const [ratio] = await tx
           .select({ impressionsPerUnit: adminImpressionRatio.impressionsPerUnit })
@@ -177,41 +177,52 @@ export class AdCrudRepository implements IAdCrudRepository {
               eq(adminImpressionRatio.promoted, adToDelete.hasPromoted)
             )
           );
-
+  
         if (!ratio) {
           throw ErrorBuilder.build(
             ErrorCode.VALIDATION_ERROR,
             "Conversion ratio not found"
           );
         }
-
+  
         // 3. Calculate refund amount
         const impressionsRemaining = adToDelete.impressionsCredit ?? 0;
-        const refundAmount = impressionsRemaining / Number(ratio.impressionsPerUnit);
-
+        const refundAmount = Math.floor(impressionsRemaining / Number(ratio.impressionsPerUnit));
+  
         // 4. Return credit to user's balance (only if there's a refund)
         if (refundAmount > 0) {
-          await tx
-            .update(users)
-            .set({
-              balance: sql`${users.balance} + ${refundAmount}`,
-            })
+          // Get current balance first
+          const [currentUser] = await tx
+            .select({ balance: users.balance })
+            .from(users)
             .where(eq(users.id, adToDelete.userId));
+  
+          if (currentUser) {
+            const newBalance = (currentUser.balance ?? 0) + refundAmount;
+            
+            await tx
+              .update(users)
+              .set({
+                balance: newBalance,
+              })
+              .where(eq(users.id, adToDelete.userId));
+          }
         }
-
+  
         // 5. Delete the ad
         const result = await tx
           .delete(ads)
           .where(eq(ads.id, id))
           .returning({ id: ads.id });
-
+  
         return result.length > 0;
       });
     } catch (error) {
+      console.error('Delete ad error:', error); // Add logging
       throw ErrorBuilder.build(
         ErrorCode.DATABASE_ERROR,
         "Failed to delete ad",
-        error instanceof Error ? error.message : error
+        error instanceof Error ? error.message : String(error)
       );
     }
   }
