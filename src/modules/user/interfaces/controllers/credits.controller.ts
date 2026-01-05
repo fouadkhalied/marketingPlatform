@@ -87,11 +87,16 @@ export class CreditsController {
 
   async updateFreeCredits(req: Request, res: Response): Promise<void> {
     try {
+
       const { credits } = req.body;
+      
+      console.log(credits);
+      
       if (!credits) {
         res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Credits are required"));
         return;
       }
+
       const result = await this.creditsService.updateFreeCredits(credits);
       const statusCode = this.getStatusCode(result);
       res.status(statusCode).json(result);
