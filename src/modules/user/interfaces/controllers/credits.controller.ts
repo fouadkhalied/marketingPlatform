@@ -92,10 +92,13 @@ export class CreditsController {
       
       console.log(credits);
       
-      if (!credits) {
-        res.status(400).json(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "Credits are required"));
+      if (credits === undefined || typeof credits !== "number") {
+        res.status(400).json(
+          ErrorBuilder.build(ErrorCode.INVALID_INPUT, "Credits must be a number")
+        );
         return;
       }
+      
 
       const result = await this.creditsService.updateFreeCredits(credits);
       const statusCode = this.getStatusCode(result);
