@@ -636,15 +636,19 @@ async addNotificationType(newType: string): Promise<boolean> {
  */
 
 async getNotificationTypes(): Promise<string[]> {
-  try { 
+  try {
+    const result = await db
+      .selectDistinct({ type: notificationTemplates.type })
+      .from(notificationTemplates);
     
-    return NOTIFICATION_TYPES.map((ele) => ele);
+    const dbTypes = result.map(row => row.type);
+    
+    return [...new Set([...dbTypes, ...NOTIFICATION_TYPES])];
   } catch (error) {
     console.error('Failed to fetch active notification types:', error);
     return [];
   }
 }
-
 /**
  * Validate and normalize a notification type
  */
