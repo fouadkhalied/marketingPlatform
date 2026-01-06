@@ -383,7 +383,6 @@ app.use(dashboardRoutes);
 
 
 // notifications routes and seeChannel
-
 const notificationRoutes = setupNotificationRoutes(notificationController,sseChannel)
 app.use(notificationRoutes)
 

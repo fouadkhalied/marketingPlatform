@@ -11,7 +11,6 @@ import { NotificationService } from "../../../../infrastructure/shared/notificat
 import { NotificationBuilder } from "../../../../infrastructure/shared/notification/builder/notification.builder";
 import { NotificationModule } from "../../../../infrastructure/shared/notification/enum/notification.module.enum";
 import { NotificationType } from "../../../../infrastructure/shared/notification/enum/notification.type.enum";
-import { NotificationMessages } from "../../../../infrastructure/shared/notification/messages/notification.messages";
 
 export class AdStatusAppService {
   constructor(
@@ -39,14 +38,11 @@ export class AdStatusAppService {
         userId: approvedAd.userId 
       });
 
-      const adApprovedMessages = NotificationMessages[NotificationType.AD_APPROVED];
       this.notificationService.notify(
         new NotificationBuilder()
           .setUserId(approvedAd.userId)
           .setModule(NotificationModule.AD)
           .setType(NotificationType.AD_APPROVED)
-          .setTitle(adApprovedMessages.title)
-          .setMessage(adApprovedMessages.message)
           .addMetadata("adId", approvedAd.id)
       );
 
@@ -126,6 +122,14 @@ export class AdStatusAppService {
         userId: rejectedAd.userId,
         reason 
       });
+
+      this.notificationService.notify(
+        new NotificationBuilder()
+          .setUserId(rejectedAd.userId)
+          .setModule(NotificationModule.AD)
+          .setType(NotificationType.AD_REJECTED)
+          .addMetadata("adId", rejectedAd.id)
+      );
 
       return ResponseBuilder.success(rejectedAd);
     } catch (error) {

@@ -4,6 +4,11 @@ export enum NotificationType {
     AD_REJECTED = "AD_REJECTED",
     AD_ACTIVATED = "AD_ACTIVATED",
     AD_DEACTIVATED = "AD_DEACTIVATED",
+
+    // Ad crud
+    AD_CREATED = "AD_CREATED",
+    AD_MODIFIED = "AD_MODIFIED",
+    AD_DELETED = "AD_DELETED",
     
     // Payment notifications
     PAYMENT_SUCCESS = "PAYMENT_SUCCESS",

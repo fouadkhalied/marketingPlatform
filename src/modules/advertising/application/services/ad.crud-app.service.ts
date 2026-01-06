@@ -6,12 +6,16 @@ import { PaginationParams } from "../../../../infrastructure/shared/common/pagin
 import { Ad, createAdSchema, InsertAd } from "../../../../infrastructure/shared/schema/schema";
 import { IAdCrudRepository } from "../../domain/repositories/ad.crud.repository.interface";
 import { ILogger } from "../../../../infrastructure/shared/common/logging";
-import { AdPhotoAppService } from "./ad.photo-app.service";
+import { NotificationService } from "../../../../infrastructure/shared/notification/service/notification.servcie";
+import { NotificationBuilder } from "../../../../infrastructure/shared/notification/builder/notification.builder";
+import { NotificationModule } from "../../../../infrastructure/shared/notification/enum/notification.module.enum";
+import { NotificationType } from "../../../../infrastructure/shared/notification/enum/notification.type.enum";
 
 export class AdCrudAppService {
   constructor(
     private readonly adCrudRepository: IAdCrudRepository,
-    private readonly logger: ILogger
+    private readonly logger: ILogger,
+    private readonly notificationService: NotificationService
   ) {}
 
   async createAd(
@@ -41,6 +45,14 @@ export class AdCrudAppService {
 
       const adId = await this.adCrudRepository.create(adData);
       this.logger.info('Ad created successfully', { adId, userId });
+
+      this.notificationService.notify(
+        new NotificationBuilder()     
+        .setUserId(userId)
+        .setModule(NotificationModule.AD)
+        .setType(NotificationType.AD_CREATED)
+        .addMetadata("adId", adId)
+      )
 
       return ResponseBuilder.success({ AdId: adId });
     } catch (error) {
@@ -141,7 +153,6 @@ export class AdCrudAppService {
 
   async deleteAd(id: string, userId : string, role :string): Promise<ApiResponseInterface<{ photoUrl: string | undefined }>> {
     try {
-
 
       const deleted = await this.adCrudRepository.delete(id, userId, role);
 
