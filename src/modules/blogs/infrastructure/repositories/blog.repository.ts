@@ -1,5 +1,5 @@
 import { IBlogRepository } from '../../domain/repositories/blog.repository.interface';
-import { BlogModel, IBlog } from '../../../../infrastructure/shared/schema/blog.schema';
+import { BlogModel, IBlog } from '../../../../infrastructure/shared/schema/blog.mongo';
 import { CreateBlogDto } from '../../application/dto/create-blog.dto';
 import { UpdateBlogDto } from '../../application/dto/update-blog.dto';
 import { BlogPaginationDto, PaginatedBlogResponse } from '../../application/dto/blog-pagination.dto';

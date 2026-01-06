@@ -1,5 +1,5 @@
 import { IBlogPhotoRepository } from '../../domain/repositories/blog.photo.repository.interface';
-import { BlogModel } from '../../../../infrastructure/shared/schema/blog.schema';
+import { BlogModel } from '../../../../infrastructure/shared/schema/blog.mongo';
 import { ErrorBuilder } from '../../../../infrastructure/shared/common/errors/errorBuilder';
 import { ErrorCode } from '../../../../infrastructure/shared/common/errors/enums/basic.error.enum';
 

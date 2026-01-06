@@ -40,10 +40,10 @@ export class SSENotificationChannel implements NotificationChannel {
       data: { type: 'connected', message: 'Successfully connected to notification stream' }
     });
     
-    // Send unread notifications
+    // Send recent notifications (combined: admin + user notifications)
     if (this.notificationRepo) {
-        console.log('📬 Fetching unread notifications for user:', userId);
-        await this.sendUnreadNotifications(userId, res);
+        console.log('📬 Fetching recent notifications for user:', userId);
+        await this.sendRecentNotifications(userId, res);
     }
     
     // Keep connection alive with heartbeat
@@ -80,6 +80,10 @@ export class SSENotificationChannel implements NotificationChannel {
       }
   }
   
+  /**
+   * Send notification to a specific user
+   * Used for user-specific notifications
+   */
   async send(payload: NotificationPayload): Promise<void> {
       const userConnections = this.connections.get(payload.userId);
       
@@ -93,7 +97,7 @@ export class SSENotificationChannel implements NotificationChannel {
           try {
               this.sendSSEMessage(res, {
                   event: 'notification',
-                  id: Date.now().toString(),
+                  id: payload.id || Date.now().toString(),
                   data: payload
               });
               successCount++;
@@ -133,57 +137,47 @@ export class SSENotificationChannel implements NotificationChannel {
       return this.connections.size;
   }
   
+  /**
+   * Broadcast to all connected users
+   * Used for admin notifications - only sends to currently connected users
+   */
   async broadcast(payload: Omit<NotificationPayload, 'userId'>): Promise<void> {
       const onlineUsers = Array.from(this.connections.keys());
+      
+      console.log(`📢 Broadcasting to ${onlineUsers.length} connected users`);
       
       for (const userId of onlineUsers) {
           await this.send({ ...payload, userId });
       }
       
-      console.log(`📢 Broadcast sent to ${onlineUsers.length} users`);
+      console.log(`📢 Broadcast completed to ${onlineUsers.length} users`);
   }
 
-  private async sendUnreadNotifications(userId: string, res: Response): Promise<void> {
+  /**
+   * Send recent notifications when user connects
+   * Fetches combined notifications (admin + user, last 5)
+   * Admin notifications appear first, then user notifications
+   * Does NOT mark as read - user must explicitly mark them
+   */
+  private async sendRecentNotifications(userId: string, res: Response): Promise<void> {
     try {
-      // Fetch unread notifications
-      const unreadNotifications = await this.notificationRepo.findUnread(userId);
-      const unreadCount = unreadNotifications.length;
+      // Fetch combined notifications (admin + user)
+      const recentNotifications = await this.notificationRepo.getCombinedNotifications(userId, 5, 0);
       
-      console.log(`📬 Found ${unreadCount} unread notifications for ${userId}`);
+      console.log(`📬 Found ${recentNotifications.length} recent notifications for ${userId}`);
       
-      let notificationsToSend = [...unreadNotifications];
-      
-      // If we have less than 5 unread, fetch some read ones to fill up to 5
-      if (unreadCount < 5) {
-        const neededCount = 5 - unreadCount;
-        console.log(`📚 Fetching ${neededCount} recent read notifications to fill up to 5`);
-        
-        const allNotifications = await this.notificationRepo.findByUserId(userId, 50, 0);
-        const recentReadOnes = allNotifications.filter(n => n.read);
-        
-        notificationsToSend = [...unreadNotifications, ...recentReadOnes.slice(0, neededCount)];
-      } else {
-        // If more than 5 unread, just take the first 5
-        notificationsToSend = unreadNotifications.slice(0, 5);
-      }
-      
-      if (notificationsToSend.length > 0) {
-        const actualUnreadCount = notificationsToSend.filter(n => !n.read).length;
-        console.log(`📤 Sending ${notificationsToSend.length} notifications (${actualUnreadCount} unread + ${notificationsToSend.length - actualUnreadCount} read)`);
-        
-        // Collect IDs of unread notifications to mark as read in batch
-        const unreadIds = notificationsToSend
-          .filter(n => !n.read)
-          .map(n => n.id);
+      if (recentNotifications.length > 0) {
+        const unreadCount = recentNotifications.filter(n => !n.read).length;
+        console.log(`📤 Sending ${recentNotifications.length} notifications (${unreadCount} unread)`);
         
         // Send all notifications via SSE
-        for (const notification of notificationsToSend) {
+        for (const notification of recentNotifications) {
           this.sendSSEMessage(res, {
             event: 'notification',
             id: notification.id,
             data: {
               id: notification.id,
-              userId: notification.userId,
+              userId: userId,
               title: notification.title,
               message: notification.message,
               module: notification.module,
@@ -191,24 +185,16 @@ export class SSENotificationChannel implements NotificationChannel {
               metadata: notification.metadata,
               timestamp: notification.createdAt,
               read: notification.read,
+              isAdminNotification: notification.isAdminNotification,
               fromDatabase: true
             }
           });
           
+          // Small delay to ensure proper delivery
           await new Promise(resolve => setTimeout(resolve, 10));
         }
         
-        // Mark all unread notifications as read in ONE batch operation
-        if (unreadIds.length > 0) {
-          try {
-            const markedCount = await this.notificationRepo.markManyAsRead(unreadIds, userId);
-            console.log(`✅ Batch marked ${markedCount} notifications as read`);
-          } catch (error) {
-            console.error('❌ Failed to batch mark notifications as read:', error);
-          }
-        }
-        
-        console.log(`✅ Successfully sent ${notificationsToSend.length} notifications to ${userId}`);
+        console.log(`✅ Successfully sent ${recentNotifications.length} notifications to ${userId}`);
       } else {
         console.log(`📪 No notifications to send for ${userId}`);
       }
@@ -217,4 +203,3 @@ export class SSENotificationChannel implements NotificationChannel {
     }
   }
 }
-

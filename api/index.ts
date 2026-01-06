@@ -463,9 +463,12 @@ async function startServer() {
     await connectMongoDB();
 
     // Start HTTPS server
-    https.createServer(options, app).listen(3000, () => {
-      console.log("✅ HTTPS Server running at https://octopusad.com:3000");
+    const httpsServer = https.createServer(options, app);
+
+    httpsServer.on("clientError", (err, socket) => {
+      socket.destroy();
     });
+    
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

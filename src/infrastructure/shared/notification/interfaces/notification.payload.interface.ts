@@ -2,6 +2,7 @@ import { NotificationModule } from "../enum/notification.module.enum";
 import { NotificationType } from "../enum/notification.type.enum";
 
 export interface NotificationPayload {
+    id?: string;
     userId: string;
     module: NotificationModule;
     type: NotificationType;
@@ -10,5 +11,6 @@ export interface NotificationPayload {
     metadata?: Record<string, any>;
     timestamp: Date;
     read?: boolean;
-    fromDatabase?: boolean
+    fromDatabase?: boolean;
+    isAdminNotification: boolean;
   }
