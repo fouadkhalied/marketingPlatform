@@ -429,11 +429,16 @@ async function startServer() {
     // Connect to MongoDB
     await connectMongoDB();
 
-    // Start HTTPS server
+    // Start HTTPS server on port 3000
     const httpsServer = https.createServer(options, app);
 
     httpsServer.on("clientError", (err, socket) => {
       socket.destroy();
+    });
+    
+    // ✅ ADD THIS - Actually start the HTTPS server!
+    httpsServer.listen(3000, () => {
+      console.log("✅ HTTPS Server running on port 3000");
     });
     
   } catch (error) {
