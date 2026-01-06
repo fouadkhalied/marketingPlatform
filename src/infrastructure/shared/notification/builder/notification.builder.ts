@@ -45,8 +45,7 @@ export class NotificationBuilder {
     }
   
     build(): NotificationPayload {
-      if (!this.payload.userId || !this.payload.module || !this.payload.type || 
-          !this.payload.title || !this.payload.message) {
+      if (!this.payload.userId || !this.payload.module || !this.payload.type) {
         throw new Error("Missing required notification fields");
       }
       this.payload.read = false;
