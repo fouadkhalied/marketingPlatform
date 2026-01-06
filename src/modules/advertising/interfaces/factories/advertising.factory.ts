@@ -81,9 +81,12 @@ function createAdsPackageRepository(): AdsPackageRepository {
 }
 
 // Service factories
-function createAdCrudAppService(logger: ILogger): AdCrudAppService {
+function createAdCrudAppService(
+    logger: ILogger,
+    notificationService: NotificationService
+): AdCrudAppService {
     const adCrudRepository = createAdCrudRepository();
-    return new AdCrudAppService(adCrudRepository, logger);
+    return new AdCrudAppService(adCrudRepository, logger, notificationService);
 }
 
 function createAdPhotoAppService(logger: ILogger): AdPhotoAppService {
@@ -131,8 +134,11 @@ function createAdsPackageAppService(logger: ILogger): AdsPackageAppService {
 }
 
 // Controller factories
-function createAdCrudController(logger: ILogger): AdCrudController {
-    const adCrudService = createAdCrudAppService(logger);
+function createAdCrudController(
+    logger: ILogger,
+    notificationService: NotificationService
+): AdCrudController {
+    const adCrudService = createAdCrudAppService(logger,notificationService);
     const adPhotoService = createAdPhotoAppService(logger);
     return new AdCrudController(adCrudService,adPhotoService ,logger);
 }
@@ -187,7 +193,7 @@ export function createAllAdvertisingControllers(
     const { logger } = createSharedDependencies();
 
     return {
-        adCrud: createAdCrudController(logger),
+        adCrud: createAdCrudController(logger, notificationService),
         adPhoto: createAdPhotoController(logger),
         adListing: createAdListingController(logger),
         adStatus: createAdStatusController(logger, notificationService), // ← Pass it here
