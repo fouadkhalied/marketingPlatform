@@ -23,8 +23,9 @@ import { setupBlogRoutes } from "../src/modules/blogs/interfaces/routes/blog.rou
 import { setupDashboardRoutes } from "../src/modules/dashboard/interfaces/routes/dashboard.routes";
 import { createAllUserControllers } from "../src/modules/user/interfaces/factories/user.factory";
 import { setupUserRoutes } from "../src/modules/user/interfaces/routes/user.routes";
+import {createNotificationFactory} from "../src/infrastructure/shared/notification/interfaces/factories/notification.factory"
+import {setupNotificationRoutes} from "../src/infrastructure/shared/notification/interfaces/routes/notifications.routes"
 import passport from 'passport';
-import { createDefaultNotificationService } from "../src/infrastructure/shared/notification/factories/notification.factory";
 
 const app = express();
 const upload = multer();
@@ -251,10 +252,15 @@ const sanitizeInput = (req: express.Request, res: express.Response, next: expres
 // ============================================
 // 8. CONTROLLER SETUP
 // ============================================
-const notificationResult = createDefaultNotificationService();
-const { notificationService, sseChannel } = notificationResult;
+const notificationResult = createNotificationFactory();
+const { notificationService, sseChannel, notificationController } = notificationResult;
 
 if (!notificationService) {
+  console.error("❌ Failed to create NotificationService", notificationResult);
+  throw new Error("NotificationService initialization failed");
+}
+
+if (!sseChannel) {
   console.error("❌ Failed to create NotificationService", notificationResult);
   throw new Error("NotificationService initialization failed");
 }
@@ -375,50 +381,11 @@ const dashboardRoutes = setupDashboardRoutes();
 app.use(dashboardRoutes);
 
 
-// notifications routes
 
-// SSE endpoint - frontend connects here
-if (sseChannel) {
-  app.get('/api/notifications/stream', AuthMiddleware(UserRole.USER), async (req ,res) => {
-    await sseChannel.addClient(req, res);
-  });
-}
+// notifications routes and seeChannel
 
-// Test endpoint - trigger a notification
-app.post('/api/notifications/send', AuthMiddleware(UserRole.USER), async (req, res) => {
-  try {
-      if (!sseChannel) {
-          return res.status(503).json({ error: 'SSE channel not available' });
-      }
-      
-      await sseChannel.send({
-          userId: req.body.userId,
-          title: req.body.title,
-          message: req.body.message,
-          module: req.body.module,
-          type: req.body.type,
-          timestamp: req.body.timestamp
-      });
-      
-      res.json({ success: true });
-  } catch (error) {
-      res.status(500).json({ error: 'Failed to send notification' });
-  }
-});
-
-// app.post('/broadcast', AuthMiddleware(UserRole.ADMIN), async (req, res) => {
-//   try {
-//       await sseChannel.broadcast({
-//           title: req.body.title,
-//           message: req.body.body,
-//           data: req.body.data
-//       });
-      
-//       res.json({ success: true });
-//   } catch (error) {
-//       res.status(500).json({ error: 'Failed to broadcast' });
-//   }
-// });
+const notificationRoutes = setupNotificationRoutes(notificationController,sseChannel)
+app.use(notificationRoutes)
 
 // ============================================
 // 10. ERROR HANDLING

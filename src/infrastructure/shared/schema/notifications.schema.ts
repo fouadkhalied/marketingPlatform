@@ -1,30 +1,45 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, jsonb, pgEnum, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
-import { number, z } from "zod";
+import { z } from "zod";
 import { users } from "./schema";
 
-// Notification enums
-export const notificationModuleEnum = pgEnum("notification_module", ["AD", "PAYMENT", "CREDIT", "USER"]);
-export const notificationTypeEnum = pgEnum("notification_type", [
-  "AD_APPROVED", "AD_REJECTED", "AD_ACTIVATED", "AD_DEACTIVATED",
-  "PAYMENT_SUCCESS", "PAYMENT_FAILED", "PAYMENT_PENDING", "PAYMENT_REFUNDED",
-  "CREDIT_ADDED", "CREDIT_DEDUCTED", "CREDIT_LOW_BALANCE"
-]);
+// Notification constants (replace enums)
+export const NOTIFICATION_MODULES = ["AD", "PAYMENT", "CREDIT", "USER"] as const;
+export const NOTIFICATION_TYPES = [
+  "AD_APPROVED", 
+  "AD_REJECTED", 
+  "AD_ACTIVATED", 
+  "AD_DEACTIVATED",
+  "PAYMENT_SUCCESS", 
+  "PAYMENT_FAILED", 
+  "PAYMENT_PENDING", 
+  "PAYMENT_REFUNDED",
+  "CREDIT_ADDED", 
+  "CREDIT_DEDUCTED", 
+  "CREDIT_LOW_BALANCE"
+] as const;
+
+// Type definitions from constants
+export type NotificationModule = typeof NOTIFICATION_MODULES[number];
+export type NotificationType = typeof NOTIFICATION_TYPES[number];
 
 // Notification templates table - stores static messages
 export const notificationTemplates = pgTable('notification_templates', {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  type: notificationTypeEnum("type").notNull().unique(),
-  module: notificationModuleEnum("module").notNull(),
+  type: text("type").notNull().unique(),
+  module: text("module").notNull(),
   titleEn: text("title_en").notNull(),
   titleAr: text("title_ar").notNull(),
   messageEn: text("message_en").notNull(),
   messageAr: text("message_ar").notNull(),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
-});
+}, (table) => ({
+  // Index for module queries
+  moduleIdx: index("idx_notification_templates_module").on(table.module),
+}));
 
 // User notifications table - notifications tied to specific users
 export const notifications = pgTable('notifications', {
@@ -122,14 +137,20 @@ export const userAdminNotificationReadsRelations = relations(userAdminNotificati
   }),
 }));
 
+// Helper function to normalize notification type (replace spaces with underscores)
+export function normalizeNotificationType(type: string): string {
+  return type.trim().replace(/\s+/g, '_').toUpperCase();
+}
+
 // Zod schemas for validation
 export const insertNotificationTemplateSchema = createInsertSchema(notificationTemplates, {
-  type: z.enum([
-    "AD_APPROVED", "AD_REJECTED", "AD_ACTIVATED", "AD_DEACTIVATED",
-    "PAYMENT_SUCCESS", "PAYMENT_FAILED", "PAYMENT_PENDING", "PAYMENT_REFUNDED",
-    "CREDIT_ADDED", "CREDIT_DEDUCTED", "CREDIT_LOW_BALANCE"
-  ]),
-  module: z.enum(["AD", "PAYMENT", "CREDIT", "USER"]),
+  type: z.string()
+    .min(1)
+    .transform(normalizeNotificationType)
+    .refine((val) => NOTIFICATION_TYPES.includes(val as any), {
+      message: "Invalid notification type"
+    }),
+  module: z.enum(NOTIFICATION_MODULES),
   titleEn: z.string().min(1).max(200),
   titleAr: z.string().min(1).max(200),
   messageEn: z.string().min(1).max(500),

@@ -11,7 +11,8 @@ import {
   AdminNotificationWithTemplate,
   InsertNotification,
   InsertAdminNotification,
-  CombinedNotification
+  CombinedNotification,
+  NOTIFICATION_TYPES
 } from "../../schema/notifications.schema";
 import { INotificationRepository } from "./notification.repository.interface";
 
@@ -315,7 +316,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     
     // Get user notifications
     const userNotifs = await this.findByUserId(userId, 100, 0);
-
+  
     // Combine and format
     const combined: CombinedNotification[] = [
       // Admin notifications first
@@ -325,7 +326,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
         message: { en: n.template.messageEn, ar: n.template.messageAr },
         module: n.template.module,
         type: n.template.type,
-        metadata: n.metadata,
+        metadata: (n.metadata as Record<string, any>) || null,
         read: n.isRead || false,
         isAdminNotification: true,
         createdAt: n.createdAt
@@ -337,13 +338,13 @@ export class NotificationRepositoryImpl implements INotificationRepository {
         message: { en: n.template.messageEn, ar: n.template.messageAr },
         module: n.template.module,
         type: n.template.type,
-        metadata: n.metadata,
+        metadata: (n.metadata as Record<string, any>) || null,
         read: n.read,
         isAdminNotification: false,
         createdAt: n.createdAt
       }))
     ];
-
+  
     // Sort by date (admin priority is already implicit in order)
     combined.sort((a, b) => {
       // Admin notifications first
@@ -352,7 +353,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
       // Then by date
       return b.createdAt.getTime() - a.createdAt.getTime();
     });
-
+  
     // Apply pagination
     return combined.slice(offset, offset + limit);
   }
@@ -604,4 +605,58 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     console.log(`💾 Upserted notification template: ${template.type}`);
     return upserted;
   }
+/**
+ * Add a new notification type dynamically
+ * Spaces in the type will be replaced with underscores
+ */
+async addNotificationType(newType: string): Promise<boolean> {
+  try {
+    // Normalize the type: trim, replace spaces with underscores, uppercase
+    const normalizedType = newType.trim().replace(/\s+/g, '_').toUpperCase();
+    
+    // Check if type already exists in the constants
+    if (NOTIFICATION_TYPES.includes(normalizedType as any)) {
+      console.log(`ℹ️ Notification type already exists: ${normalizedType}`);
+      return true;
+    }
+
+    console.log(`✅ New notification type ready to use: ${normalizedType}`);
+    console.log(`⚠️ Remember to add '${normalizedType}' to NOTIFICATION_TYPES constant in schema for permanent storage`);
+    
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to add notification type ${newType}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Get all notification types currently in use in the database
+ * (useful for finding types that might not be in the constants)
+ */
+async getNotificationTypes(): Promise<string[]> {
+  try {
+    const result = await db
+      .selectDistinct({ type: notificationTemplates.type })
+      .from(notificationTemplates);
+    
+    return result.map(row => row.type);
+  } catch (error) {
+    console.error('Failed to fetch active notification types:', error);
+    return [];
+  }
+}
+
+/**
+ * Validate and normalize a notification type
+ */
+async validateNotificationType(type: string): Promise<string> {
+  const normalized = type.trim().replace(/\s+/g, '_').toUpperCase();
+  
+  if (!NOTIFICATION_TYPES.includes(normalized as any)) {
+    throw new Error(`Invalid notification type: ${normalized}. Please add it to NOTIFICATION_TYPES constant first.`);
+  }
+  
+  return normalized;
+}
 }

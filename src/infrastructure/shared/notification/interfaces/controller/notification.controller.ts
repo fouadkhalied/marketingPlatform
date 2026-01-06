@@ -652,4 +652,135 @@ export class NotificationController {
       });
     }
   }
+
+/**
+ * PUT /notifications/admin/templates
+ * Upsert notification template (Admin only)
+ */
+async upsertTemplate(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!userId || !isAdmin) {
+      res.status(403).json({
+        success: false,
+        message: 'Admin access required',
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Admin access required'
+        }
+      });
+      return;
+    }
+
+    const templateData = req.body;
+
+    // Validate required fields
+    if (!templateData.type || !templateData.module || 
+        !templateData.titleEn || !templateData.titleAr ||
+        !templateData.messageEn || !templateData.messageAr) {
+      res.status(400).json({
+        success: false,
+        message: 'Missing required template fields',
+        error: {
+          code: 'MISSING_REQUIRED_FIELD',
+          message: 'type, module, titleEn, titleAr, messageEn, and messageAr are required'
+        }
+      });
+      return;
+    }
+
+    const result = await this.notificationService.upsertTemplate(templateData);
+    const statusCode = this.getStatusCode(result);
+
+    res.status(statusCode).json(result);
+  } catch (err: any) {
+    console.error('Error upserting template:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upsert template',
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to upsert template',
+        details: err.message
+      }
+    });
+  }
+}
+
+async addNotificationType(req: Request, res: Response): Promise<void> {
+  try {
+    // Extract type from request body
+    const { type } = req.body;
+    
+    // Validate that type exists
+    if (!type) {
+      res.status(400).json({
+        success: false,
+        message: 'Notification type is required',
+      });
+      return;
+    }
+
+    const success = await this.notificationService.addNotificationType(type);
+    
+    if (success) {
+      res.status(200).json({
+        success: true,
+        message: 'Notification type added successfully',
+        data: {
+          normalizedType: type.trim().replace(/\s+/g, '_').toUpperCase()
+        }
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Failed to add notification type',
+      });
+    }
+  } catch (error) {
+    console.error('Error adding notification type:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+}
+
+async getNotificationTypes(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!userId || !isAdmin) {
+      res.status(403).json({
+        success: false,
+        message: 'Admin access required',
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Admin access required'
+        }
+      });
+      return;
+    }
+
+    const result = await this.notificationService.getNotificationTypes();
+    const statusCode = this.getStatusCode(result);
+
+    res.status(statusCode).json(result);
+  } catch (err: any) {
+    console.error('Error upserting template:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upsert template',
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to upsert template',
+        details: err.message
+      }
+    });
+  }
+}
+
 }

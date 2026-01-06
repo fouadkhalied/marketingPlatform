@@ -157,4 +157,10 @@ export interface INotificationRepository {
    * Create or update a notification template
    */
   upsertTemplate(template: any): Promise<any>;
+
+
+  addNotificationType(newType: string): Promise<boolean>;
+
+  getNotificationTypes(): Promise<string[]>
+
 }
