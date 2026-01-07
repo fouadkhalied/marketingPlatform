@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, inArray, isNull, notInArray } from "drizzle-orm";
 import { db } from "../../../db/connection";
-import { 
+import {
   notifications,
   adminNotifications,
   userAdminNotificationReads,
@@ -17,9 +17,9 @@ import {
 import { INotificationRepository } from "./notification.repository.interface";
 
 export class NotificationRepositoryImpl implements INotificationRepository {
-  
+
   // ============ USER NOTIFICATIONS ============
-  
+
   async create(notification: InsertNotification): Promise<Notification> {
     const [created] = await db
       .insert(notifications)
@@ -72,8 +72,8 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   }
 
   async findByUserId(
-    userId: string, 
-    limit: number = 50, 
+    userId: string,
+    limit: number = 50,
     offset: number = 0
   ): Promise<NotificationWithTemplate[]> {
     const results = await db
@@ -93,6 +93,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
       .where(
         and(
           eq(notifications.userId, userId),
+          eq(notifications.read, false),
           isNull(notifications.deletedAt)
         )
       )
@@ -165,7 +166,6 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
     console.log("📢 Admin notification created:", {
       id: created.id,
-      templateId: created.templateId,
       createdAt: created.createdAt
     });
 
@@ -178,38 +178,40 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     offset: number = 0
   ): Promise<AdminNotificationWithTemplate[]> {
     // Get admin notifications with their templates
-    const adminNotifsWithTemplates = await db
+    // Get IDs of admin notifications this user has read
+    const readNotificationIds = await db
+      .select({ adminNotificationId: userAdminNotificationReads.adminNotificationId })
+      .from(userAdminNotificationReads)
+      .where(eq(userAdminNotificationReads.userId, userId));
+
+    const readIds = readNotificationIds.map(r => r.adminNotificationId);
+
+    // Get unread admin notifications
+    const query = db
       .select({
         id: adminNotifications.id,
-        templateId: adminNotifications.templateId,
+        userId: adminNotifications.userId,
+        titleEn: adminNotifications.titleEn,
+        titleAr: adminNotifications.titleAr,
+        messageEn: adminNotifications.messageEn,
+        messageAr: adminNotifications.messageAr,
         metadata: adminNotifications.metadata,
         createdAt: adminNotifications.createdAt,
-        updatedAt: adminNotifications.updatedAt,
-        template: notificationTemplates
+        updatedAt: adminNotifications.updatedAt
       })
       .from(adminNotifications)
-      .innerJoin(notificationTemplates, eq(adminNotifications.templateId, notificationTemplates.id))
       .orderBy(desc(adminNotifications.createdAt))
       .limit(limit)
       .offset(offset);
 
-    // Get read status for this user
-    const readStatuses = await db
-      .select({
-        adminNotificationId: userAdminNotificationReads.adminNotificationId,
-        readAt: userAdminNotificationReads.readAt
-      })
-      .from(userAdminNotificationReads)
-      .where(eq(userAdminNotificationReads.userId, userId));
+    // Apply filter to exclude read notifications
+    const unreadAdminNotifs = readIds.length > 0
+      ? await query.where(notInArray(adminNotifications.id, readIds))
+      : await query;
 
-    const readMap = new Map(
-      readStatuses.map(r => [r.adminNotificationId, r.readAt])
-    );
-
-    return adminNotifsWithTemplates.map(n => ({
+    return unreadAdminNotifs.map(n => ({
       ...n,
-      template: n.template,
-      isRead: readMap.has(n.id)
+      isRead: false
     })) as AdminNotificationWithTemplate[];
   }
 
@@ -226,14 +228,16 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     const query = db
       .select({
         id: adminNotifications.id,
-        templateId: adminNotifications.templateId,
+        userId: adminNotifications.userId,
+        titleEn: adminNotifications.titleEn,
+        titleAr: adminNotifications.titleAr,
+        messageEn: adminNotifications.messageEn,
+        messageAr: adminNotifications.messageAr,
         metadata: adminNotifications.metadata,
         createdAt: adminNotifications.createdAt,
         updatedAt: adminNotifications.updatedAt,
-        template: notificationTemplates
       })
       .from(adminNotifications)
-      .innerJoin(notificationTemplates, eq(adminNotifications.templateId, notificationTemplates.id))
       .orderBy(desc(adminNotifications.createdAt));
 
     // Only add notInArray if there are read IDs
@@ -243,7 +247,6 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
     return results.map(n => ({
       ...n,
-      template: n.template,
       isRead: false
     })) as AdminNotificationWithTemplate[];
   }
@@ -273,23 +276,19 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     const [result] = await db
       .select({
         id: adminNotifications.id,
-        templateId: adminNotifications.templateId,
         metadata: adminNotifications.metadata,
         createdAt: adminNotifications.createdAt,
         updatedAt: adminNotifications.updatedAt,
-        template: notificationTemplates
       })
       .from(adminNotifications)
-      .innerJoin(notificationTemplates, eq(adminNotifications.templateId, notificationTemplates.id))
       .where(eq(adminNotifications.id, id))
       .limit(1);
 
     if (!result) return null;
 
     return {
-      ...result,
-      template: result.template
-    } as AdminNotificationWithTemplate;
+      ...result
+    } as AdminNotification;
   }
 
   async deleteAdminNotification(id: string): Promise<boolean> {
@@ -304,6 +303,23 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     return deleted;
   }
 
+  async updateAdminNotification(id: string, notification: Partial<InsertAdminNotification>): Promise<AdminNotification | null> {
+    const [updated] = await db
+      .update(adminNotifications)
+      .set({
+        ...notification,
+        updatedAt: new Date()
+      })
+      .where(eq(adminNotifications.id, id))
+      .returning();
+
+    if (updated) {
+      console.log(`📝 Admin notification updated: ${id}`);
+    }
+
+    return updated || null;
+  }
+
   // ============ COMBINED NOTIFICATIONS ============
 
   async getCombinedNotifications(
@@ -313,19 +329,19 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   ): Promise<CombinedNotification[]> {
     // Get admin notifications with read status
     const adminNotifs = await this.getAdminNotificationsForUser(userId, 100, 0);
-    
+
     // Get user notifications
     const userNotifs = await this.findByUserId(userId, 100, 0);
-  
+
     // Combine and format
     const combined: CombinedNotification[] = [
       // Admin notifications first
       ...adminNotifs.map(n => ({
         id: n.id,
-        title: { en: n.template.titleEn, ar: n.template.titleAr },
-        message: { en: n.template.messageEn, ar: n.template.messageAr },
-        module: n.template.module,
-        type: n.template.type,
+        title: { en: n.titleEn, ar: n.titleAr },
+        message: { en: n.messageEn, ar: n.messageAr },
+        module: 'ADMIN',
+        type: 'ADMIN_BROADCAST',
         metadata: (n.metadata as Record<string, any>) || null,
         read: n.isRead || false,
         isAdminNotification: true,
@@ -344,7 +360,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
         createdAt: n.createdAt
       }))
     ];
-  
+
     // Sort by date (admin priority is already implicit in order)
     combined.sort((a, b) => {
       // Admin notifications first
@@ -353,7 +369,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
       // Then by date
       return b.createdAt.getTime() - a.createdAt.getTime();
     });
-  
+
     // Apply pagination
     return combined.slice(offset, offset + limit);
   }
@@ -368,14 +384,14 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
   async markAsRead(id: string, userId?: string): Promise<Notification | null> {
     const conditions = [eq(notifications.id, id)];
-    
+
     if (userId) {
       conditions.push(eq(notifications.userId, userId));
     }
 
     const [updated] = await db
       .update(notifications)
-      .set({ 
+      .set({
         read: true,
         updatedAt: new Date()
       })
@@ -396,14 +412,14 @@ export class NotificationRepositoryImpl implements INotificationRepository {
       inArray(notifications.id, ids),
       isNull(notifications.deletedAt)
     ];
-    
+
     if (userId) {
       conditions.push(eq(notifications.userId, userId));
     }
 
     const result = await db
       .update(notifications)
-      .set({ 
+      .set({
         read: true,
         updatedAt: new Date()
       })
@@ -416,7 +432,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   async markAllAsRead(userId: string): Promise<number> {
     const result = await db
       .update(notifications)
-      .set({ 
+      .set({
         read: true,
         updatedAt: new Date()
       })
@@ -427,7 +443,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
           isNull(notifications.deletedAt)
         )
       );
-    
+
     console.log(`✅ Marked all (${result.rowCount}) user notifications as read for ${userId}`);
     return result.rowCount || 0;
   }
@@ -453,7 +469,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   async markAllAdminNotificationsAsRead(userId: string): Promise<number> {
     // Get all unread admin notifications
     const unreadAdminNotifs = await this.getUnreadAdminNotifications(userId);
-    
+
     if (unreadAdminNotifs.length === 0) return 0;
 
     // Insert read records for all
@@ -475,14 +491,14 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
   async softDelete(id: string, userId?: string): Promise<boolean> {
     const conditions = [eq(notifications.id, id)];
-    
+
     if (userId) {
       conditions.push(eq(notifications.userId, userId));
     }
 
     const result = await db
       .update(notifications)
-      .set({ 
+      .set({
         deletedAt: new Date(),
         updatedAt: new Date()
       })
@@ -493,7 +509,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
   async delete(id: string, userId?: string): Promise<boolean> {
     const conditions = [eq(notifications.id, id)];
-    
+
     if (userId) {
       conditions.push(eq(notifications.userId, userId));
     }
@@ -509,14 +525,14 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     if (ids.length === 0) return 0;
 
     const conditions = [inArray(notifications.id, ids)];
-    
+
     if (userId) {
       conditions.push(eq(notifications.userId, userId));
     }
 
     const result = await db
       .update(notifications)
-      .set({ 
+      .set({
         deletedAt: new Date(),
         updatedAt: new Date()
       })
@@ -529,7 +545,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     if (ids.length === 0) return 0;
 
     const conditions = [inArray(notifications.id, ids)];
-    
+
     if (userId) {
       conditions.push(eq(notifications.userId, userId));
     }
@@ -551,14 +567,14 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
   async restore(id: string, userId?: string): Promise<boolean> {
     const conditions = [eq(notifications.id, id)];
-    
+
     if (userId) {
       conditions.push(eq(notifications.userId, userId));
     }
 
     const result = await db
       .update(notifications)
-      .set({ 
+      .set({
         deletedAt: null,
         updatedAt: new Date()
       })
@@ -582,8 +598,8 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   async getAllTemplates(): Promise<any[]> {
     return await db
       .select()
-      .from(notificationTemplates)
-      .orderBy(notificationTemplates.module, notificationTemplates.type);
+      .from(adminNotifications)
+      .orderBy(desc(adminNotifications.createdAt));
   }
 
   async upsertTemplate(template: any): Promise<any> {
@@ -605,60 +621,60 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     console.log(`💾 Upserted notification template: ${template.type}`);
     return upserted;
   }
-/**
- * Add a new notification type dynamically
- * Spaces in the type will be replaced with underscores
- */
-async addNotificationType(newType: string): Promise<boolean> {
-  try {
-    // Normalize the type: trim, replace spaces with underscores, uppercase
-    const normalizedType = newType.trim().replace(/\s+/g, '_').toUpperCase();
-    
-    // Check if type already exists in the constants
-    if (NOTIFICATION_TYPES.includes(normalizedType as any)) {
-      console.log(`ℹ️ Notification type already exists: ${normalizedType}`);
+  /**
+   * Add a new notification type dynamically
+   * Spaces in the type will be replaced with underscores
+   */
+  async addNotificationType(newType: string): Promise<boolean> {
+    try {
+      // Normalize the type: trim, replace spaces with underscores, uppercase
+      const normalizedType = newType.trim().replace(/\s+/g, '_').toUpperCase();
+
+      // Check if type already exists in the constants
+      if (NOTIFICATION_TYPES.includes(normalizedType as any)) {
+        console.log(`ℹ️ Notification type already exists: ${normalizedType}`);
+        return true;
+      }
+
+      console.log(`✅ New notification type ready to use: ${normalizedType}`);
+      console.log(`⚠️ Remember to add '${normalizedType}' to NOTIFICATION_TYPES constant in schema for permanent storage`);
+
       return true;
+    } catch (error) {
+      console.error(`❌ Failed to add notification type ${newType}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get all notification types currently in use in the database
+   * (useful for finding types that might not be in the constants)
+   */
+
+  async getNotificationTypes(): Promise<string[]> {
+    try {
+      const result = await db
+        .selectDistinct({ type: notificationTemplates.type })
+        .from(notificationTemplates);
+
+      const dbTypes = result.map(row => row.type);
+
+      return [...new Set([...dbTypes, ...NOTIFICATION_TYPES])];
+    } catch (error) {
+      console.error('Failed to fetch active notification types:', error);
+      return [];
+    }
+  }
+  /**
+   * Validate and normalize a notification type
+   */
+  async validateNotificationType(type: string): Promise<string> {
+    const normalized = type.trim().replace(/\s+/g, '_').toUpperCase();
+
+    if (!NOTIFICATION_TYPES.includes(normalized as any)) {
+      throw new Error(`Invalid notification type: ${normalized}. Please add it to NOTIFICATION_TYPES constant first.`);
     }
 
-    console.log(`✅ New notification type ready to use: ${normalizedType}`);
-    console.log(`⚠️ Remember to add '${normalizedType}' to NOTIFICATION_TYPES constant in schema for permanent storage`);
-    
-    return true;
-  } catch (error) {
-    console.error(`❌ Failed to add notification type ${newType}:`, error);
-    return false;
+    return normalized;
   }
-}
-
-/**
- * Get all notification types currently in use in the database
- * (useful for finding types that might not be in the constants)
- */
-
-async getNotificationTypes(): Promise<string[]> {
-  try {
-    const result = await db
-      .selectDistinct({ type: notificationTemplates.type })
-      .from(notificationTemplates);
-    
-    const dbTypes = result.map(row => row.type);
-    
-    return [...new Set([...dbTypes, ...NOTIFICATION_TYPES])];
-  } catch (error) {
-    console.error('Failed to fetch active notification types:', error);
-    return [];
-  }
-}
-/**
- * Validate and normalize a notification type
- */
-async validateNotificationType(type: string): Promise<string> {
-  const normalized = type.trim().replace(/\s+/g, '_').toUpperCase();
-  
-  if (!NOTIFICATION_TYPES.includes(normalized as any)) {
-    throw new Error(`Invalid notification type: ${normalized}. Please add it to NOTIFICATION_TYPES constant first.`);
-  }
-  
-  return normalized;
-}
 }

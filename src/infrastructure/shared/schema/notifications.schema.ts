@@ -6,22 +6,23 @@ import { z } from "zod";
 import { users } from "./schema";
 
 // Notification constants (replace enums)
-export const NOTIFICATION_MODULES = ["AD", "PAYMENT", "CREDIT", "USER"] as const;
+export const NOTIFICATION_MODULES = ["AD", "PAYMENT", "CREDIT", "USER", "ADMIN"] as const;
 export const NOTIFICATION_TYPES = [
-  "AD_APPROVED", 
-  "AD_REJECTED", 
+  "AD_APPROVED",
+  "AD_REJECTED",
   "AD_CREATED",
   "AD_MODIFIED",
   "AD_DELETED",
-  "AD_ACTIVATED", 
+  "AD_ACTIVATED",
   "AD_DEACTIVATED",
-  "PAYMENT_SUCCESS", 
-  "PAYMENT_FAILED", 
-  "PAYMENT_PENDING", 
+  "PAYMENT_SUCCESS",
+  "PAYMENT_FAILED",
+  "PAYMENT_PENDING",
   "PAYMENT_REFUNDED",
-  "CREDIT_ADDED", 
-  "CREDIT_DEDUCTED", 
-  "CREDIT_LOW_BALANCE"
+  "CREDIT_ADDED",
+  "CREDIT_DEDUCTED",
+  "CREDIT_LOW_BALANCE",
+  "ADMIN_BROADCAST"
 ] as const;
 
 // Type definitions from constants
@@ -57,13 +58,13 @@ export const notifications = pgTable('notifications', {
 }, (table) => ({
   // Index for fetching user's notifications
   userDateIdx: index("idx_notifications_user_date").on(
-    table.userId, 
+    table.userId,
     table.createdAt.desc()
   ),
   // Index for unread notifications queries
   userReadDateIdx: index("idx_notifications_user_read_date").on(
-    table.userId, 
-    table.read, 
+    table.userId,
+    table.read,
     table.createdAt.desc()
   ),
   // Index for soft delete queries
@@ -74,9 +75,14 @@ export const notifications = pgTable('notifications', {
 }));
 
 // Admin notifications table - broadcast notifications NOT tied to users
+
 export const adminNotifications = pgTable('admin_notifications', {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  templateId: varchar("template_id").notNull().references(() => notificationTemplates.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  titleEn: text("title_en").notNull(),
+  titleAr: text("title_ar").notNull(),
+  messageEn: text("message_en").notNull(),
+  messageAr: text("message_ar").notNull(),
   metadata: jsonb("metadata"), // Dynamic data for the broadcast
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
@@ -122,9 +128,9 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
 }));
 
 export const adminNotificationsRelations = relations(adminNotifications, ({ one, many }) => ({
-  template: one(notificationTemplates, {
-    fields: [adminNotifications.templateId],
-    references: [notificationTemplates.id],
+  user: one(users, {
+    fields: [adminNotifications.userId],
+    references: [users.id],
   }),
   reads: many(userAdminNotificationReads),
 }));
@@ -168,8 +174,12 @@ export const insertNotificationSchema = createInsertSchema(notifications, {
 });
 
 export const insertAdminNotificationSchema = createInsertSchema(adminNotifications, {
-  templateId: z.string().uuid(),
+  userId: z.string().uuid(),
   metadata: z.record(z.any()).optional(),
+  titleEn: z.string().min(1).max(200),
+  titleAr: z.string().min(1).max(200),
+  messageEn: z.string().min(1).max(500),
+  messageAr: z.string().min(1).max(500),
 });
 
 // Type exports
@@ -190,7 +200,6 @@ export type NotificationWithTemplate = Notification & {
 };
 
 export type AdminNotificationWithTemplate = AdminNotification & {
-  template: NotificationTemplate;
   isRead?: boolean; // Added when querying for specific user
 };
 

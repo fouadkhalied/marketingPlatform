@@ -1,6 +1,7 @@
 export enum NotificationModule {
-    AD = "AD",
-    PAYMENT = "PAYMENT",
-    CREDIT = "CREDIT",
-    USER = "USER",
-  }
+  AD = "AD",
+  PAYMENT = "PAYMENT",
+  CREDIT = "CREDIT",
+  USER = "USER",
+  ADMIN = "ADMIN",
+}

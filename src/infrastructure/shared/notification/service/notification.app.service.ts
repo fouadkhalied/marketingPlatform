@@ -13,7 +13,7 @@ export class NotificationAppService {
     private readonly notificationRepo: INotificationRepository,
     private readonly notificationService: NotificationService,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   /**
    * Get combined notifications (user + admin) for a user
@@ -78,10 +78,10 @@ export class NotificationAppService {
         })),
         admin: adminNotifs.map(n => ({
           id: n.id,
-          title: { en: n.template.titleEn, ar: n.template.titleAr },
-          message: { en: n.template.messageEn, ar: n.template.messageAr },
-          module: n.template.module,
-          type: n.template.type,
+          title: { en: n.titleEn, ar: n.titleAr },
+          message: { en: n.messageEn, ar: n.messageAr },
+          module: 'ADMIN',
+          type: 'ADMIN_BROADCAST',
           metadata: n.metadata,
           createdAt: n.createdAt,
           isAdminNotification: true
@@ -420,23 +420,29 @@ export class NotificationAppService {
    * Create admin broadcast notification
    */
   async createAdminBroadcast(
-    type: NotificationType,
-    metadata?: Record<string, any>
+    adminId: string,
+    data: {
+      titleEn: string;
+      titleAr: string;
+      messageEn: string;
+      messageAr: string;
+      metadata?: Record<string, any>;
+    }
   ): Promise<ApiResponseInterface<{ notificationId: string }>> {
     try {
-      this.logger.info('Creating admin broadcast', { type });
+      this.logger.info('Creating admin broadcast', { adminId });
 
       const notificationId = await this.notificationService.sendAdminBroadcast(
-        type,
-        metadata
+        adminId,
+        data
       );
 
-      this.logger.info('Admin broadcast created', { notificationId, type });
+      this.logger.info('Admin broadcast created', { notificationId });
 
       return ResponseBuilder.success({ notificationId });
     } catch (error) {
       this.logger.error('Failed to create admin broadcast', {
-        type,
+        adminId,
         error: error instanceof Error ? error.message : error
       });
       return ErrorBuilder.build(
@@ -507,7 +513,45 @@ export class NotificationAppService {
     }
   }
 
-  async upsertTemplate(templateData: any): Promise<ApiResponseInterface<any>>{
+  /**
+   * Update admin notification (Admin only)
+   */
+  async updateAdminNotification(
+    adminNotificationId: string,
+    data: any
+  ): Promise<ApiResponseInterface<any>> {
+    try {
+      this.logger.info('Updating admin notification', { adminNotificationId, data });
+
+      const updated = await this.notificationRepo.updateAdminNotification(
+        adminNotificationId,
+        data
+      );
+
+      if (!updated) {
+        return ErrorBuilder.build(
+          ErrorCode.NOTIFICATION_NOT_FOUND,
+          `Admin notification ${adminNotificationId} not found`
+        );
+      }
+
+      this.logger.info('Admin notification updated', { adminNotificationId });
+
+      return ResponseBuilder.success(updated);
+    } catch (error) {
+      this.logger.error('Failed to update admin notification', {
+        adminNotificationId,
+        error: error instanceof Error ? error.message : error
+      });
+      return ErrorBuilder.build(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "Failed to update admin notification",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  async upsertTemplate(templateData: any): Promise<ApiResponseInterface<any>> {
     try {
       this.logger.info('upsert notification template', { templateData });
 
@@ -539,7 +583,7 @@ export class NotificationAppService {
   }
 
 
-  async addNotificationType(newType: string): Promise<ApiResponseInterface<any>>{
+  async addNotificationType(newType: string): Promise<ApiResponseInterface<any>> {
     try {
       this.logger.info('upsert notification type', { newType });
 
@@ -570,7 +614,7 @@ export class NotificationAppService {
     }
   }
 
-  async getNotificationTypes(): Promise<ApiResponseInterface<string[]>>{
+  async getNotificationTypes(): Promise<ApiResponseInterface<string[]>> {
     try {
       this.logger.info('getting notification type');
 
