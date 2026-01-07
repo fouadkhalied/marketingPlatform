@@ -8,11 +8,18 @@ import { ApiResponseInterface } from "../../../../infrastructure/shared/common/a
 import { ResponseBuilder } from "../../../../infrastructure/shared/common/apiResponse/apiResponseBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
+import { NotificationService } from "../../../../infrastructure/shared/notification/service/notification.servcie";
+import { NotificationBuilder } from "../../../../infrastructure/shared/notification/builder/notification.builder";
+import { NotificationModule } from "../../../../infrastructure/shared/notification/enum/notification.module.enum";
+import { NotificationType } from "../../../../infrastructure/shared/notification/enum/notification.type.enum";
 
 export class PaymentService {
     private readonly paymobHandler: PaymobPaymentHandler;
 
-    constructor(private readonly paymentRepo: PaymentRepository) {
+    constructor(
+        private readonly paymentRepo: PaymentRepository,
+        private readonly notificationService: NotificationService
+    ) {
         this.paymobHandler = new PaymobPaymentHandler(paymobConfig);
         this.setupWebhookHandlers();
     }
@@ -64,7 +71,7 @@ export class PaymentService {
                 url: session.url,
                 sessionId: session.id,
             });
-        } catch (error:any) {
+        } catch (error: any) {
             console.error("❌ Paymob createCheckoutSession error:", error);
             return ErrorBuilder.build(
                 ErrorCode.INTERNAL_SERVER_ERROR,
@@ -93,8 +100,7 @@ export class PaymentService {
         } catch (error) {
             console.error("❌ Error creating completed payment:", error);
             throw new Error(
-                `Failed to process payment: ${
-                    error instanceof Error ? error.message : "Unknown error"
+                `Failed to process payment: ${error instanceof Error ? error.message : "Unknown error"
                 }`
             );
         }
@@ -129,23 +135,23 @@ export class PaymentService {
         try {
             // ✅ CORRECT: Get userId from YOUR database, not from Paymob metadata
             const existing = await this.paymentRepo.findBySessionId(sessionData.id);
-            
+
             if (!existing) {
                 throw new Error(`No pending payment found for session: ${sessionData.id}`);
             }
-    
+
             if (existing.status === "completed") {
                 console.log("⚠️ Already processed, skipping:", sessionData.id);
                 return;
             }
-    
+
             // ✅ Use userId from your database record
             const userId = existing.userId;
-            
+
             if (!userId) {
                 throw new Error("Missing userId in database record");
             }
-    
+
             const dto: CreatePaymentDto = {
                 userId,
                 amount: sessionData.amount_total / 100,
@@ -153,8 +159,18 @@ export class PaymentService {
                 method: "paymob",
                 stripeSessionId: sessionData.id,
             };
-    
+
             await this.createCompletedPayment(dto);
+
+            this.notificationService.notify(
+                new NotificationBuilder()
+                    .setUserId(userId)
+                    .setModule(NotificationModule.PAYMENT)
+                    .setType(NotificationType.PAYMENT_SUCCESS)
+                    .addMetadata("sessionId", sessionData.id)
+                    .addMetadata("amount", dto.amount)
+            );
+
         } catch (error) {
             console.error("❌ Error in Paymob handleCheckoutCompleted:", error);
             throw error;
@@ -167,6 +183,17 @@ export class PaymentService {
             if (sessionId) {
                 await this.paymentRepo.updateStatus(sessionId, "failed");
                 console.log("❌ Payment marked as failed:", sessionId);
+
+                const existing = await this.paymentRepo.findBySessionId(sessionId);
+                if (existing && existing.userId) {
+                    this.notificationService.notify(
+                        new NotificationBuilder()
+                            .setUserId(existing.userId)
+                            .setModule(NotificationModule.PAYMENT)
+                            .setType(NotificationType.PAYMENT_FAILED)
+                            .addMetadata("sessionId", sessionId)
+                    );
+                }
             }
         } catch (error) {
             console.error("❌ Error handling Paymob failure:", error);
@@ -184,17 +211,27 @@ export class PaymentService {
 
     async verifyPayment(orderId: string) {
         try {
-          const result = await this.paymobHandler.verifyPayment(orderId);
-          return result; // { success: boolean, paymentStatus: 'paid' | 'unpaid', ... }
+            const result = await this.paymobHandler.verifyPayment(orderId);
+            return result; // { success: boolean, paymentStatus: 'paid' | 'unpaid', ... }
         } catch (error: any) {
-          console.error("Payment verification failed:", error);
-          return { success: false, paymentStatus: 'unpaid' };
+            console.error("Payment verification failed:", error);
+            return { success: false, paymentStatus: 'unpaid' };
         }
     }
 
     async markPaymentAsRejected(sessionId: string) {
         try {
-            await this.paymentRepo.updateStatus(sessionId, 'failed')
+            await this.paymentRepo.updateStatus(sessionId, 'failed');
+            const existing = await this.paymentRepo.findBySessionId(sessionId);
+            if (existing && existing.userId) {
+                this.notificationService.notify(
+                    new NotificationBuilder()
+                        .setUserId(existing.userId)
+                        .setModule(NotificationModule.PAYMENT)
+                        .setType(NotificationType.PAYMENT_FAILED)
+                        .addMetadata("sessionId", sessionId)
+                );
+            }
         } catch (error) {
             console.error("❌ Error getting purchase history:", error);
             return ErrorBuilder.build(

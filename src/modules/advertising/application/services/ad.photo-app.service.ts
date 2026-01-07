@@ -6,16 +6,23 @@ import { UploadPhoto } from "../../../../infrastructure/shared/common/supabase/m
 import { IAdPhotoRepository } from "../../domain/repositories/ad.photo.repository.interface";
 import { ILogger } from "../../../../infrastructure/shared/common/logging";
 
+import { NotificationService } from "../../../../infrastructure/shared/notification/service/notification.servcie";
+import { NotificationBuilder } from "../../../../infrastructure/shared/notification/builder/notification.builder";
+import { NotificationModule } from "../../../../infrastructure/shared/notification/enum/notification.module.enum";
+import { NotificationType } from "../../../../infrastructure/shared/notification/enum/notification.type.enum";
+
 export class AdPhotoAppService {
   constructor(
     private readonly adPhotoRepository: IAdPhotoRepository,
     private readonly photoUploader: UploadPhoto,
-    private readonly logger: ILogger
-  ) {}
+    private readonly logger: ILogger,
+    private readonly notificationService: NotificationService
+  ) { }
 
   async uploadPhotoToAd(
     photo: Express.Multer.File[],
-    adId: string
+    adId: string,
+    userId: string
   ): Promise<ApiResponseInterface<{ photos: { url: string; index: number }[] }>> {
     try {
       this.logger.info('Uploading photo to ad', {
@@ -45,8 +52,16 @@ export class AdPhotoAppService {
         );
       }
 
+      this.notificationService.notify(
+        new NotificationBuilder()
+          .setUserId(userId)
+          .setModule(NotificationModule.AD)
+          .setType(NotificationType.AD_PHOTO_ADDED)
+          .addMetadata("adId", adId)
+      );
+
       this.logger.info('Photo uploaded and attached to ad successfully', { adId });
-      return ResponseBuilder.success({ photos: photoUploadResult.url.map((url,index) => ({url:url,index:index})) });
+      return ResponseBuilder.success({ photos: photoUploadResult.url.map((url, index) => ({ url: url, index: index })) });
     } catch (error) {
       this.logger.error('Failed to upload photo to ad', {
         adId,
@@ -89,7 +104,15 @@ export class AdPhotoAppService {
         );
       }
 
-      return ResponseBuilder.success({ photos: photoUploadResult.url.map((url,index) => ({url:url,index:index})) });
+      this.notificationService.notify(
+        new NotificationBuilder()
+          .setUserId(userId)
+          .setModule(NotificationModule.AD)
+          .setType(NotificationType.AD_PHOTO_UPDATED)
+          .addMetadata("adId", adId)
+      );
+
+      return ResponseBuilder.success({ photos: photoUploadResult.url.map((url, index) => ({ url: url, index: index })) });
     } catch (error) {
       return ErrorBuilder.build(
         ErrorCode.INTERNAL_SERVER_ERROR,
@@ -106,13 +129,20 @@ export class AdPhotoAppService {
   ): Promise<ApiResponseInterface<boolean>> {
     try {
 
-       await this.photoUploader.deletePhoto(photoUrl);
+      await this.photoUploader.deletePhoto(photoUrl);
 
-       const deletePhoto =await this.adPhotoRepository.deletePhotoFromAd(adId,userID,photoUrl);
+      const deletePhoto = await this.adPhotoRepository.deletePhotoFromAd(adId, userID, photoUrl);
 
-        if (deletePhoto) {
-          return ResponseBuilder.success(true);
-        }
+      if (deletePhoto) {
+        this.notificationService.notify(
+          new NotificationBuilder()
+            .setUserId(userID)
+            .setModule(NotificationModule.AD)
+            .setType(NotificationType.AD_PHOTO_DELETED)
+            .addMetadata("adId", adId)
+        );
+        return ResponseBuilder.success(true);
+      }
 
       return ErrorBuilder.build(ErrorCode.INTERNAL_SERVER_ERROR,
         "failed to delete photo of ad"

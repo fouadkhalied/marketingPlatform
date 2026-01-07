@@ -10,7 +10,7 @@ export class AdPromotionAppService {
   constructor(
     private readonly adPromotionRepository: IAdPromotionRepository,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   async assignCreditToAd(
     userId: string,
@@ -56,7 +56,7 @@ export class AdPromotionAppService {
     adId: string
   ): Promise<ApiResponseInterface<Ad>> {
     try {
-      const promoteAd = await this.adPromotionRepository.promoteAd(adId,userId)
+      const promoteAd = await this.adPromotionRepository.promoteAd(adId, userId)
       return ResponseBuilder.success(promoteAd, "Ad promoted successfully");
     } catch (error: any) {
       if (error.code && error.message) {
@@ -75,7 +75,7 @@ export class AdPromotionAppService {
     adId: string
   ): Promise<ApiResponseInterface<Ad>> {
     try {
-      const promoteAd = await this.adPromotionRepository.dePromoteAd(adId,userId)
+      const promoteAd = await this.adPromotionRepository.dePromoteAd(adId, userId)
       return ResponseBuilder.success(promoteAd, "Ad de promoted successfully");
     } catch (error: any) {
       if (error.code && error.message) {

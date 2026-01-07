@@ -10,7 +10,7 @@ export class AdPhotoController {
   constructor(
     private readonly adPhotoService: AdPhotoAppService,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {
@@ -56,8 +56,13 @@ export class AdPhotoController {
         return;
       }
 
+      if (!req.user?.id) {
+        res.status(401).json({ error: "User not authenticated" });
+        return;
+      }
+
       // call service
-      const response = await this.adPhotoService.uploadPhotoToAd(files, id);
+      const response = await this.adPhotoService.uploadPhotoToAd(files, id, req.user.id);
 
       res.status(response.success ? 200 : 400).json(response);
     } catch (error) {
@@ -129,7 +134,7 @@ export class AdPhotoController {
       }
 
       // call service
-      const response = await this.adPhotoService.updatePhotoFromAd(files,id,req.user.id,photoUrl,req.user.role);
+      const response = await this.adPhotoService.updatePhotoFromAd(files, id, req.user.id, photoUrl, req.user.role);
 
       res.status(response.success ? 200 : 400).json(response);
     } catch (error) {

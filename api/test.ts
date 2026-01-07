@@ -423,7 +423,7 @@ async function startServer() {
   try {
 
     // Start HTTPS server
-    app.listen(3000,()=> {console.log(`test server running on port ${3000}`);})
+    app.listen(5000,()=> {console.log(`test server running on port ${5000}`);})
     
   } catch (error) {
     console.error('❌ Failed to start server:', error);

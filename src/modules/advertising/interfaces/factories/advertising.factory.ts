@@ -89,10 +89,13 @@ function createAdCrudAppService(
     return new AdCrudAppService(adCrudRepository, logger, notificationService);
 }
 
-function createAdPhotoAppService(logger: ILogger): AdPhotoAppService {
+function createAdPhotoAppService(
+    logger: ILogger,
+    notificationService: NotificationService
+): AdPhotoAppService {
     const adPhotoRepository = createAdPhotoRepository();
     const { photoUploader } = createSharedDependencies();
-    return new AdPhotoAppService(adPhotoRepository, photoUploader, logger);
+    return new AdPhotoAppService(adPhotoRepository, photoUploader, logger, notificationService);
 }
 
 function createAdListingAppService(logger: ILogger): AdListingAppService {
@@ -139,12 +142,12 @@ function createAdCrudController(
     notificationService: NotificationService
 ): AdCrudController {
     const adCrudService = createAdCrudAppService(logger,notificationService);
-    const adPhotoService = createAdPhotoAppService(logger);
+    const adPhotoService = createAdPhotoAppService(logger,notificationService);
     return new AdCrudController(adCrudService,adPhotoService ,logger);
 }
 
-function createAdPhotoController(logger: ILogger): AdPhotoController {
-    const adPhotoService = createAdPhotoAppService(logger);
+function createAdPhotoController(logger: ILogger,notificationService: NotificationService): AdPhotoController {
+    const adPhotoService = createAdPhotoAppService(logger,notificationService);
     return new AdPhotoController(adPhotoService, logger);
 }
 
@@ -194,7 +197,7 @@ export function createAllAdvertisingControllers(
 
     return {
         adCrud: createAdCrudController(logger, notificationService),
-        adPhoto: createAdPhotoController(logger),
+        adPhoto: createAdPhotoController(logger, notificationService),
         adListing: createAdListingController(logger),
         adStatus: createAdStatusController(logger, notificationService), // ← Pass it here
         adPromotion: createAdPromotionController(logger),
