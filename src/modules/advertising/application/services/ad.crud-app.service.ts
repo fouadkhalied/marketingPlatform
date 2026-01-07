@@ -44,6 +44,7 @@ export class AdCrudAppService {
       }
 
       const adId = await this.adCrudRepository.create(adData);
+
       this.logger.info('Ad created successfully', { adId, userId });
 
       this.notificationService.notify(
@@ -53,6 +54,8 @@ export class AdCrudAppService {
         .setType(NotificationType.AD_CREATED)
         .addMetadata("adId", adId)
       )
+
+      this.logger.info('ad created notification sended', { adId, userId });
 
       return ResponseBuilder.success({ AdId: adId });
     } catch (error) {
@@ -136,6 +139,16 @@ export class AdCrudAppService {
         );
       }
 
+      this.notificationService.notify(
+        new NotificationBuilder()     
+        .setUserId(updated.userId)
+        .setModule(NotificationModule.AD)
+        .setType(NotificationType.AD_MODIFIED)
+        .addMetadata("adId", id)
+      )
+
+      this.logger.info('ad modified notification sended', { adId : id });
+
       return ResponseBuilder.success(updated);
     } catch (error) {
       this.logger.error('Failed to update ad', {
@@ -162,6 +175,16 @@ export class AdCrudAppService {
           `Ad with id ${id} not found`
         );
       }
+
+      this.notificationService.notify(
+        new NotificationBuilder()     
+        .setUserId(userId)
+        .setModule(NotificationModule.AD)
+        .setType(NotificationType.AD_DELETED)
+        .addMetadata("adId", id)
+      )
+
+      this.logger.info('ad created notification sended', { id, userId });
 
       return ResponseBuilder.success({ photoUrl: deleted.photoUrl[0] ? deleted.photoUrl[0] : undefined});
     } catch (error) {
