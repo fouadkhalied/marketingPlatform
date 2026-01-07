@@ -7,7 +7,7 @@ import { NotificationController } from '../controller/notification.controller';
 export function setupNotificationRoutes(notificationControllers: NotificationController, sseChannel: SSENotificationChannel) {
   const router = express.Router();
   // SEE channel
-  router.get('/api/notifications/stream', AuthMiddleware(UserRole.USER), async (req, res) => {
+  router.get('/api/notifications/stream', async (req, res) => {
     try {
       await sseChannel.addClient(req, res);
     } catch (error) {

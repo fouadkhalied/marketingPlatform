@@ -1,5 +1,6 @@
 // factories/notification.factory.ts
 
+import { JwtService } from "../../../common/auth/module/jwt.module";
 import { createLogger, ILogger } from "../../../common/logging";
 import { EmailNotificationChannel } from "../../channels/email.channel";
 import { SSENotificationChannel } from "../../channels/SSE.channel";
@@ -30,6 +31,9 @@ export interface NotificationFactoryResult {
 export function createNotificationFactory(): NotificationFactoryResult {
   const logger = createLogger('notification');
 
+  // create jwt service 
+  const jwtService = new JwtService()
+
   // Create repository 
   const repo = new NotificationRepositoryImpl();
 
@@ -46,7 +50,7 @@ export function createNotificationFactory(): NotificationFactoryResult {
   let sseChannel: SSENotificationChannel | undefined;
 
   // Register SSE Channel (for real-time notifications)
-    sseChannel = new SSENotificationChannel(repo);
+    sseChannel = new SSENotificationChannel(repo,jwtService);
     notificationService.registerChannel(sseChannel);
     logger.info("SSE notification channel registered");
 

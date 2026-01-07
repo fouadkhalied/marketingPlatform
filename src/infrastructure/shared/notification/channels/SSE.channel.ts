@@ -2,15 +2,26 @@ import { Request, Response } from "express";
 import { NotificationChannel } from "../interfaces/notification.channel.interface";
 import { NotificationPayload } from "../interfaces/notification.payload.interface";
 import { INotificationRepository } from "../repositories/notification.repository.interface";
+import { JwtService } from "../../common/auth/module/jwt.module";
 
 export class SSENotificationChannel implements NotificationChannel {
   name = "sse";
   private connections = new Map<string, Response[]>();
 
-  constructor(private readonly notificationRepo: INotificationRepository) {}
+  constructor(
+    private readonly notificationRepo: INotificationRepository,
+    private readonly jwtService: JwtService
+) {}
   
   async addClient(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const token = req.query.token as string;
+    
+    if (!token) {
+      res.status(401).json({ error: "Token is required" });
+      return;
+    }
+
+    const userId = this.jwtService.verify(token).userId;
     
     if (!userId) {
       throw new Error("User ID is required");
