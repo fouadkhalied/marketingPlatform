@@ -36,42 +36,6 @@ export class AdListingController {
     return ["pending", "approved", "rejected"].includes(value);
   }
 
-  async listUserAdsForAdmin(req: Request, res: Response): Promise<void> {
-    try {
-      if (!req.user?.id || !req.user?.role) {
-        res.status(401).json({ error: "User not authenticated" });
-        return;
-      }
-
-      const { limit, page, title, description, email } = req.query;
-
-      // ✅ Pagination handling (default: page=1, limit=10)
-      const pagination: PaginationParams = {
-        page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
-        limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
-      };
-
-      let result;
-
-      // if (!email) {
-      //   res.status(404).send(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "email must be send"))
-      //   return
-      // }
-
-      result = await this.adListingService.listUserAdsForAdmin(
-        pagination,
-        title as string | undefined,
-        description as string | undefined,
-        email as string
-      );
-
-      const statusCode = this.getStatusCode(result);
-      res.status(statusCode).json(result);
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to list ads", message: error.message });
-    }
-  }
-
   // ✅ List Ads
   async listAds(req: Request, res: Response): Promise<void> {
     try {
@@ -80,7 +44,7 @@ export class AdListingController {
         return;
       }
 
-      const { limit, page, status } = req.query;
+      const { limit, page, status, title, description, email } = req.query;
 
       // ✅ Normalize status into a string
       const normalizedStatus = typeof status === "string" && status.trim() !== ""
@@ -115,7 +79,10 @@ export class AdListingController {
       } else if (req.user.role === UserRole.ADMIN) {
         result = await this.adListingService.listAdsForAdmin(
           normalizedStatus,
-          pagination
+          pagination,
+          title as string | undefined,
+          description as string | undefined,
+          email as string | undefined
         );
       } else {
         res.status(403).json({ error: "Forbidden: role not allowed" });

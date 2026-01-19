@@ -15,10 +15,13 @@ export class AdListingAppService {
 
   async listAdsForAdmin(
     status: string,
-    pagination: PaginationParams
+    pagination: PaginationParams,
+    title?: string,
+    description?: string,
+    email?: string
   ): Promise<ApiResponseInterface<Ad[]>> {
     try {
-      const ads = await this.adListingRepository.findAllAdsForAdmin(status, pagination);
+      const ads = await this.adListingRepository.findAllAdsForAdmin(status, pagination,title,description,email);
       return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
     } catch (error) {
       return ErrorBuilder.build(
@@ -46,23 +49,7 @@ export class AdListingAppService {
     }
   }
 
-  async listUserAdsForAdmin(
-    pagination: PaginationParams,
-    title?: string,
-    description?: string,
-    email?: string
-  ): Promise<ApiResponseInterface<Ad[]>> {
-    try {
-      const ads = await this.adListingRepository.listUserAdsForAdmin(pagination, title, description,email);
-      return ResponseBuilder.paginatedSuccess(ads.data, ads.pagination);
-    } catch (error) {
-      return ErrorBuilder.build(
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        "Unexpected error while listing user ads for admin",
-        error instanceof Error ? error.message : error
-      );
-    }
-  }
+
 
   async listAdsFeed(
     pagination: PaginationParams,

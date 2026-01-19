@@ -10,8 +10,11 @@ import { targetAudienceValues } from "../../domain/enums/ads.targetAudence.enum"
 export class AdListingRepository implements IAdListingRepository {
   async findAllAdsForAdmin(
     status: string, // still string from request
-    pagination: PaginationParams
-  ): Promise<PaginatedResponse<Ad>> {
+    pagination: PaginationParams,
+    title?: string,
+    description?: string,
+    email?: string
+  ): Promise<PaginatedResponse<Ad & { userId: User["id"], email: User["email"], name: User["username"] }>> {
     try {
       const { page, limit } = pagination;
       const offset = (page - 1) * limit;
@@ -29,12 +32,35 @@ export class AdListingRepository implements IAdListingRepository {
         whereCondition = eq(ads.status, status);
       }
 
+      if (title) {
+        whereCondition = and(
+          whereCondition,
+          or(
+            like(ads.titleEn, `%${title}%`),
+            like(ads.titleAr, `%${title}%`)
+          )
+        );
+      }
+
+      if (description) {
+        whereCondition = and(
+          whereCondition,
+          or(
+            like(ads.descriptionEn, `%${description}%`),
+            like(ads.descriptionAr, `%${description}%`)
+          )
+        );
+      }
+      if (email) {
+        whereCondition = and(whereCondition, eq(users.email, email))
+      }
+
       // Count total records
       const countQuery = db
         .select({ count: sql<number>`count(*)` })
-        .from(ads);
-
-      if (whereCondition) countQuery.where(whereCondition);
+        .from(ads)
+        .innerJoin(users, eq(ads.userId, users.id))
+        .where(whereCondition)
 
       const [{ count }] = await countQuery;
 
@@ -42,13 +68,20 @@ export class AdListingRepository implements IAdListingRepository {
       const resultsQuery = db
         .select()
         .from(ads)
+        .innerJoin(users, eq(ads.userId, users.id))
         .limit(limit)
         .offset(offset);
 
       if (whereCondition) resultsQuery.where(whereCondition);
 
-      const results = await resultsQuery;
+      const rawResults = await resultsQuery;
 
+      const results = rawResults.map((r) => ({
+        ...r.ads,
+        userId: r.users.id,
+        email: r.users.email,
+        name: r.users.username,
+      }));
       const totalCount = Number(count);
       const totalPages = Math.ceil(totalCount / limit);
 
@@ -74,93 +107,6 @@ export class AdListingRepository implements IAdListingRepository {
     }
   }
 
-  async listUserAdsForAdmin(
-    pagination: PaginationParams,
-    title?: string,
-    description?: string,
-    email?: string
-  ): Promise<PaginatedResponse<Ad & { email: User["email"], name: User["username"] }>> {
-    try {
-      const { page, limit } = pagination;
-      const offset = (page - 1) * limit;
-
-      // ✅ Build condition
-      let whereCondition;
-
-      if (title) {
-  whereCondition = and(
-    whereCondition, 
-    or(
-      like(ads.titleEn, `%${title}%`),
-      like(ads.titleAr, `%${title}%`)
-    )
-  );
-}
-
-if (description) {
-  whereCondition = and(
-    whereCondition, 
-    or(
-      like(ads.descriptionEn, `%${description}%`),
-      like(ads.descriptionAr, `%${description}%`)
-    )
-  );
-}
-
-      if (email) {
-        whereCondition = and(whereCondition, eq(users.email, email))
-      }
-
-      // ✅ Count total records
-      const [{ count }] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(ads)
-        .innerJoin(users, eq(ads.userId, users.id))
-        .where(whereCondition);
-
-      // ✅ Fetch paginated results
-      const rawResults = await db
-        .select(
-          {
-            ads,
-            email: users.email,
-            name: users.username
-          }
-        )
-        .from(ads)
-        .where(whereCondition)
-        .innerJoin(users, eq(ads.userId, users.id))
-        .limit(limit)
-        .offset(offset);
-
-      const results = rawResults.map((r) => ({
-        ...r.ads,
-        email: r.email,
-        name: r.name,
-      }));
-
-      const totalCount = Number(count);
-      const totalPages = Math.ceil(totalCount / limit);
-
-      return {
-        data: results,
-        pagination: {
-          currentPage: page,
-          limit,
-          totalCount,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrevious: page > 1,
-        },
-      };
-    } catch (error) {
-      throw ErrorBuilder.build(
-        ErrorCode.DATABASE_ERROR,
-        "Failed to fetch ads for user",
-        error instanceof Error ? error.message : error
-      );
-    }
-  }
 
   async findAllAdsForUser(
     status: string | undefined, // 👈 request input is plain string

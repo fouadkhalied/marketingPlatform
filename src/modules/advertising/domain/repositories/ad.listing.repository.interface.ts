@@ -8,8 +8,11 @@ import { Ad, User } from "../../../../infrastructure/shared/schema/schema";
 export interface IAdListingRepository {
   findAllAdsForAdmin(
     status: string,
-    pagination: PaginationParams
-  ): Promise<PaginatedResponse<Ad>>;
+    pagination: PaginationParams,
+    title?: string,
+    description?: string,
+    email?: string
+  ): Promise<PaginatedResponse<Ad & { userId: User["id"], email: User["email"], name: User["username"] }>>;
 
   findAllAdsForUser(
     status: string,
@@ -19,13 +22,6 @@ export interface IAdListingRepository {
     description?: string,
     email?:string
   ): Promise<PaginatedResponse<Ad>>;
-
-  listUserAdsForAdmin(
-    pagination: PaginationParams,
-    title?: string,
-    description?: string,
-    email?: string
-  ): Promise<PaginatedResponse<Ad & { email: User["email"], name: User["username"] }>>;
 
   listApprovedAdsForUser(
     pagination: PaginationParams,
