@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, inArray, like, lte, or, sql } from "drizzle-orm";
 import { IAdListingRepository } from "../../domain/repositories/ad.listing.repository.interface";
 import { db } from "../../../../infrastructure/db/connection";
-import { Ad, ads , impressionsEvents } from "../../../../infrastructure/shared/schema/schema";
+import { Ad, ads, impressionsEvents, User, users } from "../../../../infrastructure/shared/schema/schema";
 import { ErrorBuilder } from "../../../../infrastructure/shared/common/errors/errorBuilder";
 import { ErrorCode } from "../../../../infrastructure/shared/common/errors/enums/basic.error.enum";
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
@@ -74,10 +74,98 @@ export class AdListingRepository implements IAdListingRepository {
     }
   }
 
+  async listUserAdsForAdmin(
+    pagination: PaginationParams,
+    title?: string,
+    description?: string,
+    email?: string
+  ): Promise<PaginatedResponse<Ad & { email: User["email"], name: User["username"] }>> {
+    try {
+      const { page, limit } = pagination;
+      const offset = (page - 1) * limit;
+
+      // ✅ Build condition
+      let whereCondition;
+
+      if (title) {
+  whereCondition = and(
+    whereCondition, 
+    or(
+      like(ads.titleEn, `%${title}%`),
+      like(ads.titleAr, `%${title}%`)
+    )
+  );
+}
+
+if (description) {
+  whereCondition = and(
+    whereCondition, 
+    or(
+      like(ads.descriptionEn, `%${description}%`),
+      like(ads.descriptionAr, `%${description}%`)
+    )
+  );
+}
+
+      if (email) {
+        whereCondition = and(whereCondition, eq(users.email, email))
+      }
+
+      // ✅ Count total records
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ads)
+        .innerJoin(users, eq(ads.userId, users.id))
+        .where(whereCondition);
+
+      // ✅ Fetch paginated results
+      const rawResults = await db
+        .select(
+          {
+            ads,
+            email: users.email,
+            name: users.username
+          }
+        )
+        .from(ads)
+        .where(whereCondition)
+        .innerJoin(users, eq(ads.userId, users.id))
+        .limit(limit)
+        .offset(offset);
+
+      const results = rawResults.map((r) => ({
+        ...r.ads,
+        email: r.email,
+        name: r.name,
+      }));
+
+      const totalCount = Number(count);
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        data: results,
+        pagination: {
+          currentPage: page,
+          limit,
+          totalCount,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrevious: page > 1,
+        },
+      };
+    } catch (error) {
+      throw ErrorBuilder.build(
+        ErrorCode.DATABASE_ERROR,
+        "Failed to fetch ads for user",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
   async findAllAdsForUser(
     status: string | undefined, // 👈 request input is plain string
     userId: string,
-    pagination: PaginationParams
+    pagination: PaginationParams,
   ): Promise<PaginatedResponse<Ad>> {
     try {
       const { page, limit } = pagination;
@@ -106,7 +194,8 @@ export class AdListingRepository implements IAdListingRepository {
 
       // ✅ Fetch paginated results
       const results = await db
-        .select()
+        .select(
+      )
         .from(ads)
         .where(whereCondition)
         .limit(limit)
@@ -141,7 +230,7 @@ export class AdListingRepository implements IAdListingRepository {
     title?: string,
     description?: string,
     targetAudience?: targetAudienceValues,
-    source?:string
+    source?: string
   ): Promise<PaginatedResponse<any>> {
     try {
       const { page, limit } = pagination;
@@ -155,9 +244,9 @@ export class AdListingRepository implements IAdListingRepository {
         gt(ads.impressionsCredit, 0),
         targetCities.length > 0
           ? sql`${ads.targetCities} && ARRAY[${sql.join(
-              targetCities.map((city) => sql`${city}`),
-              sql`, `
-            )}]::ksa_cities[]`
+            targetCities.map((city) => sql`${city}`),
+            sql`, `
+          )}]::ksa_cities[]`
           : undefined,
         targetAudience
           ? eq(ads.targetAudience, targetAudience)
@@ -165,16 +254,16 @@ export class AdListingRepository implements IAdListingRepository {
         // ✅ Search in both titleEn and titleAr if title is provided
         title
           ? or(
-              sql`LOWER(${ads.titleEn}) LIKE LOWER(${`%${title}%`})`,
-              sql`LOWER(${ads.titleAr}) LIKE LOWER(${`%${title}%`})`
-            )
+            sql`LOWER(${ads.titleEn}) LIKE LOWER(${`%${title}%`})`,
+            sql`LOWER(${ads.titleAr}) LIKE LOWER(${`%${title}%`})`
+          )
           : undefined,
-          // ✅ Search in both descriptionEn and descriptionAr if description is provided
+        // ✅ Search in both descriptionEn and descriptionAr if description is provided
         description
           ? or(
-              sql`LOWER(${ads.descriptionEn}) LIKE LOWER(${`%${description}%`})`,
-              sql`LOWER(${ads.descriptionAr}) LIKE LOWER(${`%${description}%`})`
-            )
+            sql`LOWER(${ads.descriptionEn}) LIKE LOWER(${`%${description}%`})`,
+            sql`LOWER(${ads.descriptionAr}) LIKE LOWER(${`%${description}%`})`
+          )
           : undefined
       );
 
@@ -201,13 +290,13 @@ export class AdListingRepository implements IAdListingRepository {
           phoneNumber: ads.phoneNumber,
           targetAudience: ads.targetAudience,
           hasPromoted: ads.hasPromoted,
-          tiktokLink:ads.tiktokLink,
-          youtubeLink:ads.youtubeLink,
-          youtubeVideo:ads.youtubeVideo,
-          googleAdsLink:ads.googleAdsLink,
-          instagramLink:ads.instagramLink,
-          facebookLink:ads.facebookLink,
-          snapchatLink:ads.snapchatLink
+          tiktokLink: ads.tiktokLink,
+          youtubeLink: ads.youtubeLink,
+          youtubeVideo: ads.youtubeVideo,
+          googleAdsLink: ads.googleAdsLink,
+          instagramLink: ads.instagramLink,
+          facebookLink: ads.facebookLink,
+          snapchatLink: ads.snapchatLink
         })
         .from(ads)
         .where(whereConditions)
@@ -279,7 +368,7 @@ export class AdListingRepository implements IAdListingRepository {
     title?: string,
     description?: string,
     targetAudience?: targetAudienceValues,
-    source?:string
+    source?: string
   ): Promise<PaginatedResponse<any>> {
     try {
       const { page, limit } = pagination;
@@ -293,9 +382,9 @@ export class AdListingRepository implements IAdListingRepository {
         lte(ads.impressionsCredit, 0),
         targetCities.length > 0
           ? sql`${ads.targetCities} && ARRAY[${sql.join(
-              targetCities.map((city) => sql`${city}`),
-              sql`, `
-            )}]::ksa_cities[]`
+            targetCities.map((city) => sql`${city}`),
+            sql`, `
+          )}]::ksa_cities[]`
           : undefined,
         targetAudience
           ? eq(ads.targetAudience, targetAudience)
@@ -303,16 +392,16 @@ export class AdListingRepository implements IAdListingRepository {
         // ✅ Search in both titleEn and titleAr if title is provided
         title
           ? or(
-              sql`LOWER(${ads.titleEn}) LIKE LOWER(${`%${title}%`})`,
-              sql`LOWER(${ads.titleAr}) LIKE LOWER(${`%${title}%`})`
-            )
+            sql`LOWER(${ads.titleEn}) LIKE LOWER(${`%${title}%`})`,
+            sql`LOWER(${ads.titleAr}) LIKE LOWER(${`%${title}%`})`
+          )
           : undefined,
-          // ✅ Search in both descriptionEn and descriptionAr if description is provided
+        // ✅ Search in both descriptionEn and descriptionAr if description is provided
         description
           ? or(
-              sql`LOWER(${ads.descriptionEn}) LIKE LOWER(${`%${description}%`})`,
-              sql`LOWER(${ads.descriptionAr}) LIKE LOWER(${`%${description}%`})`
-            )
+            sql`LOWER(${ads.descriptionEn}) LIKE LOWER(${`%${description}%`})`,
+            sql`LOWER(${ads.descriptionAr}) LIKE LOWER(${`%${description}%`})`
+          )
           : undefined
       );
 
@@ -322,8 +411,8 @@ export class AdListingRepository implements IAdListingRepository {
         .from(ads)
         .where(whereConditions);
 
-        
-  
+
+
 
       // ✅ Fetch paginated ads with promoted ads first
       const results = await db
@@ -342,13 +431,13 @@ export class AdListingRepository implements IAdListingRepository {
           phoneNumber: ads.phoneNumber,
           targetAudience: ads.targetAudience,
           hasPromoted: ads.hasPromoted,
-          tiktokLink:ads.tiktokLink,
-          youtubeLink:ads.youtubeLink,
-          youtubeVideo:ads.youtubeVideo,
-          googleAdsLink:ads.googleAdsLink,
-          instagramLink:ads.instagramLink,
-          facebookLink:ads.facebookLink,
-          snapchatLink:ads.snapchatLink
+          tiktokLink: ads.tiktokLink,
+          youtubeLink: ads.youtubeLink,
+          youtubeVideo: ads.youtubeVideo,
+          googleAdsLink: ads.googleAdsLink,
+          instagramLink: ads.instagramLink,
+          facebookLink: ads.facebookLink,
+          snapchatLink: ads.snapchatLink
         })
         .from(ads)
         .where(whereConditions)
@@ -360,16 +449,16 @@ export class AdListingRepository implements IAdListingRepository {
         .offset(offset);
 
 
-        if (results.length > 0) {
-          const adIds = results.map((ad) => ad.id);
-  
-          await db
-            .update(ads)
-            .set({
-              freeViews: sql`${ads.freeViews} + 1`
-            })
-            .where(inArray(ads.id, adIds));
-          }
+      if (results.length > 0) {
+        const adIds = results.map((ad) => ad.id);
+
+        await db
+          .update(ads)
+          .set({
+            freeViews: sql`${ads.freeViews} + 1`
+          })
+          .where(inArray(ads.id, adIds));
+      }
 
 
       const totalCount = Number(count);

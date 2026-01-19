@@ -1,5 +1,5 @@
 import { PaginatedResponse, PaginationParams } from "../../../../infrastructure/shared/common/pagination.vo";
-import { Ad } from "../../../../infrastructure/shared/schema/schema";
+import { Ad, User } from "../../../../infrastructure/shared/schema/schema";
 
 // ============================================
 // Ad Listing & Filtering
@@ -14,8 +14,18 @@ export interface IAdListingRepository {
   findAllAdsForUser(
     status: string,
     userId: string,
-    pagination: PaginationParams
+    pagination: PaginationParams,
+    title?: string,
+    description?: string,
+    email?:string
   ): Promise<PaginatedResponse<Ad>>;
+
+  listUserAdsForAdmin(
+    pagination: PaginationParams,
+    title?: string,
+    description?: string,
+    email?: string
+  ): Promise<PaginatedResponse<Ad & { email: User["email"], name: User["username"] }>>;
 
   listApprovedAdsForUser(
     pagination: PaginationParams,

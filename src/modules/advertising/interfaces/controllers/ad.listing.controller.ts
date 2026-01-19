@@ -14,7 +14,7 @@ export class AdListingController {
   constructor(
     private readonly adListingService: AdListingAppService,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   // ✅ Helper method to get status code from error code
   private getStatusCode(response: ApiResponseInterface<any>): number {
@@ -34,6 +34,42 @@ export class AdListingController {
 
   private isAdStatus(value: any): value is AdStatus {
     return ["pending", "approved", "rejected"].includes(value);
+  }
+
+  async listUserAdsForAdmin(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user?.id || !req.user?.role) {
+        res.status(401).json({ error: "User not authenticated" });
+        return;
+      }
+
+      const { limit, page, title, description, email } = req.query;
+
+      // ✅ Pagination handling (default: page=1, limit=10)
+      const pagination: PaginationParams = {
+        page: page && !isNaN(Number(page)) && Number(page) > 0 ? Number(page) : 1,
+        limit: limit && !isNaN(Number(limit)) && Number(limit) > 0 ? Number(limit) : 10,
+      };
+
+      let result;
+
+      // if (!email) {
+      //   res.status(404).send(ErrorBuilder.build(ErrorCode.MISSING_REQUIRED_FIELD, "email must be send"))
+      //   return
+      // }
+
+      result = await this.adListingService.listUserAdsForAdmin(
+        pagination,
+        title as string | undefined,
+        description as string | undefined,
+        email as string
+      );
+
+      const statusCode = this.getStatusCode(result);
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to list ads", message: error.message });
+    }
   }
 
   // ✅ List Ads
@@ -95,7 +131,7 @@ export class AdListingController {
 
   async listAdsFeed(req: Request, res: Response): Promise<void> {
     try {
-      let { limit, page, targetCities, title , description, targetAudience , source} = req.query;
+      let { limit, page, targetCities, title, description, targetAudience, source } = req.query;
 
       // ✅ Pagination handling (default: page=1, limit=6)
       const pagination: PaginationParams = {
@@ -106,24 +142,24 @@ export class AdListingController {
       // ✅ Parse targetCities from query string
       let citiesArray: string[] = [];
 
-    if (targetCities) {
-      if (Array.isArray(targetCities)) {
-        citiesArray = targetCities.filter((c): c is string => typeof c === 'string');
-      } else if (typeof targetCities === 'string') {
-        try {
-          // Try to parse JSON array string: ["mecca","riyadh"]
-          const parsed = JSON.parse(targetCities);
-          if (Array.isArray(parsed)) {
-            citiesArray = parsed.filter((c): c is string => typeof c === 'string');
-          } else {
+      if (targetCities) {
+        if (Array.isArray(targetCities)) {
+          citiesArray = targetCities.filter((c): c is string => typeof c === 'string');
+        } else if (typeof targetCities === 'string') {
+          try {
+            // Try to parse JSON array string: ["mecca","riyadh"]
+            const parsed = JSON.parse(targetCities);
+            if (Array.isArray(parsed)) {
+              citiesArray = parsed.filter((c): c is string => typeof c === 'string');
+            } else {
+              citiesArray = targetCities.split(',').map(c => c.trim()).filter(Boolean);
+            }
+          } catch {
+            // fallback if not JSON
             citiesArray = targetCities.split(',').map(c => c.trim()).filter(Boolean);
           }
-        } catch {
-          // fallback if not JSON
-          citiesArray = targetCities.split(',').map(c => c.trim()).filter(Boolean);
         }
       }
-    }
 
       // ✅ Validate cities against KSA_CITIES
       if (citiesArray.length > 0) {
@@ -146,8 +182,8 @@ export class AdListingController {
         citiesArray,
         typeof title === 'string' ? title : undefined,
         typeof description === 'string' ? description : undefined,
-        typeof targetAudience === 'string'? targetAudience : undefined,
-        typeof source === 'string'? source : undefined
+        typeof targetAudience === 'string' ? targetAudience : undefined,
+        typeof source === 'string' ? source : undefined
       );
 
       const statusCode = this.getStatusCode(result);
@@ -160,10 +196,10 @@ export class AdListingController {
     }
   }
 
-  
+
   async listApprovedAdsForUser(req: Request, res: Response): Promise<void> {
     try {
-      let { limit, page, targetCities, title , description, targetAudience , source} = req.query;
+      let { limit, page, targetCities, title, description, targetAudience, source } = req.query;
 
       // ✅ Pagination handling (default: page=1, limit=6)
       const pagination: PaginationParams = {
@@ -174,24 +210,24 @@ export class AdListingController {
       // ✅ Parse targetCities from query string
       let citiesArray: string[] = [];
 
-    if (targetCities) {
-      if (Array.isArray(targetCities)) {
-        citiesArray = targetCities.filter((c): c is string => typeof c === 'string');
-      } else if (typeof targetCities === 'string') {
-        try {
-          // Try to parse JSON array string: ["mecca","riyadh"]
-          const parsed = JSON.parse(targetCities);
-          if (Array.isArray(parsed)) {
-            citiesArray = parsed.filter((c): c is string => typeof c === 'string');
-          } else {
+      if (targetCities) {
+        if (Array.isArray(targetCities)) {
+          citiesArray = targetCities.filter((c): c is string => typeof c === 'string');
+        } else if (typeof targetCities === 'string') {
+          try {
+            // Try to parse JSON array string: ["mecca","riyadh"]
+            const parsed = JSON.parse(targetCities);
+            if (Array.isArray(parsed)) {
+              citiesArray = parsed.filter((c): c is string => typeof c === 'string');
+            } else {
+              citiesArray = targetCities.split(',').map(c => c.trim()).filter(Boolean);
+            }
+          } catch {
+            // fallback if not JSON
             citiesArray = targetCities.split(',').map(c => c.trim()).filter(Boolean);
           }
-        } catch {
-          // fallback if not JSON
-          citiesArray = targetCities.split(',').map(c => c.trim()).filter(Boolean);
         }
       }
-    }
 
       // ✅ Validate cities against KSA_CITIES
       if (citiesArray.length > 0) {
@@ -214,8 +250,8 @@ export class AdListingController {
         citiesArray,
         typeof title === 'string' ? title : undefined,
         typeof description === 'string' ? description : undefined,
-        typeof targetAudience === 'string'? targetAudience : undefined,
-        typeof source === 'string'? source : undefined
+        typeof targetAudience === 'string' ? targetAudience : undefined,
+        typeof source === 'string' ? source : undefined
       );
 
       const statusCode = this.getStatusCode(result);

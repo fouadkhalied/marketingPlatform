@@ -25,6 +25,11 @@ export function setupAdvertisingRoutes(advertisingController: any) {
     (req, res) => advertisingController.adListing.listApprovedAdsForUser(req, res)
   );
 
+  router.get("/api/advertising/listUserAdsForAdmin", 
+    AuthMiddleware(UserRole.ADMIN),
+    (req, res) => advertisingController.adListing.listUserAdsForAdmin(req, res)
+  );
+
   router.get("/api/advertising/list", 
     AuthMiddleware(UserRole.USER), 
     (req, res) => advertisingController.adListing.listAds(req, res)
