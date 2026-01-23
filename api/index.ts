@@ -422,6 +422,34 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
+app.post('/api/sensor-data', (req, res) => {
+  console.log('\n📊 NEW SENSOR DATA RECEIVED:');
+  console.log('----------------------------');
+  
+  const data = req.body;
+  
+  // Log each field
+  console.log(`🌡️  Temperature: ${data.temperature}°C`);
+  console.log(`💧 Turbidity Raw: ${data.turbidity_raw}`);
+  console.log(`⚡ Turbidity Voltage: ${data.turbidity_voltage}V`);
+  console.log(`🔍 Turbidity NTU: ${data.turbidity_ntu}`);
+  console.log(`⏰ Timestamp: ${data.timestamp}ms`);
+  
+  // Log complete JSON
+  console.log('\n📦 Complete JSON:');
+  console.log(JSON.stringify(data, null, 2));
+  console.log('----------------------------\n');
+  
+  // Send success response
+  res.status(200).json({
+    success: true,
+    message: 'Data received successfully',
+    received_at: new Date().toISOString(),
+    data: data
+  });
+});
+
+
 // Initialize MongoDB connection and start server
 async function startServer() {
   try {
