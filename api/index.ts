@@ -362,29 +362,126 @@ app.get('/api/payment/history',AuthMiddleware(UserRole.USER),
 app.get('/api/payment/getPurchaseHistoryForAdmin',AuthMiddleware(UserRole.ADMIN),
 (req, res) => paymentController.getPurchaseHistoryForAdmin(req, res));
 
-app.post('/api/sensor-data', (req, res) => {
-  console.log('\n📊 NEW SENSOR DATA RECEIVED:');
-  console.log('----------------------------');
+app.post('/api/sensor-data', (req,res) => {
+  console.log('\n╔════════════════════════════════════════════════════╗');
+  console.log('║         📊 NEW SENSOR DATA RECEIVED                ║');
+  console.log('╚════════════════════════════════════════════════════╝');
   
   const data = req.body;
+  const health = data.sensor_health;
   
-  // Log each field
-  console.log(`🌡️  Temperature: ${data.temperature}°C`);
-  console.log(`💧 Turbidity Raw: ${data.turbidity_raw}`);
-  console.log(`⚡ Turbidity Voltage: ${data.turbidity_voltage}V`);
-  console.log(`🔍 Turbidity NTU: ${data.turbidity_ntu}`);
-  console.log(`⏰ Timestamp: ${data.timestamp}ms`);
+  // Display timestamp and uptime
+  console.log('\n⏰ TIMING INFO:');
+  console.log('─────────────────────────────────────────────────────');
+  console.log(`   Received at: ${new Date().toISOString()}`);
+  console.log(`   ESP32 Timestamp: ${data.timestamp}ms`);
+  console.log(`   ESP32 Uptime: ${health.uptime_seconds}s (${Math.floor(health.uptime_seconds / 60)}m ${health.uptime_seconds % 60}s)`);
   
-  // Log complete JSON
-  console.log('\n📦 Complete JSON:');
+  // Display sensor health status
+  console.log('\n🏥 SENSOR HEALTH STATUS:');
+  console.log('─────────────────────────────────────────────────────');
+  
+  // DS18B20 Temperature Sensor
+  const tempIcon = health.ds18b20_connected ? '✅' : '❌';
+  console.log(`   ${tempIcon} DS18B20 Temperature Sensor: ${health.ds18b20_connected ? 'CONNECTED' : 'DISCONNECTED'}`);
+  console.log(`      • Devices found: ${health.ds18b20_device_count}`);
+  console.log(`      • Reading valid: ${health.temperature_valid ? 'Yes ✅' : 'No ❌'}`);
+  
+  if (!health.ds18b20_connected) {
+    console.log('      ⚠️  TROUBLESHOOTING:');
+    console.log('         - Check wiring (VCC→3.3V, DATA→GPIO4, GND→GND)');
+    console.log('         - Verify 4.7kΩ pull-up resistor between DATA and VCC');
+    console.log('         - Test with multimeter (DATA pin should read 3.3V)');
+  }
+  
+  // Turbidity Sensor
+  const turbIcon = health.turbidity_connected ? '✅' : '❌';
+  console.log(`   ${turbIcon} Turbidity Sensor: ${health.turbidity_connected ? 'CONNECTED' : 'DISCONNECTED'}`);
+  console.log(`      • Reading valid: ${health.turbidity_valid ? 'Yes ✅' : 'No ❌'}`);
+  
+  if (!health.turbidity_connected) {
+    console.log('      ⚠️  TROUBLESHOOTING:');
+    console.log('         - Check wiring (VCC→5V, ANALOG→GPIO19, GND→GND)');
+    console.log('         - Sensor must be powered BEFORE WiFi connects');
+    console.log('         - GPIO 19 is ADC2 (reading saved before WiFi)');
+  }
+  
+  // WiFi Status
+  const wifiIcon = health.wifi_rssi > -70 ? '📶' : '📉';
+  const wifiQuality = health.wifi_rssi > -50 ? 'Excellent' : 
+                      health.wifi_rssi > -60 ? 'Good' : 
+                      health.wifi_rssi > -70 ? 'Fair' : 'Weak';
+  console.log(`   ${wifiIcon} WiFi Signal: ${health.wifi_rssi} dBm (${wifiQuality})`);
+  
+  // Display sensor readings
+  console.log('\n📊 SENSOR READINGS:');
+  console.log('─────────────────────────────────────────────────────');
+  
+  // Temperature Reading
+  const tempStatus = health.temperature_valid ? '✅' : '⚠️';
+  console.log(`   ${tempStatus} Temperature: ${data.temperature}°C`);
+  if (data.temperature === -127) {
+    console.log('      ❌ ERROR: -127°C indicates sensor disconnected!');
+  } else if (!health.temperature_valid) {
+    console.log('      ⚠️  WARNING: Temperature out of valid range (-55 to 125°C)');
+  }
+  
+  // Turbidity Readings
+  const turbStatus = health.turbidity_valid ? '✅' : '⚠️';
+  console.log(`   ${turbStatus} Turbidity Raw: ${data.turbidity_raw}`);
+  console.log(`      • Voltage: ${data.turbidity_voltage.toFixed(3)}V`);
+  console.log(`      • NTU: ${data.turbidity_ntu.toFixed(2)}`);
+  
+  if (data.turbidity_raw === 0) {
+    console.log('      ❌ ERROR: Raw value is 0 - sensor not connected!');
+  } else if (data.turbidity_raw === 4095) {
+    console.log('      ⚠️  WARNING: Raw value maxed out (4095)');
+  }
+  
+  // Overall System Status
+  console.log('\n🔍 OVERALL SYSTEM STATUS:');
+  console.log('─────────────────────────────────────────────────────');
+  
+  const allSensorsWorking = health.ds18b20_connected && health.turbidity_connected;
+  const anyIssues = !health.temperature_valid || !health.turbidity_valid || 
+                    !health.ds18b20_connected || !health.turbidity_connected;
+  
+  if (allSensorsWorking && !anyIssues) {
+    console.log('   ✅ ALL SYSTEMS OPERATIONAL');
+  } else {
+    console.log('   ⚠️  SYSTEM ISSUES DETECTED:');
+    
+    if (!health.ds18b20_connected) {
+      console.log('      • Temperature sensor disconnected');
+    }
+    if (!health.turbidity_connected) {
+      console.log('      • Turbidity sensor disconnected');
+    }
+    if (!health.temperature_valid) {
+      console.log('      • Temperature reading invalid');
+    }
+    if (!health.turbidity_valid) {
+      console.log('      • Turbidity reading invalid');
+    }
+  }
+  
+  // Complete JSON dump
+  console.log('\n📦 COMPLETE JSON PAYLOAD:');
+  console.log('─────────────────────────────────────────────────────');
   console.log(JSON.stringify(data, null, 2));
-  console.log('----------------------------\n');
+  console.log('─────────────────────────────────────────────────────\n');
   
   // Send success response
   res.status(200).json({
     success: true,
-    message: 'Data received successfully',
+    message: allSensorsWorking ? 'All sensors operational' : 'Sensor issues detected',
     received_at: new Date().toISOString(),
+    system_status: {
+      all_sensors_connected: allSensorsWorking,
+      issues_detected: anyIssues,
+      temperature_sensor: health.ds18b20_connected ? 'OK' : 'DISCONNECTED',
+      turbidity_sensor: health.turbidity_connected ? 'OK' : 'DISCONNECTED'
+    },
     data: data
   });
 });
